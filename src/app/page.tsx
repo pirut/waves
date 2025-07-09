@@ -3,9 +3,27 @@
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { fetchUsers, fetchPosts } from "../api";
 
 export default function Home() {
     const router = useRouter();
+    const [users, setUsers] = useState<{ id: string; name?: string; profilePhotoUrl?: string }[]>([]);
+    const [posts, setPosts] = useState<{ id: string; caption?: string; mediaUrl?: string; userId?: string; eventId?: string }[]>([]);
+    const [loadingUsers, setLoadingUsers] = useState(true);
+    const [loadingPosts, setLoadingPosts] = useState(true);
+
+    useEffect(() => {
+        setLoadingUsers(true);
+        fetchUsers()
+            .then(setUsers)
+            .finally(() => setLoadingUsers(false));
+        setLoadingPosts(true);
+        fetchPosts()
+            .then(setPosts)
+            .finally(() => setLoadingPosts(false));
+    }, []);
+
     return (
         <div className="flex flex-col items-center justify-center min-h-screen gap-8 px-4">
             <Card className="w-full max-w-md bg-white/90 backdrop-blur-md shadow-xl border-none">
@@ -49,6 +67,41 @@ export default function Home() {
                     </Button>
                 </CardContent>
             </Card>
+            {/* User Feed */}
+            <div className="w-full max-w-2xl mt-8">
+                <h2 className="text-2xl font-bold mb-2 text-[#7F8C8D]">Users</h2>
+                {loadingUsers ? (
+                    <div>Loading users...</div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {users.map((user) => (
+                            <Card key={user.id} className="flex items-center gap-4 p-4">
+                                {user.profilePhotoUrl && <img src={user.profilePhotoUrl} alt={user.name} className="w-10 h-10 rounded-full" />}
+                                <span>{user.name || user.id}</span>
+                            </Card>
+                        ))}
+                    </div>
+                )}
+            </div>
+            {/* Post Feed */}
+            <div className="w-full max-w-2xl mt-8">
+                <h2 className="text-2xl font-bold mb-2 text-[#7F8C8D]">Posts</h2>
+                {loadingPosts ? (
+                    <div>Loading posts...</div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {posts.map((post) => (
+                            <Card key={post.id} className="p-4">
+                                {post.mediaUrl && <img src={post.mediaUrl} alt={post.caption} className="w-full h-40 object-cover rounded mb-2" />}
+                                <div className="font-semibold mb-1">{post.caption}</div>
+                                <div className="text-xs text-[#7F8C8D]">
+                                    User: {post.userId} | Event: {post.eventId}
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
