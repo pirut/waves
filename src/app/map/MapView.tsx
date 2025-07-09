@@ -103,30 +103,11 @@ export default function MapView() {
         };
     }, [showCards]);
 
+    // Remove flex layout and resizing logic, use absolute overlay for cards
     return (
-        <div className="flex w-full h-full transition-all duration-700">
-            {/* Left Card */}
-            <div
-                className={`h-full overflow-hidden transition-all duration-700 ${showCards ? "w-80 opacity-100" : "w-0 opacity-0 pointer-events-none"}`}
-                style={{ transitionProperty: "width, opacity", willChange: "width, opacity" }}
-            >
-                {showCards && (
-                    <Card className="h-full m-8 bg-white/90 backdrop-blur-md shadow-xl border-none flex flex-col justify-center">
-                        <CardContent className="p-6">
-                            <h3 className="text-xl font-bold mb-2 text-[#7F8C8D]">Welcome to Make Waves</h3>
-                            <p className="text-[#7F8C8D] mb-2">
-                                Zoom in to explore events around the world. This info card will hide as you get closer to the action!
-                            </p>
-                            <ul className="text-sm text-[#7F8C8D]">
-                                <li>🌊 3 events near Miami Beach</li>
-                                <li>🗺️ Drag, zoom, and explore</li>
-                            </ul>
-                        </CardContent>
-                    </Card>
-                )}
-            </div>
-            {/* Map Area */}
-            <div ref={containerRef} className="h-full flex-1 min-w-0 min-h-0" style={{ willChange: "transform", borderRadius: "1.5rem" }}>
+        <div className="relative w-full h-full">
+            {/* Map Area (always full width/height) */}
+            <div ref={containerRef} className="absolute inset-0 w-full h-full" style={{ willChange: "transform", borderRadius: "1.5rem" }}>
                 <Map
                     ref={mapRef}
                     initialViewState={{
@@ -159,13 +140,37 @@ export default function MapView() {
                     ))}
                 </Map>
             </div>
-            {/* Right Card */}
+            {/* Left Card Overlay */}
             <div
-                className={`h-full overflow-hidden transition-all duration-700 ${showCards ? "w-80 opacity-100" : "w-0 opacity-0 pointer-events-none"}`}
-                style={{ transitionProperty: "width, opacity", willChange: "width, opacity" }}
+                className={`absolute left-0 top-1/2 -translate-y-1/2 transition-all duration-700 ${
+                    showCards ? "opacity-100" : "opacity-0 pointer-events-none"
+                }`}
+                style={{ width: "22rem", maxWidth: "90vw", zIndex: 10, transitionProperty: "opacity" }}
             >
                 {showCards && (
-                    <Card className="h-full m-8 bg-white/90 backdrop-blur-md shadow-xl border-none flex flex-col justify-center">
+                    <Card className="m-8 bg-white/90 backdrop-blur-md shadow-xl border-none flex flex-col justify-center">
+                        <CardContent className="p-6">
+                            <h3 className="text-xl font-bold mb-2 text-[#7F8C8D]">Welcome to Make Waves</h3>
+                            <p className="text-[#7F8C8D] mb-2">
+                                Zoom in to explore events around the world. This info card will hide as you get closer to the action!
+                            </p>
+                            <ul className="text-sm text-[#7F8C8D]">
+                                <li>🌊 3 events near Miami Beach</li>
+                                <li>🗺️ Drag, zoom, and explore</li>
+                            </ul>
+                        </CardContent>
+                    </Card>
+                )}
+            </div>
+            {/* Right Card Overlay */}
+            <div
+                className={`absolute right-0 top-1/2 -translate-y-1/2 transition-all duration-700 ${
+                    showCards ? "opacity-100" : "opacity-0 pointer-events-none"
+                }`}
+                style={{ width: "22rem", maxWidth: "90vw", zIndex: 10, transitionProperty: "opacity" }}
+            >
+                {showCards && (
+                    <Card className="m-8 bg-white/90 backdrop-blur-md shadow-xl border-none flex flex-col justify-center">
                         <CardContent className="p-6">
                             <h3 className="text-xl font-bold mb-2 text-[#7F8C8D]">How to Use</h3>
                             <ul className="text-sm text-[#7F8C8D] list-disc pl-4">
