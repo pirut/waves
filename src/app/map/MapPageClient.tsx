@@ -2,6 +2,7 @@
 import dynamic from "next/dynamic";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 const MapView = dynamic(() => import("./MapView"), { ssr: false });
 
@@ -16,7 +17,7 @@ export default function MapPageClient() {
             </Card>
             {/* Floating Action Button (future) */}
             <Button className="fixed bottom-20 right-8 rounded-full shadow-lg" size="icon" variant="default" aria-label="Create Event">
-                +
+                <Plus className="w-6 h-6" />
             </Button>
         </div>
     );
