@@ -33,11 +33,16 @@ const mapOptions = {
     ],
 };
 
+// SVG path for a circle (as a Google Maps marker icon)
+const CIRCLE_PATH = "M 0,0 m -10,0 a 10,10 0 1,0 20,0 a 10,10 0 1,0 -20,0";
+
 export default function MapView() {
-    const { isLoaded } = useJsApiLoader({
-        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+    const { isLoaded, loadError } = useJsApiLoader({
+        googleMapsApiKey: apiKey,
     });
 
+    if (loadError) return <div className="text-center py-8 text-red-600">Failed to load map: {String(loadError)}</div>;
     if (!isLoaded) return <div className="text-center py-8">Loading map...</div>;
 
     return (
@@ -47,8 +52,8 @@ export default function MapView() {
                     key={marker.id}
                     position={marker.position}
                     icon={{
-                        path: google.maps.SymbolPath.CIRCLE,
-                        scale: 10,
+                        path: CIRCLE_PATH,
+                        scale: 1,
                         fillColor: marker.color,
                         fillOpacity: 1,
                         strokeWeight: 2,
