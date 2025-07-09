@@ -50,7 +50,7 @@ export default function MapView() {
         setZoom(evt.viewState.zoom);
     }, []);
 
-    const showCard = zoom <= 5;
+    const showCards = zoom <= 5;
 
     const mapRef = useRef<MapRef>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -101,16 +101,16 @@ export default function MapView() {
         return () => {
             if (fadeTimeout.current) clearTimeout(fadeTimeout.current);
         };
-    }, [showCard]);
+    }, [showCards]);
 
     return (
         <div className="flex w-full h-full transition-all duration-700">
-            {/* Info Card */}
+            {/* Left Card */}
             <div
-                className={`h-full overflow-hidden transition-all duration-700 ${showCard ? "w-96 opacity-100" : "w-0 opacity-0 pointer-events-none"}`}
+                className={`h-full overflow-hidden transition-all duration-700 ${showCards ? "w-80 opacity-100" : "w-0 opacity-0 pointer-events-none"}`}
                 style={{ transitionProperty: "width, opacity", willChange: "width, opacity" }}
             >
-                {showCard && (
+                {showCards && (
                     <Card className="h-full m-8 bg-white/90 backdrop-blur-md shadow-xl border-none flex flex-col justify-center">
                         <CardContent className="p-6">
                             <h3 className="text-xl font-bold mb-2 text-[#7F8C8D]">Welcome to Make Waves</h3>
@@ -158,6 +158,24 @@ export default function MapView() {
                         </Marker>
                     ))}
                 </Map>
+            </div>
+            {/* Right Card */}
+            <div
+                className={`h-full overflow-hidden transition-all duration-700 ${showCards ? "w-80 opacity-100" : "w-0 opacity-0 pointer-events-none"}`}
+                style={{ transitionProperty: "width, opacity", willChange: "width, opacity" }}
+            >
+                {showCards && (
+                    <Card className="h-full m-8 bg-white/90 backdrop-blur-md shadow-xl border-none flex flex-col justify-center">
+                        <CardContent className="p-6">
+                            <h3 className="text-xl font-bold mb-2 text-[#7F8C8D]">How to Use</h3>
+                            <ul className="text-sm text-[#7F8C8D] list-disc pl-4">
+                                <li>Zoom in to hide these cards and focus on the map.</li>
+                                <li>Click markers to see event details (future feature).</li>
+                                <li>Use the FAB to create a new event (future feature).</li>
+                            </ul>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
         </div>
     );
