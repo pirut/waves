@@ -1,9 +1,10 @@
 "use client";
 import Map, { Marker, ViewStateChangeEvent } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Style as MapboxStyle } from "mapbox-gl";
+import type { MapRef } from "react-map-gl";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_API_KEY;
 
@@ -43,6 +44,7 @@ const eventMarkers = [
 
 export default function MapView() {
     const [zoom, setZoom] = useState(2);
+    // const [fading, setFading] = useState(false); // REMOVE unused fading
 
     const onMove = useCallback((evt: ViewStateChangeEvent) => {
         setZoom(evt.viewState.zoom);
@@ -50,30 +52,83 @@ export default function MapView() {
 
     const showCard = zoom <= 5;
 
+    const mapRef = useRef<MapRef>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const fadeTimeout = useRef<NodeJS.Timeout | null>(null);
+    const resizeTimeout = useRef<NodeJS.Timeout | null>(null);
+
+    // Helper to fade the map canvas
+    const setCanvasOpacity = (opacity: number) => {
+        const map = mapRef.current;
+        if (map && map.getMap) {
+            const canvas = map.getMap().getCanvas();
+            if (canvas) {
+                (canvas as HTMLCanvasElement).style.transition = "opacity 0.3s";
+                (canvas as HTMLCanvasElement).style.opacity = String(opacity);
+            }
+        }
+    };
+
+    // Observe container resize, debounce resize and fade
+    useEffect(() => {
+        if (!containerRef.current) return;
+        const handleResize = () => {
+            // Fade out canvas
+            setCanvasOpacity(0);
+            // Debounce resize and fade in
+            if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
+            resizeTimeout.current = setTimeout(() => {
+                mapRef.current?.resize();
+                setCanvasOpacity(1);
+            }, 350); // match transition duration
+        };
+        const observer = new window.ResizeObserver(handleResize);
+        observer.observe(containerRef.current);
+        return () => {
+            observer.disconnect();
+            if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
+        };
+    }, []);
+
+    // Also trigger fade/resize on card show/hide (width transition)
+    useEffect(() => {
+        setCanvasOpacity(0);
+        if (fadeTimeout.current) clearTimeout(fadeTimeout.current);
+        fadeTimeout.current = setTimeout(() => {
+            mapRef.current?.resize();
+            setCanvasOpacity(1);
+        }, 350);
+        return () => {
+            if (fadeTimeout.current) clearTimeout(fadeTimeout.current);
+        };
+    }, [showCard]);
+
     return (
         <div className="flex w-full h-full transition-all duration-700">
             {/* Info Card */}
             <div
-                className={`h-full flex-shrink-0 flex-grow-0 transition-all duration-700 ${
-                    showCard ? "basis-[30%] opacity-100" : "basis-0 opacity-0 pointer-events-none"
-                }`}
+                className={`h-full overflow-hidden transition-all duration-700 ${showCard ? "w-96 opacity-100" : "w-0 opacity-0 pointer-events-none"}`}
+                style={{ transitionProperty: "width, opacity", willChange: "width, opacity" }}
             >
-                <Card className="h-full m-8 bg-white/90 backdrop-blur-md shadow-xl border-none flex flex-col justify-center">
-                    <CardContent className="p-6">
-                        <h3 className="text-xl font-bold mb-2 text-[#7F8C8D]">Welcome to Make Waves</h3>
-                        <p className="text-[#7F8C8D] mb-2">
-                            Zoom in to explore events around the world. This info card will hide as you get closer to the action!
-                        </p>
-                        <ul className="text-sm text-[#7F8C8D]">
-                            <li>🌊 3 events near Miami Beach</li>
-                            <li>🗺️ Drag, zoom, and explore</li>
-                        </ul>
-                    </CardContent>
-                </Card>
+                {showCard && (
+                    <Card className="h-full m-8 bg-white/90 backdrop-blur-md shadow-xl border-none flex flex-col justify-center">
+                        <CardContent className="p-6">
+                            <h3 className="text-xl font-bold mb-2 text-[#7F8C8D]">Welcome to Make Waves</h3>
+                            <p className="text-[#7F8C8D] mb-2">
+                                Zoom in to explore events around the world. This info card will hide as you get closer to the action!
+                            </p>
+                            <ul className="text-sm text-[#7F8C8D]">
+                                <li>🌊 3 events near Miami Beach</li>
+                                <li>🗺️ Drag, zoom, and explore</li>
+                            </ul>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
             {/* Map Area */}
-            <div className={`h-full transition-all duration-700 min-w-0 ${showCard ? "basis-[70%] flex-grow" : "w-full flex-grow"}`}>
+            <div ref={containerRef} className="h-full flex-1 min-w-0 min-h-0" style={{ willChange: "transform", borderRadius: "1.5rem" }}>
                 <Map
+                    ref={mapRef}
                     initialViewState={{
                         longitude: -80.13,
                         latitude: 25.79,
