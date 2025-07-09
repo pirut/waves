@@ -1,5 +1,6 @@
-import MapPageClient from "./MapPageClient";
+"use client";
+import MapboxClient from "./MapboxClient";
 
 export default function MapPage() {
-    return <MapPageClient />;
+    return <MapboxClient />;
 }

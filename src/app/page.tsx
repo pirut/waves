@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
     const router = useRouter();
@@ -12,13 +13,10 @@ export default function Home() {
                     Discover, attend, and share real-world events focused on doing good. Every post is rooted in real-life impact.
                 </p>
             </div>
-            <button
-                className="bg-[#B3DFF2] hover:bg-[#F6E8D6] text-[#7F8C8D] font-semibold py-3 px-8 rounded-full text-lg shadow transition-colors"
-                onClick={() => router.push("/map")}
-            >
+            <Button className="w-full max-w-xs text-lg py-6" onClick={() => router.push("/map")} variant="default" size="lg">
                 Find Events Near You
-            </button>
-            <button className="flex items-center gap-2 bg-white hover:bg-[#FFE5D4] text-[#7F8C8D] border border-[#B3DFF2] font-medium py-2 px-6 rounded-full shadow-sm transition-colors">
+            </Button>
+            <Button className="w-full max-w-xs flex items-center gap-2 text-lg py-6" variant="secondary" size="lg">
                 <svg width="20" height="20" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <g clipPath="url(#clip0_17_40)">
                         <path
@@ -45,7 +43,7 @@ export default function Home() {
                     </defs>
                 </svg>
                 Sign in with Google
-            </button>
+            </Button>
         </div>
     );
 }
