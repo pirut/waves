@@ -50,8 +50,6 @@ export default function MapView() {
         setZoom(evt.viewState.zoom);
     }, []);
 
-    const showCards = zoom <= 5;
-
     const mapRef = useRef<MapRef>(null);
     // const containerRef = useRef<HTMLDivElement>(null); // REMOVE: fade/resize logic and ResizeObserver
     // const fadeTimeout = useRef<NodeJS.Timeout | null>(null); // REMOVE: fade/resize logic and ResizeObserver
@@ -104,6 +102,30 @@ export default function MapView() {
     // }, [showCards]); // REMOVE: fade/resize logic and ResizeObserver
 
     // Remove flex layout and resizing logic, use absolute overlay for cards // REMOVE: fade/resize logic and ResizeObserver
+    // Card slide/fade animation based on zoom
+    const minZoom = 2;
+    const maxZoom = 6;
+    // Clamp progress between 0 (fully visible) and 1 (fully hidden)
+    const progress = Math.min(Math.max((zoom - minZoom) / (maxZoom - minZoom), 0), 1);
+    // Opacity and slide distance
+    const cardOpacity = 1 - progress;
+    const slideDistance = 120; // px
+    const leftCardStyle = {
+        width: "22rem",
+        maxWidth: "90vw",
+        zIndex: 10,
+        transition: "opacity 0.5s, transform 0.5s",
+        opacity: cardOpacity,
+        transform: `translateY(-50%) translateX(-${progress * slideDistance}px)`,
+    };
+    const rightCardStyle = {
+        width: "22rem",
+        maxWidth: "90vw",
+        zIndex: 10,
+        transition: "opacity 0.5s, transform 0.5s",
+        opacity: cardOpacity,
+        transform: `translateY(-50%) translateX(${progress * slideDistance}px)`,
+    };
     return (
         <div className="relative w-full h-full">
             {/* Map Area (always full width/height) */}
@@ -141,46 +163,32 @@ export default function MapView() {
                 </Map>
             </div>
             {/* Left Card Overlay */}
-            <div
-                className={`absolute left-0 top-1/2 -translate-y-1/2 transition-all duration-700 ${
-                    showCards ? "opacity-100" : "opacity-0 pointer-events-none"
-                }`}
-                style={{ width: "22rem", maxWidth: "90vw", zIndex: 10, transitionProperty: "opacity" }}
-            >
-                {showCards && (
-                    <Card className="m-8 bg-white/90 backdrop-blur-md shadow-xl border-none flex flex-col justify-center">
-                        <CardContent className="p-6">
-                            <h3 className="text-xl font-bold mb-2 text-[#7F8C8D]">Welcome to Make Waves</h3>
-                            <p className="text-[#7F8C8D] mb-2">
-                                Zoom in to explore events around the world. This info card will hide as you get closer to the action!
-                            </p>
-                            <ul className="text-sm text-[#7F8C8D]">
-                                <li>🌊 3 events near Miami Beach</li>
-                                <li>🗺️ Drag, zoom, and explore</li>
-                            </ul>
-                        </CardContent>
-                    </Card>
-                )}
+            <div className="absolute left-0 top-1/2" style={leftCardStyle}>
+                <Card className="m-8 bg-white/90 backdrop-blur-md shadow-xl border-none flex flex-col justify-center">
+                    <CardContent className="p-6">
+                        <h3 className="text-xl font-bold mb-2 text-[#7F8C8D]">Welcome to Make Waves</h3>
+                        <p className="text-[#7F8C8D] mb-2">
+                            Zoom in to explore events around the world. This info card will hide as you get closer to the action!
+                        </p>
+                        <ul className="text-sm text-[#7F8C8D]">
+                            <li>🌊 3 events near Miami Beach</li>
+                            <li>🗺️ Drag, zoom, and explore</li>
+                        </ul>
+                    </CardContent>
+                </Card>
             </div>
             {/* Right Card Overlay */}
-            <div
-                className={`absolute right-0 top-1/2 -translate-y-1/2 transition-all duration-700 ${
-                    showCards ? "opacity-100" : "opacity-0 pointer-events-none"
-                }`}
-                style={{ width: "22rem", maxWidth: "90vw", zIndex: 10, transitionProperty: "opacity" }}
-            >
-                {showCards && (
-                    <Card className="m-8 bg-white/90 backdrop-blur-md shadow-xl border-none flex flex-col justify-center">
-                        <CardContent className="p-6">
-                            <h3 className="text-xl font-bold mb-2 text-[#7F8C8D]">How to Use</h3>
-                            <ul className="text-sm text-[#7F8C8D] list-disc pl-4">
-                                <li>Zoom in to hide these cards and focus on the map.</li>
-                                <li>Click markers to see event details (future feature).</li>
-                                <li>Use the FAB to create a new event (future feature).</li>
-                            </ul>
-                        </CardContent>
-                    </Card>
-                )}
+            <div className="absolute right-0 top-1/2" style={rightCardStyle}>
+                <Card className="m-8 bg-white/90 backdrop-blur-md shadow-xl border-none flex flex-col justify-center">
+                    <CardContent className="p-6">
+                        <h3 className="text-xl font-bold mb-2 text-[#7F8C8D]">How to Use</h3>
+                        <ul className="text-sm text-[#7F8C8D] list-disc pl-4">
+                            <li>Zoom in to hide these cards and focus on the map.</li>
+                            <li>Click markers to see event details (future feature).</li>
+                            <li>Use the FAB to create a new event (future feature).</li>
+                        </ul>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );
