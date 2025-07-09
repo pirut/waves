@@ -1,7 +1,7 @@
 "use client";
 import Map, { Marker, ViewStateChangeEvent } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Style as MapboxStyle } from "mapbox-gl";
 import type { MapRef } from "react-map-gl";
@@ -53,61 +53,61 @@ export default function MapView() {
     const showCards = zoom <= 5;
 
     const mapRef = useRef<MapRef>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const fadeTimeout = useRef<NodeJS.Timeout | null>(null);
-    const resizeTimeout = useRef<NodeJS.Timeout | null>(null);
+    // const containerRef = useRef<HTMLDivElement>(null); // REMOVE: fade/resize logic and ResizeObserver
+    // const fadeTimeout = useRef<NodeJS.Timeout | null>(null); // REMOVE: fade/resize logic and ResizeObserver
+    // const resizeTimeout = useRef<NodeJS.Timeout | null>(null); // REMOVE: fade/resize logic and ResizeObserver
 
-    // Helper to fade the map canvas
-    const setCanvasOpacity = (opacity: number) => {
-        const map = mapRef.current;
-        if (map && map.getMap) {
-            const canvas = map.getMap().getCanvas();
-            if (canvas) {
-                (canvas as HTMLCanvasElement).style.transition = "opacity 0.3s";
-                (canvas as HTMLCanvasElement).style.opacity = String(opacity);
-            }
-        }
-    };
+    // Helper to fade the map canvas // REMOVE: fade/resize logic and ResizeObserver
+    // const setCanvasOpacity = (opacity: number) => { // REMOVE: fade/resize logic and ResizeObserver
+    //     const map = mapRef.current; // REMOVE: fade/resize logic and ResizeObserver
+    //     if (map && map.getMap) { // REMOVE: fade/resize logic and ResizeObserver
+    //         const canvas = map.getMap().getCanvas(); // REMOVE: fade/resize logic and ResizeObserver
+    //         if (canvas) { // REMOVE: fade/resize logic and ResizeObserver
+    //             (canvas as HTMLCanvasElement).style.transition = "opacity 0.3s"; // REMOVE: fade/resize logic and ResizeObserver
+    //             (canvas as HTMLCanvasElement).style.opacity = String(opacity); // REMOVE: fade/resize logic and ResizeObserver
+    //         } // REMOVE: fade/resize logic and ResizeObserver
+    //     } // REMOVE: fade/resize logic and ResizeObserver
+    // }; // REMOVE: fade/resize logic and ResizeObserver
 
-    // Observe container resize, debounce resize and fade
-    useEffect(() => {
-        if (!containerRef.current) return;
-        const handleResize = () => {
-            // Fade out canvas
-            setCanvasOpacity(0);
-            // Debounce resize and fade in
-            if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
-            resizeTimeout.current = setTimeout(() => {
-                mapRef.current?.resize();
-                setCanvasOpacity(1);
-            }, 350); // match transition duration
-        };
-        const observer = new window.ResizeObserver(handleResize);
-        observer.observe(containerRef.current);
-        return () => {
-            observer.disconnect();
-            if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
-        };
-    }, []);
+    // Observe container resize, debounce resize and fade // REMOVE: fade/resize logic and ResizeObserver
+    // useEffect(() => { // REMOVE: fade/resize logic and ResizeObserver
+    //     if (!containerRef.current) return; // REMOVE: fade/resize logic and ResizeObserver
+    //     const handleResize = () => { // REMOVE: fade/resize logic and ResizeObserver
+    //         // Fade out canvas // REMOVE: fade/resize logic and ResizeObserver
+    //         setCanvasOpacity(0); // REMOVE: fade/resize logic and ResizeObserver
+    //         // Debounce resize and fade in // REMOVE: fade/resize logic and ResizeObserver
+    //         if (resizeTimeout.current) clearTimeout(resizeTimeout.current); // REMOVE: fade/resize logic and ResizeObserver
+    //         resizeTimeout.current = setTimeout(() => { // REMOVE: fade/resize logic and ResizeObserver
+    //             mapRef.current?.resize(); // REMOVE: fade/resize logic and ResizeObserver
+    //             setCanvasOpacity(1); // REMOVE: fade/resize logic and ResizeObserver
+    //         }, 350); // match transition duration // REMOVE: fade/resize logic and ResizeObserver
+    //     }; // REMOVE: fade/resize logic and ResizeObserver
+    //     const observer = new window.ResizeObserver(handleResize); // REMOVE: fade/resize logic and ResizeObserver
+    //     observer.observe(containerRef.current); // REMOVE: fade/resize logic and ResizeObserver
+    //     return () => { // REMOVE: fade/resize logic and ResizeObserver
+    //         observer.disconnect(); // REMOVE: fade/resize logic and ResizeObserver
+    //         if (resizeTimeout.current) clearTimeout(resizeTimeout.current); // REMOVE: fade/resize logic and ResizeObserver
+    //     }; // REMOVE: fade/resize logic and ResizeObserver
+    // }, []); // REMOVE: fade/resize logic and ResizeObserver
 
-    // Also trigger fade/resize on card show/hide (width transition)
-    useEffect(() => {
-        setCanvasOpacity(0);
-        if (fadeTimeout.current) clearTimeout(fadeTimeout.current);
-        fadeTimeout.current = setTimeout(() => {
-            mapRef.current?.resize();
-            setCanvasOpacity(1);
-        }, 350);
-        return () => {
-            if (fadeTimeout.current) clearTimeout(fadeTimeout.current);
-        };
-    }, [showCards]);
+    // Also trigger fade/resize on card show/hide (width transition) // REMOVE: fade/resize logic and ResizeObserver
+    // useEffect(() => { // REMOVE: fade/resize logic and ResizeObserver
+    //     setCanvasOpacity(0); // REMOVE: fade/resize logic and ResizeObserver
+    //     if (fadeTimeout.current) clearTimeout(fadeTimeout.current); // REMOVE: fade/resize logic and ResizeObserver
+    //     fadeTimeout.current = setTimeout(() => { // REMOVE: fade/resize logic and ResizeObserver
+    //         mapRef.current?.resize(); // REMOVE: fade/resize logic and ResizeObserver
+    //         setCanvasOpacity(1); // REMOVE: fade/resize logic and ResizeObserver
+    //     }, 350); // REMOVE: fade/resize logic and ResizeObserver
+    //     return () => { // REMOVE: fade/resize logic and ResizeObserver
+    //         if (fadeTimeout.current) clearTimeout(fadeTimeout.current); // REMOVE: fade/resize logic and ResizeObserver
+    //     }; // REMOVE: fade/resize logic and ResizeObserver
+    // }, [showCards]); // REMOVE: fade/resize logic and ResizeObserver
 
-    // Remove flex layout and resizing logic, use absolute overlay for cards
+    // Remove flex layout and resizing logic, use absolute overlay for cards // REMOVE: fade/resize logic and ResizeObserver
     return (
         <div className="relative w-full h-full">
             {/* Map Area (always full width/height) */}
-            <div ref={containerRef} className="absolute inset-0 w-full h-full" style={{ willChange: "transform", borderRadius: "1.5rem" }}>
+            <div className="absolute inset-0 w-full h-full" style={{ willChange: "transform", borderRadius: "1.5rem" }}>
                 <Map
                     ref={mapRef}
                     initialViewState={{
