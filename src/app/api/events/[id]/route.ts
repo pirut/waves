@@ -1,23 +1,31 @@
-import { NextRequest, NextResponse } from "next/server";
+// Use global Request/Response types
 import { adminDb } from "../../../../firebaseAdmin";
 
 // GET /api/events/[id] - Get event by ID
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-    const doc = await adminDb.collection("events").doc(params.id).get();
-    if (!doc.exists) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json({ id: doc.id, ...doc.data() });
+export async function GET(request: Request) {
+    const url = new URL(request.url);
+    const id = url.pathname.split("/").pop() ?? "";
+    const doc = await adminDb.collection("events").doc(id).get();
+    if (!doc.exists) {
+        return new Response(JSON.stringify({ error: "Not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
+    }
+    return new Response(JSON.stringify({ id: doc.id, ...doc.data() }), { status: 200, headers: { "Content-Type": "application/json" } });
 }
 
 // PUT /api/events/[id] - Update event by ID
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-    const data = await req.json();
-    await adminDb.collection("events").doc(params.id).update(data);
-    const updated = await adminDb.collection("events").doc(params.id).get();
-    return NextResponse.json({ id: updated.id, ...updated.data() });
+export async function PUT(request: Request) {
+    const url = new URL(request.url);
+    const id = url.pathname.split("/").pop() ?? "";
+    const data = await request.json();
+    await adminDb.collection("events").doc(id).update(data);
+    const updated = await adminDb.collection("events").doc(id).get();
+    return new Response(JSON.stringify({ id: updated.id, ...updated.data() }), { status: 200, headers: { "Content-Type": "application/json" } });
 }
 
 // DELETE /api/events/[id] - Delete event by ID
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-    await adminDb.collection("events").doc(params.id).delete();
-    return NextResponse.json({ success: true });
+export async function DELETE(request: Request) {
+    const url = new URL(request.url);
+    const id = url.pathname.split("/").pop() ?? "";
+    await adminDb.collection("events").doc(id).delete();
+    return new Response(JSON.stringify({ success: true }), { status: 200, headers: { "Content-Type": "application/json" } });
 }
