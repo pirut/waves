@@ -1,10 +1,11 @@
 "use client";
 import Map, { Marker, ViewStateChangeEvent } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Style as MapboxStyle } from "mapbox-gl";
 import type { MapRef } from "react-map-gl";
+import { fetchEvents } from "../../api";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_API_KEY;
 
@@ -36,14 +37,10 @@ const pastelMapStyle = {
     },
 };
 
-const eventMarkers = [
-    { id: 1, lat: 25.792, lng: -80.13, color: "#B3DFF2" },
-    { id: 2, lat: 25.789, lng: -80.132, color: "#FFE5D4" },
-    { id: 3, lat: 25.791, lng: -80.128, color: "#F6E8D6" },
-];
-
 export default function MapView() {
     const [zoom, setZoom] = useState(2);
+    const [events, setEvents] = useState<{ id: string; location?: { lat: number; lng: number }; title?: string }[]>([]);
+    const [loading, setLoading] = useState(true);
     // const [fading, setFading] = useState(false); // REMOVE unused fading
 
     const onMove = useCallback((evt: ViewStateChangeEvent) => {
@@ -103,8 +100,8 @@ export default function MapView() {
 
     // Remove flex layout and resizing logic, use absolute overlay for cards // REMOVE: fade/resize logic and ResizeObserver
     // Card slide/fade animation based on zoom
-    const minZoom = 2;
-    const maxZoom = 6;
+    const minZoom = 3;
+    const maxZoom = 5;
     // Clamp progress between 0 (fully visible) and 1 (fully hidden)
     const progress = Math.min(Math.max((zoom - minZoom) / (maxZoom - minZoom), 0), 1);
     // Opacity and slide distance
@@ -126,6 +123,14 @@ export default function MapView() {
         opacity: cardOpacity,
         transform: `translateY(-50%) translateX(${progress * slideDistance}px)`,
     };
+
+    useEffect(() => {
+        setLoading(true);
+        fetchEvents()
+            .then(setEvents)
+            .finally(() => setLoading(false));
+    }, []);
+
     return (
         <div className="relative w-full h-full">
             {/* Map Area (always full width/height) */}
@@ -139,27 +144,32 @@ export default function MapView() {
                         pitch: 0,
                         bearing: 0,
                     }}
-                    style={{ width: "100%", height: "100%", borderRadius: "1.5rem" }}
+                    style={{ width: "100%", height: "100%", borderRadius: "0px" }}
                     mapStyle={pastelMapStyle as MapboxStyle}
                     mapboxAccessToken={MAPBOX_TOKEN}
                     projection={{ name: "globe" }}
                     attributionControl={true}
                     onMove={onMove}
                 >
-                    {eventMarkers.map((marker) => (
-                        <Marker key={marker.id} longitude={marker.lng} latitude={marker.lat} anchor="center">
-                            <div
-                                style={{
-                                    width: 18,
-                                    height: 18,
-                                    background: marker.color,
-                                    borderRadius: "50%",
-                                    border: "2px solid #7F8C8D",
-                                    boxShadow: "0 2px 8px #0002",
-                                }}
-                            />
-                        </Marker>
-                    ))}
+                    {loading
+                        ? null
+                        : events
+                              .filter((e) => e.location && typeof e.location.lat === "number" && typeof e.location.lng === "number")
+                              .map((event) => (
+                                  <Marker key={event.id} longitude={event.location!.lng} latitude={event.location!.lat} anchor="center">
+                                      <div
+                                          style={{
+                                              width: 18,
+                                              height: 18,
+                                              background: "#B3DFF2",
+                                              borderRadius: "50%",
+                                              border: "2px solid #7F8C8D",
+                                              boxShadow: "0 2px 8px #0002",
+                                          }}
+                                          title={event.title}
+                                      />
+                                  </Marker>
+                              ))}
                 </Map>
             </div>
             {/* Left Card Overlay */}

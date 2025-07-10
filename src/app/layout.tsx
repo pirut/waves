@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Metadata } from "next";
 import "./globals.css";
-import { NavigationMenu, NavigationMenuList, NavigationMenuItem } from "@/components/ui/navigation-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
+import Header from "@/components/Header";
 
 export const metadata: Metadata = {
     title: "Make Waves",
@@ -15,16 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <html lang="en">
             <body className="min-h-screen bg-[#FFE5D4] text-[#7F8C8D] font-sans flex flex-col">
                 {/* Nav Bar */}
-                <nav className="sticky top-0 z-30 w-full h-16 flex items-center justify-between px-6 bg-white/80 backdrop-blur-md">
-                    <NavigationMenu className="flex-1">
-                        <NavigationMenuList>
-                            <NavigationMenuItem className="text-xl font-semibold tracking-tight">Make Waves</NavigationMenuItem>
-                        </NavigationMenuList>
-                    </NavigationMenu>
-                    <Avatar className="ml-4">
-                        <AvatarFallback>MW</AvatarFallback>
-                    </Avatar>
-                </nav>
+                <Header />
                 <Separator className="bg-[#F6E8D6]" />
                 {/* Main Content */}
                 <div className="flex-1 h-full min-h-0 flex flex-col">{children}</div>
