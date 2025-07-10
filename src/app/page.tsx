@@ -64,21 +64,21 @@ export default function Home() {
     }, [currentUser, loadingUsers, loadingPosts]);
 
     return (
-        <div className="flex min-h-screen px-4">
+        <div className="flex flex-col min-h-screen px-2 sm:px-4">
             {!currentUser ? (
-                <div className="flex flex-1 items-center justify-center gap-8 w-full">
-                    <Card ref={introCardRef} className="max-w-md w-full bg-white/90 backdrop-blur-md shadow-xl border-none">
-                        <CardContent className="flex flex-col items-center gap-6 p-8">
+                <div className="flex flex-1 flex-col md:flex-row items-center justify-center gap-4 md:gap-8 w-full py-4">
+                    <Card ref={introCardRef} className="max-w-md w-full bg-white/90 backdrop-blur-md shadow-xl border-none mb-4 md:mb-0">
+                        <CardContent className="flex flex-col items-center gap-6 p-6 md:p-8">
                             <div className="flex flex-col items-center gap-2">
-                                <h1 className="text-5xl font-bold text-[#7F8C8D] tracking-tight">Make Waves</h1>
+                                <h1 className="text-5xl font-bold text-[#7F8C8D] tracking-tight text-center">Make Waves</h1>
                                 <p className="text-lg text-[#7F8C8D] max-w-md text-center">
                                     Discover, attend, and share real-world events focused on doing good. Every post is rooted in real-life impact.
                                 </p>
                             </div>
-                            <Button className="w-full max-w-xs text-lg py-6" onClick={() => router.push("/map")} variant="default" size="lg">
+                            <Button className="w-full max-w-xs text-lg py-4 md:py-6" onClick={() => router.push("/map")} variant="default" size="lg">
                                 Find Events Near You
                             </Button>
-                            <Button className="w-full max-w-xs flex items-center gap-2 text-lg py-6" variant="secondary" size="lg">
+                            <Button className="w-full max-w-xs flex items-center gap-2 text-lg py-4 md:py-6" variant="secondary" size="lg">
                                 <svg width="20" height="20" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <g clipPath="url(#clip0_17_40)">
                                         <path
@@ -112,20 +112,20 @@ export default function Home() {
                         className="max-w-md w-full bg-white/90 backdrop-blur-md shadow-xl border-none flex flex-col"
                         style={hasMounted && introCardHeight ? { height: introCardHeight } : {}}
                     >
-                        <CardContent className="flex flex-col justify-center h-full p-8">
+                        <CardContent className="flex flex-col justify-center h-full p-6 md:p-8">
                             <AuthWidget />
                         </CardContent>
                     </Card>
                 </div>
             ) : (
-                <div className="flex flex-1 flex-col gap-8 w-full px-4 py-8 mx-auto max-w-5xl">
+                <div className="flex flex-1 flex-col gap-8 w-full px-2 sm:px-4 py-4 sm:py-8 mx-auto max-w-5xl">
                     {/* User Feed */}
                     <div className="w-full">
                         <h2 className="text-2xl font-bold mb-2 text-[#7F8C8D]">Users</h2>
                         {loadingUsers ? (
                             <div>Loading users...</div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {users.map((user) => (
                                     <Card key={user.id} className="flex items-center gap-4 p-4">
                                         {user.profilePhotoUrl && (
@@ -149,7 +149,7 @@ export default function Home() {
                         {loadingPosts ? (
                             <div>Loading posts...</div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {posts.map((post) => (
                                     <Card key={post.id} className="p-4">
                                         {post.mediaUrl && (
@@ -158,7 +158,7 @@ export default function Home() {
                                                 alt={post.caption || ""}
                                                 width={400}
                                                 height={160}
-                                                className="w-full h-40 object-cover rounded mb-2"
+                                                className="w-full h-32 sm:h-40 object-cover rounded mb-2"
                                             />
                                         )}
                                         <div className="font-semibold mb-1">{post.caption}</div>

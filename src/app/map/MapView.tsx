@@ -35,7 +35,7 @@ export default function MapView() {
     }, []);
 
     return (
-        <div className="relative w-full h-full">
+        <div className="w-full h-full p-0 m-0">
             {/* Map Area (always full width/height) */}
             <div className="absolute inset-0 w-full h-full" style={{ willChange: "transform", borderRadius: "1.5rem" }}>
                 <Map
@@ -94,9 +94,9 @@ export default function MapView() {
                 </Map>
             </div>
             {/* Left Card Overlay */}
-            <div className="absolute left-0 top-8" style={overlayStyle}>
-                <Card className="m-8 bg-white/90 backdrop-blur-md shadow-xl border-none flex flex-col justify-center">
-                    <CardContent className="p-6">
+            <div className="absolute left-0 top-2 sm:top-8 w-full sm:w-auto flex flex-col sm:block items-center" style={overlayStyle}>
+                <Card className="m-2 sm:m-8 bg-white/90 backdrop-blur-md shadow-xl border-none flex flex-col justify-center w-full sm:w-auto max-w-xs sm:max-w-md">
+                    <CardContent className="p-4 sm:p-6">
                         <h3 className="text-xl font-bold mb-2 text-[#7F8C8D]">Welcome to Make Waves</h3>
                         <p className="text-[#7F8C8D] mb-2">
                             Zoom in to explore events around the world. This info card will hide as you get closer to the action!
@@ -109,9 +109,9 @@ export default function MapView() {
                 </Card>
             </div>
             {/* Right Card Overlay */}
-            <div className="absolute right-0 top-8" style={overlayStyle}>
-                <Card className="m-8 bg-white/90 backdrop-blur-md shadow-xl border-none flex flex-col justify-center">
-                    <CardContent className="p-6">
+            <div className="absolute right-0 top-32 sm:top-8 w-full sm:w-auto flex flex-col sm:block items-center" style={overlayStyle}>
+                <Card className="m-2 sm:m-8 bg-white/90 backdrop-blur-md shadow-xl border-none flex flex-col justify-center w-full sm:w-auto max-w-xs sm:max-w-md">
+                    <CardContent className="p-4 sm:p-6">
                         <h3 className="text-xl font-bold mb-2 text-[#7F8C8D]">How to Use</h3>
                         <ul className="text-sm text-[#7F8C8D] list-disc pl-4">
                             <li>Zoom in to hide these cards and focus on the map.</li>

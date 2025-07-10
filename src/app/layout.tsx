@@ -1,8 +1,7 @@
- 
 import type { Metadata } from "next";
 import "./globals.css";
 import { Separator } from "@/components/ui/separator";
-import { Card, CardContent } from "@/components/ui/card";
+import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 
 export const metadata: Metadata = {
@@ -18,14 +17,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <Header />
                 <Separator className="bg-[#F6E8D6]" />
                 {/* Main Content */}
-                <div className="flex-1 h-full min-h-0 flex flex-col">{children}</div>
+                <div className="flex-1 h-full min-h-0 flex flex-col px-2 sm:px-4 md:px-8 pt-2 pb-16 md:pb-0">{children}</div>
                 <Separator className="bg-[#F6E8D6]" />
                 {/* Footer */}
-                <Card className="fixed bottom-0 left-0 z-20 w-full h-12 rounded-none shadow-none bg-white/80 backdrop-blur-md border-none">
-                    <CardContent className="flex items-center justify-center h-full p-0 text-xs text-[#7F8C8D]">
-                        &copy; {new Date().getFullYear()} Make Waves
-                    </CardContent>
-                </Card>
+                <Footer />
             </body>
         </html>
     );
