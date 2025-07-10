@@ -5,6 +5,7 @@ import { auth } from "../firebase";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import Image from "next/image";
 
 export default function AuthWidget() {
     const [email, setEmail] = useState("");
@@ -19,14 +20,12 @@ export default function AuthWidget() {
         setError("");
         setLoading(true);
         try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             if (mode === "login") {
                 await signInWithEmailAndPassword(auth, email, password);
             } else {
                 await createUserWithEmailAndPassword(auth, email, password);
             }
         } catch (err: any) {
-            // eslint-disable-line @typescript-eslint/no-explicit-any
             setError((err as Error).message);
         } finally {
             setLoading(false);
@@ -37,10 +36,8 @@ export default function AuthWidget() {
         setError("");
         setLoading(true);
         try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             await signInWithPopup(auth, new GoogleAuthProvider());
         } catch (err: any) {
-            // eslint-disable-line @typescript-eslint/no-explicit-any
             setError((err as Error).message);
         } finally {
             setLoading(false);
@@ -56,7 +53,15 @@ export default function AuthWidget() {
             <Card className="w-full max-w-md my-4">
                 <CardContent className="flex flex-col items-center gap-4 p-6">
                     <div className="flex items-center gap-2">
-                        {user.photoURL && <img src={user.photoURL} alt={user.displayName || user.email || "User"} className="w-10 h-10 rounded-full" />}
+                        {user.photoURL && (
+                            <Image
+                                src={user.photoURL}
+                                alt={user.displayName || user.email || "User"}
+                                width={40}
+                                height={40}
+                                className="w-10 h-10 rounded-full"
+                            />
+                        )}
                         <span>{user.displayName || user.email}</span>
                     </div>
                     <Button onClick={handleSignOut} variant="secondary">

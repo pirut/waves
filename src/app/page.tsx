@@ -10,6 +10,7 @@ import AuthWidget from "@/components/AuthWidget";
 import { auth, db } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import Image from "next/image";
 
 export default function Home() {
     const router = useRouter();
@@ -127,7 +128,15 @@ export default function Home() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {users.map((user) => (
                                     <Card key={user.id} className="flex items-center gap-4 p-4">
-                                        {user.profilePhotoUrl && <img src={user.profilePhotoUrl} alt={user.name} className="w-10 h-10 rounded-full" />}
+                                        {user.profilePhotoUrl && (
+                                            <Image
+                                                src={user.profilePhotoUrl || ""}
+                                                alt={user.name || ""}
+                                                width={40}
+                                                height={40}
+                                                className="w-10 h-10 rounded-full"
+                                            />
+                                        )}
                                         <span>{user.name || user.id}</span>
                                     </Card>
                                 ))}
@@ -143,7 +152,15 @@ export default function Home() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {posts.map((post) => (
                                     <Card key={post.id} className="p-4">
-                                        {post.mediaUrl && <img src={post.mediaUrl} alt={post.caption} className="w-full h-40 object-cover rounded mb-2" />}
+                                        {post.mediaUrl && (
+                                            <Image
+                                                src={post.mediaUrl || ""}
+                                                alt={post.caption || ""}
+                                                width={400}
+                                                height={160}
+                                                className="w-full h-40 object-cover rounded mb-2"
+                                            />
+                                        )}
                                         <div className="font-semibold mb-1">{post.caption}</div>
                                         <div className="text-xs text-[#7F8C8D]">
                                             User: {post.userId} | Event: {post.eventId}

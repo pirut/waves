@@ -12,7 +12,7 @@ export async function fetchEvent(id: string) {
     return res.json();
 }
 
-export async function createEvent(data: any) {
+export async function createEvent(data: unknown) {
     const res = await fetch("/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -22,7 +22,7 @@ export async function createEvent(data: any) {
     return res.json();
 }
 
-export async function updateEvent(id: string, data: any) {
+export async function updateEvent(id: string, data: unknown) {
     const res = await fetch(`/api/events/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -51,7 +51,7 @@ export async function fetchUser(id: string) {
     return res.json();
 }
 
-export async function createUser(data: any) {
+export async function createUser(data: unknown) {
     const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -61,7 +61,7 @@ export async function createUser(data: any) {
     return res.json();
 }
 
-export async function updateUser(id: string, data: any) {
+export async function updateUser(id: string, data: unknown) {
     const res = await fetch(`/api/users/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -90,7 +90,7 @@ export async function fetchPost(id: string) {
     return res.json();
 }
 
-export async function createPost(data: any) {
+export async function createPost(data: unknown) {
     const res = await fetch("/api/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -100,7 +100,7 @@ export async function createPost(data: any) {
     return res.json();
 }
 
-export async function updatePost(id: string, data: any) {
+export async function updatePost(id: string, data: unknown) {
     const res = await fetch(`/api/posts/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

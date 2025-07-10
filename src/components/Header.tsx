@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { auth } from "../firebase";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Header() {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -28,7 +29,13 @@ export default function Header() {
                 {currentUser ? (
                     <>
                         {currentUser.photoURL && (
-                            <img src={currentUser.photoURL} alt={currentUser.displayName || currentUser.email || "User"} className="w-8 h-8 rounded-full" />
+                            <Image
+                                src={currentUser.photoURL}
+                                alt={currentUser.displayName || currentUser.email || "User"}
+                                width={32}
+                                height={32}
+                                className="w-8 h-8 rounded-full"
+                            />
                         )}
                         <Button variant="secondary" size="sm" onClick={() => signOut(auth)}>
                             Sign Out
