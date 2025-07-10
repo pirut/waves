@@ -124,6 +124,21 @@ export default function Home() {
                         <h2 className="text-2xl font-bold mb-2 text-[#7F8C8D]">Users</h2>
                         {loadingUsers ? (
                             <div>Loading users...</div>
+                        ) : users.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 opacity-80">
+                                <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="60" cy="60" r="56" fill="#F6E8D6" stroke="#E1CFC2" strokeWidth="4" />
+                                    <ellipse cx="60" cy="80" rx="28" ry="8" fill="#E1CFC2" />
+                                    <path d="M40 60 Q60 80 80 60" stroke="#7F8C8D" strokeWidth="3" fill="none" />
+                                    <circle cx="50" cy="54" r="4" fill="#7F8C8D" />
+                                    <circle cx="70" cy="54" r="4" fill="#7F8C8D" />
+                                </svg>
+                                <div className="mt-6 text-lg text-[#7F8C8D] text-center">
+                                    No users yet.
+                                    <br />
+                                    Be the first to join Make Waves!
+                                </div>
+                            </div>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {users.map((user) => (
@@ -148,6 +163,21 @@ export default function Home() {
                         <h2 className="text-2xl font-bold mb-2 text-[#7F8C8D]">Posts</h2>
                         {loadingPosts ? (
                             <div>Loading posts...</div>
+                        ) : posts.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 opacity-80">
+                                <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="60" cy="60" r="56" fill="#D4E9FF" stroke="#B6D0E2" strokeWidth="4" />
+                                    <ellipse cx="60" cy="80" rx="28" ry="8" fill="#B6D0E2" />
+                                    <path d="M45 65 Q60 90 75 65" stroke="#7F8C8D" strokeWidth="3" fill="none" />
+                                    <rect x="48" y="48" width="24" height="16" rx="3" fill="#7F8C8D" />
+                                    <rect x="54" y="54" width="12" height="4" rx="2" fill="#B6D0E2" />
+                                </svg>
+                                <div className="mt-6 text-lg text-[#7F8C8D] text-center">
+                                    No posts yet.
+                                    <br />
+                                    Be the first to make a wave!
+                                </div>
+                            </div>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {posts.map((post) => (

@@ -24,7 +24,7 @@ export default function Header() {
         return () => unsub();
     }, []);
     return (
-        <nav className="fixed top-0 z-30 w-full h-16 flex flex-col sm:flex-row items-center justify-between px-2 sm:px-6 bg-white/80 backdrop-blur-md gap-2 sm:gap-0">
+        <nav className="relative z-30 w-full h-16 flex flex-col sm:flex-row items-center justify-between px-4 sm:px-8 py-2 bg-white/80 backdrop-blur-md gap-2 sm:gap-0">
             <NavigationMenu className="flex-1 w-full sm:w-auto">
                 <NavigationMenuList>
                     <NavigationMenuItem className="text-xl font-semibold tracking-tight">
@@ -36,6 +36,11 @@ export default function Header() {
             </NavigationMenu>
             {/* Auth UI in header */}
             <div className="flex items-center gap-2 sm:gap-4 ml-0 sm:ml-4 w-full sm:w-auto justify-end">
+                <Link href="/map">
+                    <Button variant="outline" size="sm" className="mr-2">
+                        Find Events
+                    </Button>
+                </Link>
                 {currentUser ? (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -53,16 +58,17 @@ export default function Header() {
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-56" align="end">
-                            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                            <DropdownMenuLabel asChild>
+                                <Link href="/account" className="hover:underline cursor-pointer">
+                                    My Account
+                                </Link>
+                            </DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem asChild>
                                 <Link href="/profile">Profile</Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                                 <Link href="/events">Upcoming Events</Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                                <Link href="/posts">Posts</Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => signOut(auth)}>Sign Out</DropdownMenuItem>
