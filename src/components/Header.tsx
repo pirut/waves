@@ -24,7 +24,7 @@ export default function Header() {
         return () => unsub();
     }, []);
     return (
-        <nav className="relative z-30 w-full h-16 flex flex-col sm:flex-row items-center justify-between px-4 sm:px-8 py-2 bg-white/80 backdrop-blur-md gap-2 sm:gap-0">
+        <nav className="relative z-30 w-full h-16 flex flex-col sm:flex-row items-center justify-between px-4 sm:px-8 py-2 bg-background/80 backdrop-blur-md gap-2 sm:gap-0 text-foreground">
             <NavigationMenu className="flex-1 w-full sm:w-auto">
                 <NavigationMenuList>
                     <NavigationMenuItem className="text-xl font-semibold tracking-tight">

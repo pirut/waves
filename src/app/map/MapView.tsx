@@ -70,18 +70,7 @@ export default function MapView() {
                                         });
                                     }}
                                 >
-                                    <div
-                                        style={{
-                                            width: 18,
-                                            height: 18,
-                                            background: "#B3DFF2",
-                                            borderRadius: "50%",
-                                            border: "2px solid #7F8C8D",
-                                            boxShadow: "0 2px 8px #0002",
-                                            cursor: "pointer",
-                                        }}
-                                        title={event.title}
-                                    />
+                                    <div className="w-4 h-4 rounded-full border-2 bg-primary border-primary shadow" title={event.title} />
                                 </Marker>
                             ))}
                     {popupInfo && (
@@ -95,13 +84,13 @@ export default function MapView() {
             </div>
             {/* Left Card Overlay */}
             <div className="absolute left-0 top-2 sm:top-8 w-full sm:w-auto flex flex-col sm:block items-center" style={overlayStyle}>
-                <Card className="m-2 sm:m-8 bg-white/90 backdrop-blur-md shadow-xl border-none flex flex-col justify-center w-full sm:w-auto max-w-xs sm:max-w-md">
+                <Card className="m-2 sm:m-8 bg-card backdrop-blur-md shadow-xl border-none flex flex-col justify-center w-full sm:w-auto max-w-xs sm:max-w-md">
                     <CardContent className="p-4 sm:p-6">
-                        <h3 className="text-xl font-bold mb-2 text-[#7F8C8D]">Welcome to Make Waves</h3>
-                        <p className="text-[#7F8C8D] mb-2">
+                        <h3 className="text-xl font-bold mb-2 text-foreground">Welcome to Make Waves</h3>
+                        <p className="text-muted-foreground mb-2">
                             Zoom in to explore events around the world. This info card will hide as you get closer to the action!
                         </p>
-                        <ul className="text-sm text-[#7F8C8D]">
+                        <ul className="text-sm text-muted-foreground">
                             <li>🌊 3 events near Miami Beach</li>
                             <li>🗺️ Drag, zoom, and explore</li>
                         </ul>
@@ -110,10 +99,10 @@ export default function MapView() {
             </div>
             {/* Right Card Overlay */}
             <div className="absolute right-0 top-32 sm:top-8 w-full sm:w-auto flex flex-col sm:block items-center" style={overlayStyle}>
-                <Card className="m-2 sm:m-8 bg-white/90 backdrop-blur-md shadow-xl border-none flex flex-col justify-center w-full sm:w-auto max-w-xs sm:max-w-md">
+                <Card className="m-2 sm:m-8 bg-card backdrop-blur-md shadow-xl border-none flex flex-col justify-center w-full sm:w-auto max-w-xs sm:max-w-md">
                     <CardContent className="p-4 sm:p-6">
-                        <h3 className="text-xl font-bold mb-2 text-[#7F8C8D]">How to Use</h3>
-                        <ul className="text-sm text-[#7F8C8D] list-disc pl-4">
+                        <h3 className="text-xl font-bold mb-2 text-foreground">How to Use</h3>
+                        <ul className="text-sm text-muted-foreground list-disc pl-4">
                             <li>Zoom in to hide these cards and focus on the map.</li>
                             <li>Click markers to see event details.</li>
                             <li>Use the FAB to create a new event (future feature).</li>
