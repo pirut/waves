@@ -23,6 +23,7 @@ const mapOptions = {
     mapTypeControl: false,
     fullscreenControl: false,
     gestureHandling: "greedy", // Allow single-finger pan/zoom on mobile
+    isFractionalZoomEnabled: true, // Enable continuous/smooth zooming
 };
 
 // Category color mapping
