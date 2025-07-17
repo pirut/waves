@@ -38,9 +38,12 @@ const categoryColorMap: { [key: string]: string } = {
     "Senior Support": "#8b5cf6", // Violet
 };
 
-// Pre-generate marker icons for each category to avoid regenerating on each render
-const categoryIcons = Object.entries(categoryColorMap).reduce((acc, [category, color]) => {
-    acc[category] = {
+// Helper function to create marker icon (only call after Google Maps API is loaded)
+const createMarkerIcon = (color: string) => {
+    if (typeof google === "undefined") {
+        return undefined;
+    }
+    return {
         url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
             <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="12" cy="12" r="8" fill="${color}" stroke="#ffffff" stroke-width="3"/>
@@ -49,18 +52,6 @@ const categoryIcons = Object.entries(categoryColorMap).reduce((acc, [category, c
         scaledSize: new google.maps.Size(24, 24),
         anchor: new google.maps.Point(12, 12),
     };
-    return acc;
-}, {} as Record<string, google.maps.Icon>);
-
-// Default icon for categories not in the map
-const defaultIcon = {
-    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-        <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="8" fill="#FFE5D4" stroke="#ffffff" stroke-width="3"/>
-        </svg>
-    `)}`,
-    scaledSize: new google.maps.Size(24, 24),
-    anchor: new google.maps.Point(12, 12),
 };
 
 const getCategoryMarkerColor = (category: string) => {
@@ -161,7 +152,7 @@ export default function MapView() {
                                         description: event.description,
                                     });
                                 }}
-                                icon={event.category && categoryIcons[event.category] ? categoryIcons[event.category] : defaultIcon}
+                                icon={createMarkerIcon(getCategoryMarkerColor(event.category || ""))}
                             />
                         ))}
 
