@@ -22,6 +22,7 @@ const mapOptions = {
     streetViewControl: false,
     mapTypeControl: false,
     fullscreenControl: false,
+    gestureHandling: "greedy", // Allow single-finger pan/zoom on mobile
 };
 
 // Category color mapping

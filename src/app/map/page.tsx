@@ -2,5 +2,9 @@
 import MapboxClient from "./MapboxClient";
 
 export default function MapPage() {
-    return <MapboxClient />;
+    return (
+        <div className="fixed inset-0 top-16 bottom-12 z-10">
+            <MapboxClient />
+        </div>
+    );
 }
