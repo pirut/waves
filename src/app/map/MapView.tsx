@@ -16,15 +16,22 @@ const center = {
     lng: -80.13,
 };
 
-const mapOptions = {
+// Create map options dynamically after Google Maps API loads
+const getMapOptions = () => ({
     disableDefaultUI: false,
     zoomControl: true,
     streetViewControl: false,
     mapTypeControl: false,
     fullscreenControl: false,
     gestureHandling: "greedy", // Allow single-finger pan/zoom on mobile
-    isFractionalZoomEnabled: true, // Enable continuous/smooth zooming
-};
+    // Balanced zoom: allow fractional but with better performance
+    isFractionalZoomEnabled: false, // Disable for better performance
+    // Optimize rendering performance
+    optimized: true,
+    // Faster animations
+    clickableIcons: true,
+    keyboardShortcuts: true,
+});
 
 // Category color mapping
 const categoryColorMap: { [key: string]: string } = {
@@ -135,7 +142,7 @@ export default function MapView() {
                     onLoad={onLoad}
                     onUnmount={onUnmount}
                     onZoomChanged={onZoomChanged}
-                    options={mapOptions}
+                    options={getMapOptions()}
                 >
                     {!loading &&
                         filteredEvents.map((event) => (
