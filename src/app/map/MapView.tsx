@@ -17,21 +17,30 @@ const center = {
 };
 
 // Create map options dynamically after Google Maps API loads
-const getMapOptions = () => ({
-    disableDefaultUI: false,
-    zoomControl: true,
-    streetViewControl: false,
-    mapTypeControl: false,
-    fullscreenControl: false,
-    gestureHandling: "greedy", // Allow single-finger pan/zoom on mobile
-    // Balanced zoom: allow fractional but with better performance
-    isFractionalZoomEnabled: false, // Disable for better performance
-    // Optimize rendering performance
-    optimized: true,
-    // Faster animations
-    clickableIcons: true,
-    keyboardShortcuts: true,
-});
+const getMapOptions = () => {
+    // Detect if we're on mobile for better zoom experience
+    const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
+
+    return {
+        disableDefaultUI: false,
+        zoomControl: true,
+        streetViewControl: false,
+        mapTypeControl: false,
+        fullscreenControl: false,
+        gestureHandling: "greedy", // Allow single-finger pan/zoom on mobile
+        // Enable fractional zoom on mobile for smoother pinch-to-zoom
+        isFractionalZoomEnabled: isMobile,
+        // Optimize rendering performance
+        optimized: true,
+        // Mobile-specific optimizations
+        clickableIcons: true,
+        keyboardShortcuts: !isMobile, // Disable keyboard shortcuts on mobile
+        // Faster zoom animations
+        zoomControlOptions: {
+            style: isMobile ? 1 : 0, // Smaller zoom controls on mobile
+        },
+    };
+};
 
 // Category color mapping
 const categoryColorMap: { [key: string]: string } = {
