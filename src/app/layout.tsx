@@ -8,19 +8,25 @@ import { ThemeProvider } from "@/components/theme-provider";
 export const metadata: Metadata = {
     title: "Make Waves",
     description: "Map-centric social app for real-world good.",
+    viewport: {
+        width: "device-width",
+        initialScale: 1,
+        maximumScale: 3,
+        userScalable: true,
+    },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="en" suppressHydrationWarning>
-            <body className="min-h-screen flex flex-col font-sans bg-background text-foreground">
+            <body className="min-h-screen flex flex-col font-sans bg-background text-foreground overflow-x-hidden">
                 <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
                     {/* Nav Bar */}
                     <Header />
-                    <Separator className="bg-[#F6E8D6]" />
+                    <Separator className="bg-[#F6E8D6] hidden sm:block" />
                     {/* Main Content */}
-                    <main className="flex-1 flex flex-col px-2 sm:px-4 md:px-8 pt-2">{children}</main>
-                    <Separator className="bg-[#F6E8D6]" />
+                    <main className="flex-1 flex flex-col">{children}</main>
+                    <Separator className="bg-[#F6E8D6] hidden sm:block" />
                     {/* Footer */}
                     <Footer />
                 </ThemeProvider>

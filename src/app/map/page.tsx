@@ -3,7 +3,7 @@ import MapboxClient from "./MapboxClient";
 
 export default function MapPage() {
     return (
-        <div className="fixed inset-0 top-16 bottom-12 z-10">
+        <div className="flex-1 relative w-full h-full min-h-[calc(100vh-6rem)] sm:min-h-[calc(100vh-7rem)]">
             <MapboxClient />
         </div>
     );

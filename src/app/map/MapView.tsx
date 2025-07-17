@@ -16,25 +16,26 @@ const center = {
     lng: -80.13,
 };
 
-// Create map options dynamically after Google Maps API loads
-const getMapOptions = () => {
-    // Detect if we're on mobile for better zoom experience
-    const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
-
+// Simple map options - let Google Maps handle mobile optimization
+const getMapOptions = (): google.maps.MapOptions => {
     return {
         disableDefaultUI: false,
         zoomControl: true,
         streetViewControl: false,
         mapTypeControl: false,
         fullscreenControl: false,
-        gestureHandling: "greedy", // Allow single-finger pan/zoom on mobile
-        // Enable fractional zoom on mobile for smoother pinch-to-zoom
-        isFractionalZoomEnabled: isMobile,
-        // Optimize rendering performance
-        optimized: true,
-        // Mobile-specific optimizations
+        // Always use greedy - this gives immediate touch response
+        gestureHandling: "greedy",
+        // Enable fractional zoom for smoother experience
+        isFractionalZoomEnabled: true,
+        // Basic settings
         clickableIcons: true,
-        keyboardShortcuts: !isMobile, // Disable keyboard shortcuts on mobile
+        keyboardShortcuts: true,
+        minZoom: 2,
+        maxZoom: 20,
+        tilt: 0,
+        rotateControl: false,
+        disableDoubleClickZoom: false,
     };
 };
 
@@ -89,15 +90,6 @@ export default function MapView() {
 
     // Overlay fade threshold
     const overlayVisible = zoom < 8;
-    const pointerEvents: "auto" | "none" = overlayVisible ? "auto" : "none";
-    const overlayStyle: React.CSSProperties = {
-        width: "22rem",
-        maxWidth: "90vw",
-        zIndex: 10,
-        transition: "opacity 0.5s",
-        opacity: overlayVisible ? 1 : 0,
-        pointerEvents,
-    };
 
     const loadEvents = useCallback(() => {
         setLoading(true);
@@ -108,6 +100,20 @@ export default function MapView() {
 
     const onLoad = useCallback((map: google.maps.Map) => {
         setMap(map);
+
+        // Mobile touch optimization - let Google Maps handle everything
+        const mapDiv = map.getDiv();
+        if (mapDiv) {
+            // Remove any conflicting touch-action styles
+            mapDiv.style.touchAction = "";
+
+            // Ensure the map container has proper styling for mobile
+            const container = mapDiv.parentElement;
+            if (container) {
+                container.style.touchAction = "";
+                container.style.overflow = "hidden";
+            }
+        }
     }, []);
 
     const onUnmount = useCallback(() => {
@@ -125,10 +131,12 @@ export default function MapView() {
         loadEvents();
     }, [loadEvents]);
 
-    // Load Google Maps API once
+    // Load Google Maps API once with latest version
     const { isLoaded } = useJsApiLoader({
         id: "google-map-script",
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+        version: "weekly", // Use the latest weekly release
+        libraries: ["places"], // Load additional libraries if needed
     });
 
     // Memoize filtered events to prevent unnecessary re-renders
@@ -137,97 +145,106 @@ export default function MapView() {
     }, [events]);
 
     return (
-        <div className="w-full h-full p-0 m-0">
+        <div className="w-full h-full relative overflow-hidden">
             {/* Google Map */}
             {isLoaded ? (
-                <GoogleMap
-                    mapContainerStyle={mapContainerStyle}
-                    center={center}
-                    zoom={zoom}
-                    onLoad={onLoad}
-                    onUnmount={onUnmount}
-                    onZoomChanged={onZoomChanged}
-                    options={getMapOptions()}
-                >
-                    {!loading &&
-                        filteredEvents.map((event) => (
-                            <Marker
-                                key={event.id}
-                                position={{
-                                    lat: event.location!.lat,
-                                    lng: event.location!.lng,
-                                }}
-                                onClick={() => {
-                                    setSelectedEvent({
-                                        id: event.id,
-                                        location: event.location!,
-                                        title: event.title,
-                                        category: event.category,
-                                        description: event.description,
-                                    });
-                                }}
-                                icon={createMarkerIcon(getCategoryMarkerColor(event.category || ""))}
-                            />
-                        ))}
+                <div className="w-full h-full">
+                    <GoogleMap
+                        mapContainerStyle={mapContainerStyle}
+                        center={center}
+                        zoom={zoom}
+                        onLoad={onLoad}
+                        onUnmount={onUnmount}
+                        onZoomChanged={onZoomChanged}
+                        options={getMapOptions()}
+                    >
+                        {!loading &&
+                            filteredEvents.map((event) => (
+                                <Marker
+                                    key={event.id}
+                                    position={{
+                                        lat: event.location!.lat,
+                                        lng: event.location!.lng,
+                                    }}
+                                    onClick={() => {
+                                        setSelectedEvent({
+                                            id: event.id,
+                                            location: event.location!,
+                                            title: event.title,
+                                            category: event.category,
+                                            description: event.description,
+                                        });
+                                    }}
+                                    icon={createMarkerIcon(getCategoryMarkerColor(event.category || ""))}
+                                />
+                            ))}
 
-                    {selectedEvent && (
-                        <InfoWindow position={selectedEvent.location} onCloseClick={() => setSelectedEvent(null)}>
-                            <div className="p-2 max-w-xs">
-                                <h3 className="font-semibold text-sm mb-1">{selectedEvent.title}</h3>
-                                {selectedEvent.category && (
-                                    <p className="text-xs text-gray-600 mb-2">
-                                        <span
-                                            className="inline-block w-2 h-2 rounded-full mr-1"
-                                            style={{ backgroundColor: getCategoryMarkerColor(selectedEvent.category) }}
-                                        />
-                                        {selectedEvent.category}
-                                    </p>
-                                )}
-                                {selectedEvent.description && <p className="text-xs text-gray-700 mb-2 line-clamp-2">{selectedEvent.description}</p>}
-                                <button
-                                    onClick={() => window.open(`/events/${selectedEvent.id}`, "_blank")}
-                                    className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition-colors"
-                                >
-                                    View Details
-                                </button>
-                            </div>
-                        </InfoWindow>
-                    )}
-                </GoogleMap>
+                        {selectedEvent && (
+                            <InfoWindow position={selectedEvent.location} onCloseClick={() => setSelectedEvent(null)}>
+                                <div className="p-2 max-w-xs">
+                                    <h3 className="font-semibold text-sm mb-1">{selectedEvent.title}</h3>
+                                    {selectedEvent.category && (
+                                        <p className="text-xs text-gray-600 mb-2">
+                                            <span
+                                                className="inline-block w-2 h-2 rounded-full mr-1"
+                                                style={{ backgroundColor: getCategoryMarkerColor(selectedEvent.category) }}
+                                            />
+                                            {selectedEvent.category}
+                                        </p>
+                                    )}
+                                    {selectedEvent.description && <p className="text-xs text-gray-700 mb-2 line-clamp-2">{selectedEvent.description}</p>}
+                                    <button
+                                        onClick={() => window.open(`/events/${selectedEvent.id}`, "_blank")}
+                                        className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition-colors"
+                                    >
+                                        View Details
+                                    </button>
+                                </div>
+                            </InfoWindow>
+                        )}
+                    </GoogleMap>
+                </div>
             ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                <div className="w-full h-full flex items-center justify-center bg-muted">
                     <div className="text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                        <p className="text-gray-600">Loading map...</p>
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                        <p className="text-muted-foreground">Loading map...</p>
                     </div>
                 </div>
             )}
-            {/* Left Card Overlay */}
-            <div className="absolute left-0 top-2 sm:top-8 w-full sm:w-auto flex flex-col sm:block items-center" style={overlayStyle}>
-                <Card className="m-2 sm:m-8 backdrop-blur-md shadow-xl border-none flex flex-col justify-center w-full sm:w-auto max-w-xs sm:max-w-md">
-                    <CardContent className="p-4 sm:p-6">
-                        <h3 className="section-title mb-2">Welcome to Make Waves</h3>
-                        <p className="subtitle mb-2">Zoom in to explore events around the world. This info card will hide as you get closer to the action!</p>
-                        <ul className="text-sm subtitle">
-                            <li>🌊 3 events near Miami Beach</li>
-                            <li>🗺️ Drag, zoom, and explore</li>
-                        </ul>
-                    </CardContent>
-                </Card>
-            </div>
-            {/* Right Card Overlay */}
-            <div className="absolute right-0 top-32 sm:top-8 w-full sm:w-auto flex flex-col sm:block items-center" style={overlayStyle}>
-                <Card className="m-2 sm:m-8 backdrop-blur-md shadow-xl border-none flex flex-col justify-center w-full sm:w-auto max-w-xs sm:max-w-md">
-                    <CardContent className="p-4 sm:p-6">
-                        <h3 className="section-title mb-2">How to Use</h3>
-                        <ul className="text-sm subtitle list-disc pl-4">
-                            <li>Zoom in to hide these cards and focus on the map.</li>
-                            <li>Click markers to see event details.</li>
-                            <li>Use the FAB to create a new event (future feature).</li>
-                        </ul>
-                    </CardContent>
-                </Card>
-            </div>
+
+            {/* Mobile-optimized overlays */}
+            {overlayVisible && (
+                <>
+                    {/* Welcome Card - Mobile optimized */}
+                    <div className="absolute top-2 left-2 right-2 sm:top-4 sm:left-4 sm:right-auto sm:w-80 z-20 pointer-events-auto">
+                        <Card className="backdrop-blur-md bg-card/95 shadow-lg border border-border/50">
+                            <CardContent className="p-3 sm:p-4">
+                                <h3 className="section-title mb-2 text-sm sm:text-base">Welcome to Make Waves</h3>
+                                <p className="subtitle mb-2 text-xs sm:text-sm">Zoom in to explore events around the world!</p>
+                                <ul className="text-xs subtitle space-y-1">
+                                    <li>🌊 3 events near Miami Beach</li>
+                                    <li>🗺️ Drag, zoom, and explore</li>
+                                </ul>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* How to Use Card - Mobile optimized */}
+                    <div className="absolute top-32 left-2 right-2 sm:top-4 sm:right-4 sm:left-auto sm:w-80 z-20 pointer-events-auto">
+                        <Card className="backdrop-blur-md bg-card/95 shadow-lg border border-border/50">
+                            <CardContent className="p-3 sm:p-4">
+                                <h3 className="section-title mb-2 text-sm sm:text-base">How to Use</h3>
+                                <ul className="text-xs subtitle space-y-1 list-disc pl-4">
+                                    <li>Zoom in to hide these cards</li>
+                                    <li>Tap markers for event details</li>
+                                    <li>Use + button to create events</li>
+                                </ul>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </>
+            )}
 
             {/* Create Event FAB */}
             <CreateEventModal onEventCreated={loadEvents} />

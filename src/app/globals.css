@@ -230,6 +230,58 @@ body {
     font-size: 0.875rem;
 }
 
+/* Google Maps mobile optimizations - let Google handle touch events */
+.gm-style {
+    /* Don't override touch-action - let Google Maps handle it natively */
+}
+
+/* Prevent iOS Safari bounce effect and enable smooth scrolling */
+html,
+body {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Map container optimizations */
+.map-container {
+    position: relative;
+    overflow: hidden;
+    /* DO NOT set touch-action - let Google Maps handle it */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* Optimize map rendering on mobile */
+@media (max-width: 768px) {
+    .gm-style {
+        /* Better performance on mobile */
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        will-change: transform;
+        /* Disable text selection on mobile */
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        /* Prevent callout on iOS */
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Ensure map controls are touch-friendly */
+    .gm-style .gm-style-cc {
+        touch-action: manipulation;
+    }
+
+    /* Make zoom controls larger on mobile */
+    .gm-bundled-control {
+        transform: scale(1.2);
+        transform-origin: bottom right;
+    }
+}
+
 @layer base {
     * {
         @apply border-border outline-ring/50;
@@ -237,5 +289,7 @@ body {
     body {
         @apply bg-background text-foreground;
         letter-spacing: var(--tracking-normal);
+        /* Prevent overscroll bounce on iOS */
+        overscroll-behavior: none;
     }
 }

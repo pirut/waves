@@ -19,45 +19,79 @@ import {
 
 export default function Header() {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [isMounted, setIsMounted] = useState(false);
+
     useEffect(() => {
+        setIsMounted(true);
         const unsub = onAuthStateChanged(auth, (user) => setCurrentUser(user));
         return () => unsub();
     }, []);
+    // Prevent hydration mismatch by showing consistent content until mounted
+    if (!isMounted) {
+        return (
+            <nav className="relative z-30 w-full h-16 flex items-center justify-between px-4 sm:px-8 py-2 bg-background/95 backdrop-blur-md text-foreground border-b border-border/50">
+                <NavigationMenu className="flex-shrink-0">
+                    <NavigationMenuList>
+                        <NavigationMenuItem className="text-xl font-semibold tracking-tight">
+                            <Link href="/" className="hover:underline focus:outline-none">
+                                Make Waves
+                            </Link>
+                        </NavigationMenuItem>
+                    </NavigationMenuList>
+                </NavigationMenu>
+                <div className="flex items-center gap-4">
+                    <Link href="/map">
+                        <Button variant="outline" size="sm">
+                            Find Events
+                        </Button>
+                    </Link>
+                    <Button variant="default" size="sm">
+                        Login
+                    </Button>
+                </div>
+            </nav>
+        );
+    }
+
     return (
-        <nav className="relative z-30 w-full h-16 flex flex-col sm:flex-row items-center justify-between px-4 sm:px-8 py-2 bg-background/80 backdrop-blur-md gap-2 sm:gap-0 text-foreground">
-            <NavigationMenu className="flex-1 w-full sm:w-auto">
+        <nav className="relative z-30 w-full h-14 sm:h-16 flex items-center justify-between px-3 sm:px-8 py-2 bg-background/95 backdrop-blur-md text-foreground border-b border-border/50">
+            <NavigationMenu className="flex-shrink-0">
                 <NavigationMenuList>
-                    <NavigationMenuItem className="text-xl font-semibold tracking-tight">
+                    <NavigationMenuItem className="text-lg sm:text-xl font-semibold tracking-tight">
                         <Link href="/" className="hover:underline focus:outline-none">
                             Make Waves
                         </Link>
                     </NavigationMenuItem>
                 </NavigationMenuList>
             </NavigationMenu>
+
             {/* Auth UI in header */}
-            <div className="flex items-center gap-2 sm:gap-4 ml-0 sm:ml-4 w-full sm:w-auto justify-end">
+            <div className="flex items-center gap-1 sm:gap-4">
                 <Link href="/map">
-                    <Button variant="outline" size="sm" className="mr-2">
-                        Find Events
+                    <Button variant="outline" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
+                        <span className="hidden sm:inline">Find Events</span>
+                        <span className="sm:hidden">Map</span>
                     </Button>
                 </Link>
                 {currentUser ? (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-100 focus:outline-none">
+                            <button className="flex items-center gap-1 sm:gap-2 px-1 sm:px-2 py-1 rounded hover:bg-muted focus:outline-none">
                                 {currentUser.photoURL && (
                                     <Image
                                         src={currentUser.photoURL}
                                         alt={currentUser.displayName || currentUser.email || "User"}
-                                        width={32}
-                                        height={32}
-                                        className="w-8 h-8 rounded-full"
+                                        width={28}
+                                        height={28}
+                                        className="w-6 h-6 sm:w-8 sm:h-8 rounded-full"
                                     />
                                 )}
-                                <span className="truncate max-w-[100px]">{currentUser.displayName || currentUser.email}</span>
+                                <span className="truncate max-w-[60px] sm:max-w-[100px] text-xs sm:text-sm hidden sm:inline">
+                                    {currentUser.displayName || currentUser.email}
+                                </span>
                             </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-56" align="end">
+                        <DropdownMenuContent className="w-48 sm:w-56" align="end">
                             <DropdownMenuLabel asChild>
                                 <Link href="/account" className="hover:underline cursor-pointer">
                                     My Account
@@ -77,11 +111,11 @@ export default function Header() {
                 ) : (
                     <Dialog>
                         <DialogTrigger asChild>
-                            <Button variant="default" size="sm">
+                            <Button variant="default" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
                                 Login
                             </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="w-[90vw] max-w-md">
                             <DialogHeader>
                                 <DialogTitle>Sign In</DialogTitle>
                             </DialogHeader>
