@@ -133,8 +133,8 @@ export default function MapView() {
                                                 )}" stroke="#ffffff" stroke-width="3"/>
                                             </svg>
                                         `)}`,
-                                        scaledSize: { width: 24, height: 24 },
-                                        anchor: { x: 12, y: 12 },
+                                        scaledSize: new google.maps.Size(24, 24),
+                                        anchor: new google.maps.Point(12, 12),
                                     }}
                                 />
                             ))}
