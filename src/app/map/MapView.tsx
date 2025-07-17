@@ -1,35 +1,62 @@
 "use client";
-import Map, { Marker, Popup } from "react-map-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
-import { useEffect, useState } from "react";
+import { GoogleMap, LoadScript, Marker, InfoWindow } from "@react-google-maps/api";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { fetchEvents } from "../../api";
-import maplibregl from "maplibre-gl";
 import CreateEventModal from "@/components/CreateEventModal";
 
-const MAP_STYLE = "https://api.maptiler.com/maps/streets-v2/style.json?key=K6WmZnyE5taUYHe4fQ0P";
+// Google Maps configuration
+const mapContainerStyle = {
+    width: "100%",
+    height: "100%",
+};
 
-const getCategoryMarkerClass = (category: string) => {
-    const categoryMap: { [key: string]: string } = {
-        Environmental: "marker-environmental",
-        "Community Service": "marker-community",
-        Education: "marker-education",
-        "Health & Wellness": "marker-health",
-        "Arts & Culture": "marker-arts",
-        "Social Justice": "marker-social",
+const center = {
+    lat: 25.79,
+    lng: -80.13,
+};
+
+const mapOptions = {
+    disableDefaultUI: false,
+    zoomControl: true,
+    streetViewControl: false,
+    mapTypeControl: false,
+    fullscreenControl: false,
+};
+
+const getCategoryMarkerColor = (category: string) => {
+    const colorMap: { [key: string]: string } = {
+        Environmental: "#4ade80", // Green
+        "Community Service": "#60a5fa", // Blue
+        Education: "#a78bfa", // Purple
+        "Health & Wellness": "#fb7185", // Pink
+        "Arts & Culture": "#fbbf24", // Yellow
+        "Social Justice": "#f97316", // Orange
+        "Animal Welfare": "#10b981", // Emerald
+        "Disaster Relief": "#ef4444", // Red
+        "Youth Development": "#6366f1", // Indigo
+        "Senior Support": "#8b5cf6", // Violet
     };
-    return categoryMap[category] || "marker";
+    return colorMap[category] || "#FFE5D4"; // Default warm peach
 };
 
 export default function MapView() {
-    const [zoom, setZoom] = useState(2);
-    const [events, setEvents] = useState<{ id: string; location?: { lat: number; lng: number }; title?: string; category?: string }[]>([]);
+    const [map, setMap] = useState<google.maps.Map | null>(null);
+    const [zoom, setZoom] = useState(10);
+    const [events, setEvents] = useState<{ id: string; location?: { lat: number; lng: number }; title?: string; category?: string; description?: string }[]>(
+        []
+    );
     const [loading, setLoading] = useState(true);
-    const [popupInfo, setPopupInfo] = useState<{ lat: number; lng: number; title?: string } | null>(null);
-    // Removed unused mapRef
+    const [selectedEvent, setSelectedEvent] = useState<{
+        id: string;
+        location: { lat: number; lng: number };
+        title?: string;
+        category?: string;
+        description?: string;
+    } | null>(null);
 
     // Overlay fade threshold
-    const overlayVisible = zoom < 4;
+    const overlayVisible = zoom < 8;
     const pointerEvents: "auto" | "none" = overlayVisible ? "auto" : "none";
     const overlayStyle: React.CSSProperties = {
         width: "22rem",
@@ -40,34 +67,44 @@ export default function MapView() {
         pointerEvents,
     };
 
-    const loadEvents = () => {
+    const loadEvents = useCallback(() => {
         setLoading(true);
         fetchEvents()
             .then(setEvents)
             .finally(() => setLoading(false));
-    };
+    }, []);
+
+    const onLoad = useCallback((map: google.maps.Map) => {
+        setMap(map);
+    }, []);
+
+    const onUnmount = useCallback(() => {
+        setMap(null);
+    }, []);
+
+    const onZoomChanged = useCallback(() => {
+        if (map) {
+            const currentZoom = map.getZoom() || 10;
+            setZoom(currentZoom);
+        }
+    }, [map]);
 
     useEffect(() => {
         loadEvents();
-    }, []);
+    }, [loadEvents]);
 
     return (
         <div className="w-full h-full p-0 m-0">
-            {/* Map Area (always full width/height) */}
-            <div className="absolute inset-0 w-full h-full" style={{ willChange: "transform", borderRadius: "1.5rem" }}>
-                <Map
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    mapLib={maplibregl as any}
-                    initialViewState={{
-                        longitude: -80.13,
-                        latitude: 25.79,
-                        zoom: 2,
-                    }}
-                    style={{ width: "100%", height: "100%", borderRadius: "0px" }}
-                    mapStyle={MAP_STYLE}
-                    minZoom={2}
-                    maxZoom={18}
-                    onZoom={({ viewState }) => setZoom(viewState.zoom)}
+            {/* Google Map */}
+            <LoadScript googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
+                <GoogleMap
+                    mapContainerStyle={mapContainerStyle}
+                    center={center}
+                    zoom={zoom}
+                    onLoad={onLoad}
+                    onUnmount={onUnmount}
+                    onZoomChanged={onZoomChanged}
+                    options={mapOptions}
                 >
                     {!loading &&
                         events
@@ -75,33 +112,58 @@ export default function MapView() {
                             .map((event) => (
                                 <Marker
                                     key={event.id}
-                                    longitude={event.location!.lng}
-                                    latitude={event.location!.lat}
-                                    anchor="center"
-                                    onClick={(e) => {
-                                        e.originalEvent.stopPropagation();
-                                        setPopupInfo({
-                                            lat: event.location!.lat,
-                                            lng: event.location!.lng,
+                                    position={{
+                                        lat: event.location!.lat,
+                                        lng: event.location!.lng,
+                                    }}
+                                    onClick={() => {
+                                        setSelectedEvent({
+                                            id: event.id,
+                                            location: event.location!,
                                             title: event.title,
+                                            category: event.category,
+                                            description: event.description,
                                         });
                                     }}
-                                >
-                                    <div
-                                        className={`w-4 h-4 rounded-full border-2 ${getCategoryMarkerClass(event.category || "")}`}
-                                        title={`${event.title} - ${event.category || "Event"}`}
-                                    />
-                                </Marker>
+                                    icon={{
+                                        url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+                                            <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                <circle cx="12" cy="12" r="8" fill="${getCategoryMarkerColor(
+                                                    event.category || ""
+                                                )}" stroke="#ffffff" stroke-width="3"/>
+                                            </svg>
+                                        `)}`,
+                                        scaledSize: { width: 24, height: 24 },
+                                        anchor: { x: 12, y: 12 },
+                                    }}
+                                />
                             ))}
-                    {popupInfo && (
-                        <Popup longitude={popupInfo.lng} latitude={popupInfo.lat} anchor="top" onClose={() => setPopupInfo(null)}>
-                            <div>
-                                <strong>{popupInfo.title}</strong>
+
+                    {selectedEvent && (
+                        <InfoWindow position={selectedEvent.location} onCloseClick={() => setSelectedEvent(null)}>
+                            <div className="p-2 max-w-xs">
+                                <h3 className="font-semibold text-sm mb-1">{selectedEvent.title}</h3>
+                                {selectedEvent.category && (
+                                    <p className="text-xs text-gray-600 mb-2">
+                                        <span
+                                            className="inline-block w-2 h-2 rounded-full mr-1"
+                                            style={{ backgroundColor: getCategoryMarkerColor(selectedEvent.category) }}
+                                        />
+                                        {selectedEvent.category}
+                                    </p>
+                                )}
+                                {selectedEvent.description && <p className="text-xs text-gray-700 mb-2 line-clamp-2">{selectedEvent.description}</p>}
+                                <button
+                                    onClick={() => window.open(`/events/${selectedEvent.id}`, "_blank")}
+                                    className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition-colors"
+                                >
+                                    View Details
+                                </button>
                             </div>
-                        </Popup>
+                        </InfoWindow>
                     )}
-                </Map>
-            </div>
+                </GoogleMap>
+            </LoadScript>
             {/* Left Card Overlay */}
             <div className="absolute left-0 top-2 sm:top-8 w-full sm:w-auto flex flex-col sm:block items-center" style={overlayStyle}>
                 <Card className="m-2 sm:m-8 backdrop-blur-md shadow-xl border-none flex flex-col justify-center w-full sm:w-auto max-w-xs sm:max-w-md">
