@@ -1,6 +1,6 @@
 "use client";
-import { GoogleMap, LoadScript, Marker, InfoWindow } from "@react-google-maps/api";
-import { useEffect, useState, useCallback } from "react";
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { fetchEvents } from "../../api";
 import CreateEventModal from "@/components/CreateEventModal";
@@ -24,20 +24,47 @@ const mapOptions = {
     fullscreenControl: false,
 };
 
-const getCategoryMarkerColor = (category: string) => {
-    const colorMap: { [key: string]: string } = {
-        Environmental: "#4ade80", // Green
-        "Community Service": "#60a5fa", // Blue
-        Education: "#a78bfa", // Purple
-        "Health & Wellness": "#fb7185", // Pink
-        "Arts & Culture": "#fbbf24", // Yellow
-        "Social Justice": "#f97316", // Orange
-        "Animal Welfare": "#10b981", // Emerald
-        "Disaster Relief": "#ef4444", // Red
-        "Youth Development": "#6366f1", // Indigo
-        "Senior Support": "#8b5cf6", // Violet
+// Category color mapping
+const categoryColorMap: { [key: string]: string } = {
+    Environmental: "#4ade80", // Green
+    "Community Service": "#60a5fa", // Blue
+    Education: "#a78bfa", // Purple
+    "Health & Wellness": "#fb7185", // Pink
+    "Arts & Culture": "#fbbf24", // Yellow
+    "Social Justice": "#f97316", // Orange
+    "Animal Welfare": "#10b981", // Emerald
+    "Disaster Relief": "#ef4444", // Red
+    "Youth Development": "#6366f1", // Indigo
+    "Senior Support": "#8b5cf6", // Violet
+};
+
+// Pre-generate marker icons for each category to avoid regenerating on each render
+const categoryIcons = Object.entries(categoryColorMap).reduce((acc, [category, color]) => {
+    acc[category] = {
+        url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+            <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="8" fill="${color}" stroke="#ffffff" stroke-width="3"/>
+            </svg>
+        `)}`,
+        scaledSize: new google.maps.Size(24, 24),
+        anchor: new google.maps.Point(12, 12),
     };
-    return colorMap[category] || "#FFE5D4"; // Default warm peach
+    return acc;
+}, {} as Record<string, google.maps.Icon>);
+
+// Default icon for categories not in the map
+const defaultIcon = {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+        <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="8" fill="#FFE5D4" stroke="#ffffff" stroke-width="3"/>
+        </svg>
+    `)}`,
+    scaledSize: new google.maps.Size(24, 24),
+    anchor: new google.maps.Point(12, 12),
+};
+
+const getCategoryMarkerColor = (category: string) => {
+    return categoryColorMap[category] || "#FFE5D4"; // Default warm peach
 };
 
 export default function MapView() {
@@ -93,10 +120,21 @@ export default function MapView() {
         loadEvents();
     }, [loadEvents]);
 
+    // Load Google Maps API once
+    const { isLoaded } = useJsApiLoader({
+        id: "google-map-script",
+        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+    });
+
+    // Memoize filtered events to prevent unnecessary re-renders
+    const filteredEvents = useMemo(() => {
+        return events.filter((e) => e.location && typeof e.location.lat === "number" && typeof e.location.lng === "number");
+    }, [events]);
+
     return (
         <div className="w-full h-full p-0 m-0">
             {/* Google Map */}
-            <LoadScript googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
+            {isLoaded ? (
                 <GoogleMap
                     mapContainerStyle={mapContainerStyle}
                     center={center}
@@ -107,37 +145,25 @@ export default function MapView() {
                     options={mapOptions}
                 >
                     {!loading &&
-                        events
-                            .filter((e) => e.location && typeof e.location.lat === "number" && typeof e.location.lng === "number")
-                            .map((event) => (
-                                <Marker
-                                    key={event.id}
-                                    position={{
-                                        lat: event.location!.lat,
-                                        lng: event.location!.lng,
-                                    }}
-                                    onClick={() => {
-                                        setSelectedEvent({
-                                            id: event.id,
-                                            location: event.location!,
-                                            title: event.title,
-                                            category: event.category,
-                                            description: event.description,
-                                        });
-                                    }}
-                                    icon={{
-                                        url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-                                            <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                <circle cx="12" cy="12" r="8" fill="${getCategoryMarkerColor(
-                                                    event.category || ""
-                                                )}" stroke="#ffffff" stroke-width="3"/>
-                                            </svg>
-                                        `)}`,
-                                        scaledSize: new google.maps.Size(24, 24),
-                                        anchor: new google.maps.Point(12, 12),
-                                    }}
-                                />
-                            ))}
+                        filteredEvents.map((event) => (
+                            <Marker
+                                key={event.id}
+                                position={{
+                                    lat: event.location!.lat,
+                                    lng: event.location!.lng,
+                                }}
+                                onClick={() => {
+                                    setSelectedEvent({
+                                        id: event.id,
+                                        location: event.location!,
+                                        title: event.title,
+                                        category: event.category,
+                                        description: event.description,
+                                    });
+                                }}
+                                icon={event.category && categoryIcons[event.category] ? categoryIcons[event.category] : defaultIcon}
+                            />
+                        ))}
 
                     {selectedEvent && (
                         <InfoWindow position={selectedEvent.location} onCloseClick={() => setSelectedEvent(null)}>
@@ -163,7 +189,14 @@ export default function MapView() {
                         </InfoWindow>
                     )}
                 </GoogleMap>
-            </LoadScript>
+            ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                        <p className="text-gray-600">Loading map...</p>
+                    </div>
+                </div>
+            )}
             {/* Left Card Overlay */}
             <div className="absolute left-0 top-2 sm:top-8 w-full sm:w-auto flex flex-col sm:block items-center" style={overlayStyle}>
                 <Card className="m-2 sm:m-8 backdrop-blur-md shadow-xl border-none flex flex-col justify-center w-full sm:w-auto max-w-xs sm:max-w-md">
