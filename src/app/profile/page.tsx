@@ -25,12 +25,12 @@ export default function ProfilePage() {
     return (
         <main className="flex flex-col items-center justify-center min-h-screen">
             <h1 className="text-3xl font-bold mb-4">Your Profile</h1>
-            <div className="flex flex-col items-center gap-4 p-6 border rounded-lg bg-card shadow">
+            <div className="flex flex-col items-center gap-4 p-6 border rounded-lg shadow profile-card">
                 {user.photoURL && (
                     <Image src={user.photoURL} alt={user.displayName || user.email || "User"} width={80} height={80} className="w-20 h-20 rounded-full" />
                 )}
-                <div className="text-lg font-semibold text-foreground">{user.displayName || user.email}</div>
-                <div className="text-sm text-muted-foreground">{user.email}</div>
+                <div className="profile-name">{user.displayName || user.email}</div>
+                <div className="profile-email">{user.email}</div>
             </div>
         </main>
     );

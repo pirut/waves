@@ -3,10 +3,11 @@
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useEffect, useState, useRef, useLayoutEffect } from "react";
 import { fetchUsers, fetchPosts } from "../api";
 import AuthWidget from "@/components/AuthWidget";
+import EventList from "@/components/EventList";
 import { auth, db } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
@@ -67,15 +68,15 @@ export default function Home() {
         <div className="flex flex-col min-h-screen px-2 sm:px-4">
             {!currentUser ? (
                 <div className="flex flex-1 flex-col md:flex-row items-center justify-center gap-4 md:gap-8 w-full py-4">
-                    <Card ref={introCardRef} className="max-w-md w-full bg-card backdrop-blur-md shadow-xl border-none mb-4 md:mb-0">
-                        <CardContent className="flex flex-col items-center gap-6 p-6 md:p-8">
-                            <div className="flex flex-col items-center gap-2">
-                                <h1 className="text-5xl font-bold text-foreground tracking-tight text-center">Make Waves</h1>
-                                <p className="text-lg text-muted-foreground max-w-md text-center">
-                                    Discover, attend, and share real-world events focused on doing good. Every post is rooted in real-life impact.
-                                </p>
-                            </div>
-                            <Button className="w-full max-w-xs text-lg py-4 md:py-6" onClick={() => router.push("/map")} variant="default" size="lg">
+                    <Card ref={introCardRef} className="max-w-md w-full backdrop-blur-md shadow-xl border-none mb-4 md:mb-0">
+                        <CardHeader className="flex flex-col items-center gap-2">
+                            <CardTitle className="text-center">Make Waves</CardTitle>
+                            <CardDescription className="subtitle max-w-md text-center">
+                                Discover, attend, and share real-world events focused on doing good. Every post is rooted in real-life impact.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-col items-center gap-6 p-0">
+                            <Button className="w-full max-w-xs py-4 md:py-6" onClick={() => router.push("/map")} variant="default" size="lg">
                                 Find Events Near You
                             </Button>
                             <Button className="w-full max-w-xs flex items-center gap-2 text-lg py-4 md:py-6" variant="secondary" size="lg">
@@ -108,61 +109,40 @@ export default function Home() {
                             </Button>
                         </CardContent>
                     </Card>
-                    <Card
-                        className="max-w-md w-full bg-card backdrop-blur-md shadow-xl border-none flex flex-col"
-                        style={hasMounted && introCardHeight ? { height: introCardHeight } : {}}
-                    >
-                        <CardContent className="flex flex-col justify-center h-full p-6 md:p-8">
-                            <AuthWidget />
-                        </CardContent>
-                    </Card>
+                    <AuthWidget />
                 </div>
             ) : (
-                <div className="flex flex-1 flex-col gap-8 w-full px-2 sm:px-4 py-4 sm:py-8 mx-auto max-w-5xl">
-                    {/* User Feed */}
-                    <div className="w-full">
-                        <h2 className="text-2xl font-bold mb-2 text-foreground">Users</h2>
-                        {loadingUsers ? (
-                            <div>Loading users...</div>
-                        ) : users.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-12 opacity-80">
-                                <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="60" cy="60" r="56" fill="#F6E8D6" stroke="#E1CFC2" strokeWidth="4" />
-                                    <ellipse cx="60" cy="80" rx="28" ry="8" fill="#E1CFC2" />
-                                    <path d="M40 60 Q60 80 80 60" stroke="currentColor" strokeWidth="3" fill="none" />
-                                    <circle cx="50" cy="54" r="4" fill="currentColor" />
-                                    <circle cx="70" cy="54" r="4" fill="currentColor" />
-                                </svg>
-                                <div className="mt-6 text-lg text-muted-foreground text-center">
-                                    No users yet.
-                                    <br />
-                                    Be the first to join Make Waves!
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {users.map((user) => (
-                                    <Card key={user.id} className="flex items-center gap-4 p-4 bg-card text-foreground">
-                                        {user.profilePhotoUrl && (
-                                            <Image
-                                                src={user.profilePhotoUrl || ""}
-                                                alt={user.name || ""}
-                                                width={40}
-                                                height={40}
-                                                className="w-10 h-10 rounded-full"
-                                            />
-                                        )}
-                                        <span>{user.name || user.id}</span>
-                                    </Card>
-                                ))}
-                            </div>
-                        )}
+                <div className="flex flex-1 flex-col gap-8 w-full px-2 sm:px-4 py-4 sm:py-8 mx-auto max-w-4xl">
+                    {/* Welcome Section */}
+                    <div className="text-center py-8">
+                        <h1 className="text-3xl font-bold mb-4">Welcome back, {currentUser.displayName || currentUser.email}!</h1>
+                        <p className="subtitle text-lg mb-6">Ready to make some waves? Discover events near you or create your own.</p>
+                        <div className="flex gap-4 justify-center">
+                            <Button onClick={() => router.push("/map")} size="lg">
+                                Explore Map
+                            </Button>
+                            <Button onClick={() => router.push("/profile")} variant="outline" size="lg">
+                                My Profile
+                            </Button>
+                        </div>
                     </div>
-                    {/* Post Feed */}
+
+                    {/* Upcoming Events */}
                     <div className="w-full">
-                        <h2 className="text-2xl font-bold mb-2 text-foreground">Posts</h2>
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="section-title">Upcoming Events</h2>
+                            <Button onClick={() => router.push("/map")} variant="outline" size="sm">
+                                View All
+                            </Button>
+                        </div>
+                        <EventList limit={6} showCreateButton={true} />
+                    </div>
+
+                    {/* Recent Posts Section (keeping for later when posts are implemented) */}
+                    <div className="w-full">
+                        <h2 className="section-title mb-4">Recent Community Posts</h2>
                         {loadingPosts ? (
-                            <div>Loading posts...</div>
+                            <div className="text-center py-8 subtitle">Loading posts...</div>
                         ) : posts.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 opacity-80">
                                 <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -172,29 +152,29 @@ export default function Home() {
                                     <rect x="48" y="48" width="24" height="16" rx="3" fill="currentColor" />
                                     <rect x="54" y="54" width="12" height="4" rx="2" fill="#B6D0E2" />
                                 </svg>
-                                <div className="mt-6 text-lg text-muted-foreground text-center">
+                                <div className="mt-6 subtitle text-center">
                                     No posts yet.
                                     <br />
-                                    Be the first to make a wave!
+                                    Attend an event to share your first wave!
                                 </div>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {posts.map((post) => (
-                                    <Card key={post.id} className="p-4 bg-card text-foreground">
-                                        {post.mediaUrl && (
-                                            <Image
-                                                src={post.mediaUrl || ""}
-                                                alt={post.caption || ""}
-                                                width={400}
-                                                height={160}
-                                                className="w-full h-32 sm:h-40 object-cover rounded mb-2"
-                                            />
-                                        )}
-                                        <div className="font-semibold mb-1">{post.caption}</div>
-                                        <div className="text-xs text-muted-foreground">
-                                            User: {post.userId} | Event: {post.eventId}
-                                        </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {posts.slice(0, 6).map((post) => (
+                                    <Card key={post.id} className="p-4">
+                                        <CardHeader className="p-0">
+                                            {post.mediaUrl && (
+                                                <Image
+                                                    src={post.mediaUrl || ""}
+                                                    alt={post.caption || ""}
+                                                    width={400}
+                                                    height={160}
+                                                    className="w-full h-32 object-cover rounded mb-2"
+                                                />
+                                            )}
+                                            <CardTitle className="font-semibold mb-1 text-sm">{post.caption}</CardTitle>
+                                            <CardDescription className="text-xs subtitle">Event: {post.eventId}</CardDescription>
+                                        </CardHeader>
                                     </Card>
                                 ))}
                             </div>

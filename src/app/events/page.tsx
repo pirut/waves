@@ -4,7 +4,7 @@ export default function EventsPage() {
     return (
         <main className="flex flex-col items-center justify-center min-h-screen">
             <h1 className="text-3xl font-bold mb-4">Upcoming Events</h1>
-            <p className="text-muted-foreground">Your upcoming events will appear here. (Coming soon)</p>
+            <p className="subtitle">Your upcoming events will appear here. (Coming soon)</p>
         </main>
     );
 }
