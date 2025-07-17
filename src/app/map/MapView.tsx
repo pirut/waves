@@ -35,10 +35,6 @@ const getMapOptions = () => {
         // Mobile-specific optimizations
         clickableIcons: true,
         keyboardShortcuts: !isMobile, // Disable keyboard shortcuts on mobile
-        // Faster zoom animations
-        zoomControlOptions: {
-            style: isMobile ? 1 : 0, // Smaller zoom controls on mobile
-        },
     };
 };
 
