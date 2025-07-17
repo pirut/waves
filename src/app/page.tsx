@@ -4,8 +4,8 @@
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useEffect, useState, useRef, useLayoutEffect } from "react";
-import { fetchUsers, fetchPosts } from "../api";
+import { useEffect, useState } from "react";
+import { fetchPosts } from "../api";
 import AuthWidget from "@/components/AuthWidget";
 import EventList from "@/components/EventList";
 import { auth, db } from "../firebase";
@@ -15,14 +15,9 @@ import Image from "next/image";
 
 export default function Home() {
     const router = useRouter();
-    const [users, setUsers] = useState<{ id: string; name?: string; profilePhotoUrl?: string }[]>([]);
     const [posts, setPosts] = useState<{ id: string; caption?: string; mediaUrl?: string; userId?: string; eventId?: string }[]>([]);
-    const [loadingUsers, setLoadingUsers] = useState(true);
     const [loadingPosts, setLoadingPosts] = useState(true);
     const [currentUser, setCurrentUser] = useState<any>(null);
-    const introCardRef = useRef<HTMLDivElement>(null);
-    const [introCardHeight, setIntroCardHeight] = useState<number | undefined>(undefined);
-    const [hasMounted, setHasMounted] = useState(false);
     // Sync user to Firestore on sign-in
     useEffect(() => {
         const unsub = onAuthStateChanged(auth, async (user) => {
@@ -44,31 +39,17 @@ export default function Home() {
     }, []);
 
     useEffect(() => {
-        setHasMounted(true);
-    }, []);
-
-    useEffect(() => {
-        setLoadingUsers(true);
-        fetchUsers()
-            .then(setUsers)
-            .finally(() => setLoadingUsers(false));
         setLoadingPosts(true);
         fetchPosts()
             .then(setPosts)
             .finally(() => setLoadingPosts(false));
     }, []);
 
-    useLayoutEffect(() => {
-        if (introCardRef.current) {
-            setIntroCardHeight(introCardRef.current.offsetHeight);
-        }
-    }, [currentUser, loadingUsers, loadingPosts]);
-
     return (
         <div className="flex flex-col min-h-screen px-2 sm:px-4">
             {!currentUser ? (
                 <div className="flex flex-1 flex-col md:flex-row items-center justify-center gap-4 md:gap-8 w-full py-4">
-                    <Card ref={introCardRef} className="max-w-md w-full backdrop-blur-md shadow-xl border-none mb-4 md:mb-0">
+                    <Card className="max-w-md w-full backdrop-blur-md shadow-xl border-none mb-4 md:mb-0">
                         <CardHeader className="flex flex-col items-center gap-2">
                             <CardTitle className="text-center">Make Waves</CardTitle>
                             <CardDescription className="subtitle max-w-md text-center">
