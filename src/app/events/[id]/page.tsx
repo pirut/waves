@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { fetchEvent } from "@/api";
+import { trpc } from "@/lib/trpc";
 import { MapPin, Calendar, Users, Tag, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -28,19 +27,16 @@ export default function EventDetailsPage() {
     const params = useParams();
     const router = useRouter();
     const { user } = useAuth();
-    const [event, setEvent] = useState<Event | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (params.id) {
-            setLoading(true);
-            fetchEvent(params.id as string)
-                .then(setEvent)
-                .catch((err) => setError(err.message))
-                .finally(() => setLoading(false));
-        }
-    }, [params.id]);
+    const {
+        data: event,
+        isLoading: loading,
+        error,
+    } = trpc.events.getById.useQuery({ id: params.id as string }, { enabled: !!params.id }) as {
+        data: Event | undefined;
+        isLoading: boolean;
+        error: Error | null;
+    };
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
@@ -104,7 +100,9 @@ export default function EventDetailsPage() {
                 <Card>
                     <CardContent className="flex flex-col items-center justify-center py-12">
                         <h2 className="text-xl font-semibold mb-2">Event Not Found</h2>
-                        <p className="text-muted-foreground mb-4">{error || "The event you&apos;re looking for doesn&apos;t exist or has been removed."}</p>
+                        <p className="text-muted-foreground mb-4">
+                            {error?.message || "The event you&apos;re looking for doesn&apos;t exist or has been removed."}
+                        </p>
                         <Button onClick={() => router.push("/map")}>Explore Events</Button>
                     </CardContent>
                 </Card>

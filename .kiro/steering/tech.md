@@ -16,11 +16,13 @@
 
 ## Backend & Services
 
+-   **tRPC** for type-safe API layer with React Query integration
 -   **Firebase** for authentication, database, and storage
     -   Firestore for data storage
     -   Firebase Auth with Google login
     -   Firebase Admin SDK for server-side operations
 -   **Google Maps API** via `@react-google-maps/api`
+-   **Zod** for runtime type validation
 
 ## Development Tools
 
@@ -54,14 +56,15 @@ npm run lint         # Run ESLint
 
 # External APIs
 # NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-# NEXT_PUBLIC_MAPBOX_API_KEY
 # NEXT_PUBLIC_UPLOADTHING_KEY
 ```
 
 ## Code Patterns
 
 -   Use `"use client"` directive for client-side components
+-   **tRPC** for type-safe API calls: `trpc.events.getAll.useQuery()`
 -   Firebase config in `src/firebase.ts` and `src/firebaseAdmin.ts`
 -   Custom hooks in `src/hooks/` (e.g., `useAuth`)
--   API routes follow REST conventions in `src/app/api/`
+-   tRPC routers in `src/server/routers/` with Zod validation
+-   API endpoint at `/api/trpc/[trpc]` for tRPC handler
 -   UI components use shadcn/ui + CVA pattern for variants

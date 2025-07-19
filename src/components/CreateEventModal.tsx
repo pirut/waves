@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Plus, MapPin, Calendar, Users, Search, CheckCircle, AlertCircle } from "lucide-react";
-import { createEvent } from "@/api";
+import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/useAuth";
 
 interface CreateEventModalProps {
@@ -32,7 +32,6 @@ const EVENT_CATEGORIES = [
 export default function CreateEventModal({ onEventCreated, defaultLocation }: CreateEventModalProps) {
     const { user } = useAuth();
     const [open, setOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
     const [geocoding, setGeocoding] = useState(false);
     const [geocodeStatus, setGeocodeStatus] = useState<"idle" | "success" | "error">("idle");
     const [formData, setFormData] = useState({
@@ -49,27 +48,10 @@ export default function CreateEventModal({ onEventCreated, defaultLocation }: Cr
         maxAttendees: "",
     });
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!user) return;
-
-        setLoading(true);
-        try {
-            const eventData = {
-                title: formData.title,
-                description: formData.description,
-                category: formData.category,
-                time: new Date(`${formData.date}T${formData.time}`).toISOString(),
-                location: formData.location,
-                maxAttendees: formData.maxAttendees ? parseInt(formData.maxAttendees) : null,
-                createdBy: user.uid,
-                createdAt: new Date().toISOString(),
-                attendees: [user.uid],
-                status: "active",
-            };
-
-            await createEvent(eventData);
-
+    const createEventMutation = trpc.events.create.useMutation({
+        onSuccess: () => {
+            onEventCreated?.();
+            setOpen(false);
             // Reset form
             setFormData({
                 title: "",
@@ -84,14 +66,29 @@ export default function CreateEventModal({ onEventCreated, defaultLocation }: Cr
                 },
                 maxAttendees: "",
             });
-
-            setOpen(false);
-            onEventCreated?.();
-        } catch (error) {
+        },
+        onError: (error) => {
             console.error("Failed to create event:", error);
-        } finally {
-            setLoading(false);
-        }
+        },
+    });
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user) return;
+
+        const eventData = {
+            title: formData.title,
+            description: formData.description,
+            category: formData.category,
+            date: new Date(`${formData.date}T${formData.time}`).toISOString(),
+            location: {
+                lat: formData.location.lat,
+                lng: formData.location.lng,
+            },
+            maxAttendees: formData.maxAttendees ? parseInt(formData.maxAttendees) : undefined,
+        };
+
+        createEventMutation.mutate(eventData);
     };
 
     // Geocoding function using our server-side API
@@ -395,7 +392,7 @@ export default function CreateEventModal({ onEventCreated, defaultLocation }: Cr
                         <Button
                             type="submit"
                             disabled={
-                                loading ||
+                                createEventMutation.isPending ||
                                 !formData.title ||
                                 !formData.description ||
                                 !formData.category ||
@@ -406,7 +403,7 @@ export default function CreateEventModal({ onEventCreated, defaultLocation }: Cr
                             }
                             className="flex-1"
                         >
-                            {loading ? "Creating..." : geocoding ? "Finding Location..." : "Create Event"}
+                            {createEventMutation.isPending ? "Creating..." : geocoding ? "Finding Location..." : "Create Event"}
                         </Button>
                     </div>
                 </form>

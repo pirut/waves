@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { fetchEvents } from "@/api";
+import { trpc } from "@/lib/trpc";
 import { MapPin, Calendar, Users, Tag } from "lucide-react";
 import Link from "next/link";
 
@@ -29,19 +28,10 @@ interface EventListProps {
 }
 
 export default function EventList({ limit, showCreateButton = false }: EventListProps) {
-    const [events, setEvents] = useState<Event[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { data: allEvents = [], isLoading: loading } = trpc.events.getAll.useQuery();
 
-    useEffect(() => {
-        setLoading(true);
-        fetchEvents()
-            .then((data) => {
-                // Sort by date and limit if specified
-                const sortedEvents = data.sort((a: Event, b: Event) => new Date(a.time).getTime() - new Date(b.time).getTime()).slice(0, limit);
-                setEvents(sortedEvents);
-            })
-            .finally(() => setLoading(false));
-    }, [limit]);
+    // Sort by date and limit if specified
+    const events = allEvents.sort((a: Event, b: Event) => new Date(a.time).getTime() - new Date(b.time).getTime()).slice(0, limit);
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);

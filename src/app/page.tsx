@@ -1,11 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useEffect, useState } from "react";
-import { fetchPosts } from "../api";
+import { trpc } from "@/lib/trpc";
 import AuthWidget from "@/components/AuthWidget";
 import EventList from "@/components/EventList";
 import { auth, db } from "../firebase";
@@ -13,11 +12,27 @@ import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import Image from "next/image";
 
+// Post interface to match the data structure
+interface Post {
+    id: string;
+    content?: string;
+    caption?: string;
+    mediaUrl?: string;
+    eventId?: string;
+    authorId?: string;
+    createdAt?: string;
+}
+
 export default function Home() {
     const router = useRouter();
-    const [posts, setPosts] = useState<{ id: string; caption?: string; mediaUrl?: string; userId?: string; eventId?: string }[]>([]);
-    const [loadingPosts, setLoadingPosts] = useState(true);
-    const [currentUser, setCurrentUser] = useState<any>(null);
+    const [currentUser, setCurrentUser] = useState<unknown>(null);
+
+    // Use tRPC to fetch posts
+    const { data: posts = [], isLoading: loadingPosts } = trpc.posts.getAll.useQuery() as {
+        data: Post[];
+        isLoading: boolean;
+    };
+
     // Sync user to Firestore on sign-in
     useEffect(() => {
         const unsub = onAuthStateChanged(auth, async (user) => {
@@ -36,13 +51,6 @@ export default function Home() {
             }
         });
         return () => unsub();
-    }, []);
-
-    useEffect(() => {
-        setLoadingPosts(true);
-        fetchPosts()
-            .then(setPosts)
-            .finally(() => setLoadingPosts(false));
     }, []);
 
     return (

@@ -1,9 +1,27 @@
 "use client";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { fetchEvents } from "../../api";
+import { trpc } from "@/lib/trpc";
 import CreateEventModal from "@/components/CreateEventModal";
+
+// Event interface to match the data structure
+interface Event {
+    id: string;
+    title?: string;
+    description?: string;
+    category?: string;
+    location?: {
+        lat: number;
+        lng: number;
+        address?: string;
+    };
+    attendees?: string[];
+    maxAttendees?: number;
+    createdBy?: string;
+    time?: string;
+    date?: string;
+}
 
 // Google Maps configuration
 const mapContainerStyle = {
@@ -76,10 +94,6 @@ const getCategoryMarkerColor = (category: string) => {
 export default function MapView() {
     const [map, setMap] = useState<google.maps.Map | null>(null);
     const [zoom, setZoom] = useState(10);
-    const [events, setEvents] = useState<{ id: string; location?: { lat: number; lng: number }; title?: string; category?: string; description?: string }[]>(
-        []
-    );
-    const [loading, setLoading] = useState(true);
     const [selectedEvent, setSelectedEvent] = useState<{
         id: string;
         location: { lat: number; lng: number };
@@ -88,15 +102,19 @@ export default function MapView() {
         description?: string;
     } | null>(null);
 
+    // Use tRPC to fetch events
+    const {
+        data: events = [],
+        isLoading: loading,
+        refetch: loadEvents,
+    } = trpc.events.getAll.useQuery() as {
+        data: Event[];
+        isLoading: boolean;
+        refetch: () => void;
+    };
+
     // Overlay fade threshold
     const overlayVisible = zoom < 8;
-
-    const loadEvents = useCallback(() => {
-        setLoading(true);
-        fetchEvents()
-            .then(setEvents)
-            .finally(() => setLoading(false));
-    }, []);
 
     const onLoad = useCallback((map: google.maps.Map) => {
         setMap(map);
@@ -126,10 +144,6 @@ export default function MapView() {
             setZoom(currentZoom);
         }
     }, [map]);
-
-    useEffect(() => {
-        loadEvents();
-    }, [loadEvents]);
 
     // Load Google Maps API once with latest version
     const { isLoaded } = useJsApiLoader({
