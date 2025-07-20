@@ -8,7 +8,7 @@ import { trpc } from "@/lib/trpc";
 import AuthWidget from "@/components/AuthWidget";
 import EventList from "@/components/EventList";
 import { auth, db } from "../firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, User } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import Image from "next/image";
 
@@ -25,7 +25,7 @@ interface Post {
 
 export default function Home() {
     const router = useRouter();
-    const [currentUser, setCurrentUser] = useState<unknown>(null);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
 
     // Use tRPC to fetch posts
     const { data: posts = [], isLoading: loadingPosts } = trpc.posts.getAll.useQuery() as {
