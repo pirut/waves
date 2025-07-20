@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 interface CreateEventModalProps {
     onEventCreated?: () => void;
     defaultLocation?: { lat: number; lng: number };
+    children?: React.ReactNode;
 }
 
 const EVENT_CATEGORIES = [
@@ -29,7 +30,7 @@ const EVENT_CATEGORIES = [
     "Senior Support",
 ];
 
-export default function CreateEventModal({ onEventCreated, defaultLocation }: CreateEventModalProps) {
+export default function CreateEventModal({ onEventCreated, defaultLocation, children }: CreateEventModalProps) {
     const { user } = useAuth();
     const [open, setOpen] = useState(false);
     const [geocoding, setGeocoding] = useState(false);
@@ -171,9 +172,11 @@ export default function CreateEventModal({ onEventCreated, defaultLocation }: Cr
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 h-12 w-12 sm:h-14 sm:w-14 rounded-full shadow-lg z-50" size="icon">
-                    <Plus className="h-6 w-6" />
-                </Button>
+                {children || (
+                    <Button className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 h-12 w-12 sm:h-14 sm:w-14 rounded-full shadow-lg z-50 bg-[#FFE5D4] hover:bg-[#F6E8D6] text-gray-900" size="icon">
+                        <Plus className="h-6 w-6" />
+                    </Button>
+                )}
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>

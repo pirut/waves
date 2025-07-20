@@ -1,11 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
-import { NavigationMenu, NavigationMenuList, NavigationMenuItem } from "@/components/ui/navigation-menu";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { auth } from "../firebase";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import Link from "next/link";
-import Image from "next/image";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import AuthWidget from "@/components/AuthWidget";
 import {
@@ -13,109 +12,114 @@ import {
     DropdownMenuTrigger,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Search, Settings } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 export default function Header() {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [isMounted, setIsMounted] = useState(false);
+    const pathname = usePathname();
 
     useEffect(() => {
         setIsMounted(true);
         const unsub = onAuthStateChanged(auth, (user) => setCurrentUser(user));
         return () => unsub();
     }, []);
-    // Prevent hydration mismatch by showing consistent content until mounted
+
     if (!isMounted) {
         return (
-            <nav className="relative z-30 w-full h-16 flex items-center justify-between px-4 sm:px-8 py-2 bg-background/95 backdrop-blur-md text-foreground border-b border-border/50">
-                <NavigationMenu className="flex-shrink-0">
-                    <NavigationMenuList>
-                        <NavigationMenuItem className="text-xl font-semibold tracking-tight">
-                            <Link href="/" className="hover:underline focus:outline-none">
-                                Make Waves
-                            </Link>
-                        </NavigationMenuItem>
-                    </NavigationMenuList>
-                </NavigationMenu>
-                <div className="flex items-center gap-4">
-                    <Link href="/map">
-                        <Button variant="outline" size="sm">
-                            Find Events
-                        </Button>
-                    </Link>
-                    <Button variant="default" size="sm">
-                        Login
-                    </Button>
+            <header className="h-16 bg-white border-b border-[#F6E8D6] flex items-center justify-between px-6">
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-[#FFE5D4] rounded-full flex items-center justify-center">
+                        <span className="text-gray-900 text-sm font-bold">W</span>
+                    </div>
+                    <span className="text-lg font-semibold text-gray-900">Waves Map</span>
                 </div>
-            </nav>
+            </header>
         );
     }
 
-    return (
-        <nav className="relative z-30 w-full h-14 sm:h-16 flex items-center justify-between px-3 sm:px-8 py-2 bg-background/95 backdrop-blur-md text-foreground border-b border-border/50">
-            <NavigationMenu className="flex-shrink-0">
-                <NavigationMenuList>
-                    <NavigationMenuItem className="text-lg sm:text-xl font-semibold tracking-tight">
-                        <Link href="/" className="hover:underline focus:outline-none">
-                            Make Waves
-                        </Link>
-                    </NavigationMenuItem>
-                </NavigationMenuList>
-            </NavigationMenu>
+    const navItems = [
+        { name: "Map View", href: "/map", active: pathname === "/map" },
+        { name: "Event List", href: "/events", active: pathname === "/events" },
+        { name: "Event Detail", href: "/events/detail", active: pathname.startsWith("/events/") && pathname !== "/events" },
+        { name: "User Profile", href: "/profile", active: pathname === "/profile" },
+        { name: "Settings", href: "/settings", active: pathname === "/settings" },
+    ];
 
-            {/* Auth UI in header */}
-            <div className="flex items-center gap-1 sm:gap-4">
-                <Link href="/map">
-                    <Button variant="outline" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
-                        <span className="hidden sm:inline">Find Events</span>
-                        <span className="sm:hidden">Map</span>
-                    </Button>
+    return (
+        <header className="h-16 bg-white border-b border-[#F6E8D6] flex items-center justify-between px-6">
+            {/* Logo */}
+            <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-[#FFE5D4] rounded-full flex items-center justify-center">
+                    <span className="text-gray-900 text-sm font-bold">W</span>
+                </div>
+                <Link href="/" className="text-lg font-semibold text-gray-900 hover:text-gray-700">
+                    Waves Map
                 </Link>
+            </div>
+
+            {/* Navigation */}
+            <nav className="hidden md:flex items-center gap-8">
+                {navItems.map((item) => (
+                    <Link
+                        key={item.name}
+                        href={item.href}
+                        className={`text-sm font-medium transition-colors ${
+                            item.active 
+                                ? "text-gray-900 border-b-2 border-[#FFE5D4] pb-4" 
+                                : "text-gray-600 hover:text-gray-900"
+                        }`}
+                    >
+                        {item.name}
+                    </Link>
+                ))}
+            </nav>
+
+            {/* Right side */}
+            <div className="flex items-center gap-4">
+                <Button variant="ghost" size="sm" className="hover:bg-[#FFE5D4]/20">
+                    <Search className="h-4 w-4" />
+                </Button>
+                
                 {currentUser ? (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button className="flex items-center gap-1 sm:gap-2 px-1 sm:px-2 py-1 rounded hover:bg-muted focus:outline-none">
-                                {currentUser.photoURL && (
-                                    <Image
-                                        src={currentUser.photoURL}
-                                        alt={currentUser.displayName || currentUser.email || "User"}
-                                        width={28}
-                                        height={28}
-                                        className="w-6 h-6 sm:w-8 sm:h-8 rounded-full"
-                                    />
-                                )}
-                                <span className="truncate max-w-[60px] sm:max-w-[100px] text-xs sm:text-sm hidden sm:inline">
-                                    {currentUser.displayName || currentUser.email}
-                                </span>
-                            </button>
+                            <Button variant="ghost" className="relative h-8 w-8 rounded-full hover:bg-[#FFE5D4]/20">
+                                <Avatar className="h-8 w-8">
+                                    <AvatarImage src={currentUser.photoURL || ""} alt={currentUser.displayName || ""} />
+                                    <AvatarFallback className="bg-[#FFE5D4] text-gray-900">
+                                        {currentUser.displayName?.[0] || currentUser.email?.[0] || "U"}
+                                    </AvatarFallback>
+                                </Avatar>
+                            </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-48 sm:w-56" align="end">
-                            <DropdownMenuLabel asChild>
-                                <Link href="/account" className="hover:underline cursor-pointer">
-                                    My Account
-                                </Link>
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator />
+                        <DropdownMenuContent className="w-56 border-[#F6E8D6]" align="end">
                             <DropdownMenuItem asChild>
                                 <Link href="/profile">Profile</Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
-                                <Link href="/events">Upcoming Events</Link>
+                                <Link href="/settings">
+                                    <Settings className="mr-2 h-4 w-4" />
+                                    Settings
+                                </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => signOut(auth)}>Sign Out</DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-[#F6E8D6]" />
+                            <DropdownMenuItem onClick={() => signOut(auth)}>
+                                Sign Out
+                            </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 ) : (
                     <Dialog>
                         <DialogTrigger asChild>
-                            <Button variant="default" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
+                            <Button size="sm" className="bg-[#FFE5D4] hover:bg-[#F6E8D6] text-gray-900">
                                 Login
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="w-[90vw] max-w-md">
+                        <DialogContent className="w-[90vw] max-w-md border-[#F6E8D6]">
                             <DialogHeader>
                                 <DialogTitle>Sign In</DialogTitle>
                             </DialogHeader>
@@ -124,6 +128,6 @@ export default function Header() {
                     </Dialog>
                 )}
             </div>
-        </nav>
+        </header>
     );
 }

@@ -23,15 +23,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <html lang="en" suppressHydrationWarning>
             <body className="min-h-screen flex flex-col font-sans bg-background text-foreground overflow-x-hidden">
                 <TrpcProvider>
-                    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-                        {/* Nav Bar */}
-                        <Header />
-                        <Separator className="bg-[#F6E8D6] hidden sm:block" />
-                        {/* Main Content */}
-                        <main className="flex-1 flex flex-col">{children}</main>
-                        <Separator className="bg-[#F6E8D6] hidden sm:block" />
-                        {/* Footer */}
-                        <Footer />
+                    <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+                        {children}
                     </ThemeProvider>
                 </TrpcProvider>
             </body>

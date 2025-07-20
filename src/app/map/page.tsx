@@ -1,10 +1,16 @@
-"use client";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import MapView from "./MapView";
 import ImprovedMapView from "./ImprovedMapView";
 
 export default function MapPage() {
     return (
-        <div className="flex-1 relative w-full h-full min-h-[calc(100vh-4rem)] sm:min-h-[calc(100vh-7rem)]">
-            <ImprovedMapView />
+        <div className="min-h-screen flex flex-col">
+            <Header />
+            <div className="flex-1">
+                <ImprovedMapView />
+            </div>
+            <Footer />
         </div>
     );
 }

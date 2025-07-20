@@ -12,25 +12,26 @@ body {
 /* Custom global styles can go here */
 
 :root {
-    --background: oklch(0.9842 0.0034 247.8575);
-    --foreground: oklch(0.2077 0.0398 265.7549);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.2077 0.0398 265.7549);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.2077 0.0398 265.7549);
-    --primary: oklch(0.8602 0.0456 72.605);
-    --primary-foreground: oklch(0.2077 0.0398 265.7549);
-    --secondary: oklch(0.7813 0.0735 79.5752);
-    --secondary-foreground: oklch(0.2077 0.0398 265.7549);
-    --muted: oklch(0.9288 0.0126 255.5078);
-    --muted-foreground: oklch(0.5544 0.0407 257.4166);
-    --accent: oklch(0.6278 0.0716 73.2703);
-    --accent-foreground: oklch(0.9842 0.0034 247.8575);
-    --destructive: oklch(0.5858 0.222 17.5846);
-    --destructive-foreground: oklch(0.9842 0.0034 247.8575);
-    --border: oklch(0.9288 0.0126 255.5078);
-    --input: oklch(0.9288 0.0126 255.5078);
-    --ring: oklch(0.6278 0.0716 73.2703);
+    /* Make Waves Color Palette */
+    --background: #FFFFFF; /* White */
+    --foreground: #374151; /* Gray-700 */
+    --card: #FFFFFF; /* White */
+    --card-foreground: #374151; /* Gray-700 */
+    --popover: #FFFFFF; /* White */
+    --popover-foreground: #374151; /* Gray-700 */
+    --primary: #FFE5D4; /* Warm Peach */
+    --primary-foreground: #374151; /* Gray-700 */
+    --secondary: #F6E8D6; /* Sand */
+    --secondary-foreground: #374151; /* Gray-700 */
+    --muted: #F6E8D6; /* Sand */
+    --muted-foreground: #6B7280; /* Gray-500 */
+    --accent: #B3DFF2; /* Baby Blue */
+    --accent-foreground: #374151; /* Gray-700 */
+    --destructive: #EF4444; /* Red-500 */
+    --destructive-foreground: #FFFFFF; /* White */
+    --border: #F6E8D6; /* Sand */
+    --input: #F6E8D6; /* Sand */
+    --ring: #FFE5D4; /* Warm Peach */
     --chart-1: oklch(0.8602 0.0456 72.605);
     --chart-2: oklch(0.7813 0.0735 79.5752);
     --chart-3: oklch(0.6278 0.0716 73.2703);
