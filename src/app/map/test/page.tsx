@@ -59,7 +59,7 @@ export default function MapTestPage() {
                             <CardContent className="text-sm space-y-2">
                                 <div className="text-green-600">✅ Auto-detects user location</div>
                                 <div className="text-green-600">✅ Search any location</div>
-                                <div className="text-green-600">✅ "Go to my location" button</div>
+                                <div className="text-green-600">✅ &ldquo;Go to my location&rdquo; button</div>
                                 <div className="text-green-600">✅ Clean interface, no blocking overlays</div>
                                 <div className="text-yellow-600">🔄 Marker clustering (coming next)</div>
                                 <div className="text-green-600">✅ Larger, easier-to-tap markers</div>
