@@ -1,6 +1,6 @@
 "use client";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import CreateEventModal from "@/components/CreateEventModal";
@@ -33,6 +33,8 @@ const center = {
     lat: 25.79,
     lng: -80.13,
 };
+
+const INITIAL_ZOOM = 10;
 
 // Simple map options - let Google Maps handle mobile optimization
 const getMapOptions = (): google.maps.MapOptions => {
@@ -93,7 +95,9 @@ const getCategoryMarkerColor = (category: string) => {
 
 export default function MapView() {
     const [map, setMap] = useState<google.maps.Map | null>(null);
-    const [zoom, setZoom] = useState(10);
+    const [overlayVisible, setOverlayVisible] = useState(true);
+    const zoomRef = useRef(INITIAL_ZOOM);
+    const mapOptions = useMemo(getMapOptions, []);
     const [selectedEvent, setSelectedEvent] = useState<{
         id: string;
         location: { lat: number; lng: number };
@@ -113,11 +117,11 @@ export default function MapView() {
         refetch: () => void;
     };
 
-    // Overlay fade threshold
-    const overlayVisible = zoom < 8;
 
     const onLoad = useCallback((map: google.maps.Map) => {
         setMap(map);
+        zoomRef.current = map.getZoom() || INITIAL_ZOOM;
+        setOverlayVisible(zoomRef.current < 8);
 
         // Mobile touch optimization - let Google Maps handle everything
         const mapDiv = map.getDiv();
@@ -140,8 +144,9 @@ export default function MapView() {
 
     const onZoomChanged = useCallback(() => {
         if (map) {
-            const currentZoom = map.getZoom() || 10;
-            setZoom(currentZoom);
+            const currentZoom = map.getZoom() || INITIAL_ZOOM;
+            zoomRef.current = currentZoom;
+            setOverlayVisible(currentZoom < 8);
         }
     }, [map]);
 
@@ -166,11 +171,11 @@ export default function MapView() {
                     <GoogleMap
                         mapContainerStyle={mapContainerStyle}
                         center={center}
-                        zoom={zoom}
+                        defaultZoom={INITIAL_ZOOM}
                         onLoad={onLoad}
                         onUnmount={onUnmount}
                         onZoomChanged={onZoomChanged}
-                        options={getMapOptions()}
+                        options={mapOptions}
                     >
                         {!loading &&
                             filteredEvents.map((event) => (
