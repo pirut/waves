@@ -28,7 +28,10 @@ interface EventListProps {
 }
 
 export default function EventList({ limit, showCreateButton = false }: EventListProps) {
-    const { data: allEvents = [], isLoading: loading } = trpc.events.getAll.useQuery();
+    const { data: allEvents = [], isLoading: loading } = trpc.events.getAll.useQuery() as {
+        data: Event[];
+        isLoading: boolean;
+    };
 
     // Sort by date and limit if specified
     const events = allEvents.sort((a: Event, b: Event) => new Date(a.time).getTime() - new Date(b.time).getTime()).slice(0, limit);

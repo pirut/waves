@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Separator } from "@/components/ui/separator";
 import Footer from "@/components/Footer";
@@ -9,12 +9,13 @@ import { TrpcProvider } from "@/components/TrpcProvider";
 export const metadata: Metadata = {
     title: "Make Waves",
     description: "Map-centric social app for real-world good.",
-    viewport: {
-        width: "device-width",
-        initialScale: 1,
-        maximumScale: 3,
-        userScalable: true,
-    },
+};
+
+export const viewport: Viewport = {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 3,
+    userScalable: true,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
