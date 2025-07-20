@@ -38,21 +38,21 @@ const defaultCenter = {
     lng: -80.13,
 };
 
-// Improved map options for better UX
-const getMapOptions = (): google.maps.MapOptions => {
+// Improved map options for better UX - mobile-aware
+const getMapOptions = (isMobile: boolean = false): google.maps.MapOptions => {
     return {
         disableDefaultUI: false,
         zoomControl: false, // Disable default zoom controls - we'll use custom ones
         streetViewControl: false,
         mapTypeControl: false,
-        fullscreenControl: true,
+        fullscreenControl: !isMobile, // Disable fullscreen on mobile to avoid conflicts
         gestureHandling: "greedy",
-        isFractionalZoomEnabled: false, // Disable fractional zoom for snappier feel
+        isFractionalZoomEnabled: isMobile, // Enable fractional zoom on mobile for smoother pinch
         clickableIcons: false,
-        keyboardShortcuts: true,
+        keyboardShortcuts: !isMobile, // Disable keyboard shortcuts on mobile
         minZoom: 3,
         maxZoom: 18,
-        scrollwheel: true,
+        scrollwheel: !isMobile, // Disable scroll wheel on mobile
         tilt: 0,
         rotateControl: false,
         disableDoubleClickZoom: false,
@@ -183,8 +183,34 @@ export default function ImprovedMapView() {
         return events.filter((e) => e.location && typeof e.location.lat === "number" && typeof e.location.lng === "number");
     }, [events]);
 
-    // Memoize map options for better performance
-    const mapOptions = useMemo(() => getMapOptions(), []);
+    // Detect mobile for map options (only after mount to avoid hydration issues)
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        if (!isMounted) return;
+
+        // Detect mobile only after hydration
+        const detectMobile = () => {
+            // Check user agent
+            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                return true;
+            }
+            // Check for touch capability
+            if ("ontouchstart" in window || navigator.maxTouchPoints > 0) {
+                return true;
+            }
+            // Check screen size as additional indicator
+            if (window.innerWidth <= 768) {
+                return true;
+            }
+            return false;
+        };
+
+        setIsMobile(detectMobile());
+    }, [isMounted]);
+
+    // Memoize map options for better performance - mobile-aware
+    const mapOptions = useMemo(() => getMapOptions(isMobile), [isMobile]);
 
     // Search functionality
     const handleSearch = useCallback(async () => {
@@ -273,18 +299,14 @@ export default function ImprovedMapView() {
 
     // Override scroll wheel behavior ONLY on desktop (not mobile)
     useEffect(() => {
-        if (!mapRef.current || !isMounted) return;
+        if (!mapRef.current || !isMounted || isMobile) return;
 
-        // Detect if this is a mobile device (only after mount to avoid hydration issues)
-        const isMobile =
-            /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-            "ontouchstart" in window ||
-            navigator.maxTouchPoints > 0;
-
-        // Only override scroll wheel on desktop, let mobile handle everything natively
-        if (isMobile) return;
+        console.log("Desktop detected - using custom scroll wheel handling");
 
         const handleWheel = (e: WheelEvent) => {
+            // Only handle actual wheel events, not touch
+            if (e.type !== "wheel") return;
+
             e.preventDefault();
             e.stopPropagation();
 
@@ -298,13 +320,14 @@ export default function ImprovedMapView() {
 
         const mapDiv = mapRef.current.getDiv();
         if (mapDiv) {
+            // Only add wheel listener on desktop
             mapDiv.addEventListener("wheel", handleWheel, { passive: false });
 
             return () => {
                 mapDiv.removeEventListener("wheel", handleWheel);
             };
         }
-    }, [isMounted]);
+    }, [isMounted, isMobile]);
 
     // Close info window when clicking elsewhere
     const onMapClick = useCallback(() => {
@@ -376,10 +399,10 @@ export default function ImprovedMapView() {
             <GoogleMap
                 mapContainerStyle={mapContainerStyle}
                 center={center}
-                zoom={zoom}
+                zoom={isMobile ? 12 : zoom} // Fixed initial zoom for mobile, controlled zoom for desktop
                 onLoad={onLoad}
                 onUnmount={onUnmount}
-                onZoomChanged={onZoomChanged}
+                {...(!isMobile && { onZoomChanged })} // Only track zoom changes on desktop
                 onClick={onMapClick}
                 options={mapOptions}
             >
