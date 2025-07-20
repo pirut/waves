@@ -1,6 +1,6 @@
 "use client";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import CreateEventModal from "@/components/CreateEventModal";
@@ -91,9 +91,24 @@ const getCategoryMarkerColor = (category: string) => {
     return categoryColorMap[category] || "#FFE5D4"; // Default warm peach
 };
 
+const useMarkerIcons = (loaded: boolean) =>
+    useMemo(() => {
+        if (!loaded) return {} as Record<string, google.maps.Icon>;
+        const icons: Record<string, google.maps.Icon> = {};
+        Object.entries(categoryColorMap).forEach(([cat, color]) => {
+            const icon = createMarkerIcon(color);
+            if (icon) icons[cat] = icon;
+        });
+        const defaultIcon = createMarkerIcon("#FFE5D4");
+        if (defaultIcon) icons.default = defaultIcon;
+        return icons;
+    }, [loaded]);
+
 export default function MapView() {
     const [map, setMap] = useState<google.maps.Map | null>(null);
-    const [zoom, setZoom] = useState(10);
+    const initialZoom = 10;
+    const zoomRef = useRef(initialZoom);
+    const [overlayVisible, setOverlayVisible] = useState(initialZoom < 8);
     const [selectedEvent, setSelectedEvent] = useState<{
         id: string;
         location: { lat: number; lng: number };
@@ -113,8 +128,6 @@ export default function MapView() {
         refetch: () => void;
     };
 
-    // Overlay fade threshold
-    const overlayVisible = zoom < 8;
 
     const onLoad = useCallback((map: google.maps.Map) => {
         setMap(map);
@@ -140,10 +153,11 @@ export default function MapView() {
 
     const onZoomChanged = useCallback(() => {
         if (map) {
-            const currentZoom = map.getZoom() || 10;
-            setZoom(currentZoom);
+            const currentZoom = map.getZoom() || initialZoom;
+            zoomRef.current = currentZoom;
+            setOverlayVisible(currentZoom < 8);
         }
-    }, [map]);
+    }, [map, initialZoom]);
 
     // Load Google Maps API once with latest version
     const { isLoaded } = useJsApiLoader({
@@ -152,6 +166,8 @@ export default function MapView() {
         version: "weekly", // Use the latest weekly release
         libraries: ["places"], // Load additional libraries if needed
     });
+
+    const markerIcons = useMarkerIcons(isLoaded);
 
     // Memoize filtered events to prevent unnecessary re-renders
     const filteredEvents = useMemo(() => {
@@ -166,7 +182,7 @@ export default function MapView() {
                     <GoogleMap
                         mapContainerStyle={mapContainerStyle}
                         center={center}
-                        zoom={zoom}
+                        defaultZoom={initialZoom}
                         onLoad={onLoad}
                         onUnmount={onUnmount}
                         onZoomChanged={onZoomChanged}
@@ -189,7 +205,7 @@ export default function MapView() {
                                             description: event.description,
                                         });
                                     }}
-                                    icon={createMarkerIcon(getCategoryMarkerColor(event.category || ""))}
+                                    icon={markerIcons[event.category ?? "default"]}
                                 />
                             ))}
 
