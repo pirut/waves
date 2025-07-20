@@ -61,7 +61,8 @@ export default function MapTestPage() {
                                 <div className="text-green-600">✅ Search any location</div>
                                 <div className="text-green-600">✅ &ldquo;Go to my location&rdquo; button</div>
                                 <div className="text-green-600">✅ Clean interface, no blocking overlays</div>
-                                <div className="text-yellow-600">🔄 Marker clustering (coming next)</div>
+                                <div className="text-green-600">✅ Smart marker clustering</div>
+                                <div className="text-green-600">✅ Viewport-based event loading</div>
                                 <div className="text-green-600">✅ Larger, easier-to-tap markers</div>
                                 <div className="text-green-600">✅ Smooth in-app navigation</div>
                                 <div className="text-green-600">✅ Loading states & error handling</div>

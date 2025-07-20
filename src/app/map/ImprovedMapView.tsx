@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import CreateEventModal from "@/components/CreateEventModal";
 import { Search, Locate, X } from "lucide-react";
+import { MarkerClusterer } from "@googlemaps/markerclusterer";
 
 // Event interface to match the data structure
 interface Event {
@@ -120,15 +121,17 @@ export default function ImprovedMapView() {
     const [isSearching, setIsSearching] = useState(false);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [isMounted, setIsMounted] = useState(false);
+    const [mapBounds, setMapBounds] = useState<google.maps.LatLngBounds | null>(null);
+    const clustererRef = useRef<MarkerClusterer | null>(null);
 
     // Handle hydration by only running client-side code after mount
     useEffect(() => {
         setIsMounted(true);
     }, []);
 
-    // Use tRPC to fetch events
+    // Use tRPC to fetch events - we'll implement viewport-based loading later
     const {
-        data: events = [],
+        data: allEvents = [],
         isLoading: loading,
         refetch: loadEvents,
     } = trpc.events.getAll.useQuery() as {
@@ -136,6 +139,18 @@ export default function ImprovedMapView() {
         isLoading: boolean;
         refetch: () => void;
     };
+
+    // Filter events based on viewport bounds for performance
+    const eventsInViewport = useMemo(() => {
+        if (!mapBounds || !allEvents.length) return allEvents;
+
+        return allEvents.filter((event) => {
+            if (!event.location) return false;
+
+            const eventLatLng = new google.maps.LatLng(event.location.lat, event.location.lng);
+            return mapBounds.contains(eventLatLng);
+        });
+    }, [allEvents, mapBounds]);
 
     // Load Google Maps API with clustering
     const { isLoaded } = useJsApiLoader({
@@ -178,10 +193,10 @@ export default function ImprovedMapView() {
         }
     }, [isMounted, center.lat, center.lng]);
 
-    // Memoize filtered events
+    // Memoize filtered events from viewport
     const filteredEvents = useMemo(() => {
-        return events.filter((e) => e.location && typeof e.location.lat === "number" && typeof e.location.lng === "number");
-    }, [events]);
+        return eventsInViewport.filter((e) => e.location && typeof e.location.lat === "number" && typeof e.location.lng === "number");
+    }, [eventsInViewport]);
 
     // Detect mobile for map options (only after mount to avoid hydration issues)
     const [isMobile, setIsMobile] = useState(false);
@@ -262,6 +277,12 @@ export default function ImprovedMapView() {
         const initialZoom = map.getZoom() || 10;
         setZoom(initialZoom);
 
+        // Set initial bounds for viewport-based loading
+        const bounds = map.getBounds();
+        if (bounds) {
+            setMapBounds(bounds);
+        }
+
         // Force a resize to ensure proper rendering
         setTimeout(() => {
             google.maps.event.trigger(map, "resize");
@@ -277,6 +298,16 @@ export default function ImprovedMapView() {
             // Update zoom directly from map for smoother interactions
             const currentZoom = mapRef.current.getZoom() || 10;
             setZoom(currentZoom);
+        }
+    }, []);
+
+    // Handle bounds change for viewport-based loading
+    const onBoundsChanged = useCallback(() => {
+        if (mapRef.current) {
+            const bounds = mapRef.current.getBounds();
+            if (bounds) {
+                setMapBounds(bounds);
+            }
         }
     }, []);
 
@@ -296,6 +327,49 @@ export default function ImprovedMapView() {
             mapRef.current.setZoom(newZoom);
         }
     }, []);
+
+    // Initialize marker clustering
+    useEffect(() => {
+        if (!mapRef.current || !isLoaded || !filteredEvents.length) return;
+
+        // Clean up existing clusterer
+        if (clustererRef.current) {
+            clustererRef.current.clearMarkers();
+        }
+
+        // Create markers for clustering
+        const markers = filteredEvents.map((event) => {
+            const marker = new google.maps.Marker({
+                position: {
+                    lat: event.location!.lat,
+                    lng: event.location!.lng,
+                },
+                icon: createMarkerIcon(getCategoryMarkerColor(event.category || "")),
+                title: event.title,
+            });
+
+            // Add click listener to marker
+            marker.addListener("click", () => {
+                setSelectedEvent(event);
+            });
+
+            return marker;
+        });
+
+        // Create or update clusterer with simplified configuration
+        if (markers.length > 0) {
+            clustererRef.current = new MarkerClusterer({
+                map: mapRef.current,
+                markers,
+            });
+        }
+
+        return () => {
+            if (clustererRef.current) {
+                clustererRef.current.clearMarkers();
+            }
+        };
+    }, [isLoaded, filteredEvents]);
 
     // Override scroll wheel behavior ONLY on desktop (not mobile)
     useEffect(() => {
@@ -403,6 +477,7 @@ export default function ImprovedMapView() {
                 onLoad={onLoad}
                 onUnmount={onUnmount}
                 {...(!isMobile && { onZoomChanged })} // Only track zoom changes on desktop
+                onBoundsChanged={onBoundsChanged} // Track viewport changes for event loading
                 onClick={onMapClick}
                 options={mapOptions}
             >
@@ -424,19 +499,7 @@ export default function ImprovedMapView() {
                     />
                 )}
 
-                {/* Event markers */}
-                {filteredEvents.map((event) => (
-                    <Marker
-                        key={event.id}
-                        position={{
-                            lat: event.location!.lat,
-                            lng: event.location!.lng,
-                        }}
-                        onClick={() => setSelectedEvent(event)}
-                        icon={createMarkerIcon(getCategoryMarkerColor(event.category || ""))}
-                        title={event.title}
-                    />
-                ))}
+                {/* Event markers are now handled by MarkerClusterer */}
 
                 {/* Improved InfoWindow - mobile optimized */}
                 {selectedEvent && selectedEvent.location && (
@@ -520,9 +583,11 @@ export default function ImprovedMapView() {
                 <Card className="bg-card/95 backdrop-blur-sm">
                     <CardContent className="p-1.5 sm:p-2 text-xs text-muted-foreground">
                         <span className="hidden sm:inline">
-                            {filteredEvents.length} events • Zoom: {zoom}
+                            {filteredEvents.length} of {allEvents.length} events • Zoom: {zoom}
                         </span>
-                        <span className="sm:hidden">{filteredEvents.length} events</span>
+                        <span className="sm:hidden">
+                            {filteredEvents.length}/{allEvents.length} events
+                        </span>
                     </CardContent>
                 </Card>
             </div>
