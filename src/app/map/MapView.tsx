@@ -1,6 +1,6 @@
 "use client";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import CreateEventModal from "@/components/CreateEventModal";
@@ -92,7 +92,7 @@ const getCategoryMarkerColor = (category: string) => {
 };
 
 export default function MapView() {
-    const [map, setMap] = useState<google.maps.Map | null>(null);
+    const mapRef = useRef<google.maps.Map | null>(null);
     const [zoom, setZoom] = useState(10);
     const [selectedEvent, setSelectedEvent] = useState<{
         id: string;
@@ -101,6 +101,8 @@ export default function MapView() {
         category?: string;
         description?: string;
     } | null>(null);
+
+    const mapOptions = useMemo(() => getMapOptions(), []);
 
     // Use tRPC to fetch events
     const {
@@ -117,7 +119,8 @@ export default function MapView() {
     const overlayVisible = zoom < 8;
 
     const onLoad = useCallback((map: google.maps.Map) => {
-        setMap(map);
+        mapRef.current = map;
+        setZoom(map.getZoom() || 10);
 
         // Mobile touch optimization - let Google Maps handle everything
         const mapDiv = map.getDiv();
@@ -135,15 +138,15 @@ export default function MapView() {
     }, []);
 
     const onUnmount = useCallback(() => {
-        setMap(null);
+        mapRef.current = null;
     }, []);
 
     const onZoomChanged = useCallback(() => {
-        if (map) {
-            const currentZoom = map.getZoom() || 10;
+        if (mapRef.current) {
+            const currentZoom = mapRef.current.getZoom() || 10;
             setZoom(currentZoom);
         }
-    }, [map]);
+    }, []);
 
     // Load Google Maps API once with latest version
     const { isLoaded } = useJsApiLoader({
@@ -166,11 +169,10 @@ export default function MapView() {
                     <GoogleMap
                         mapContainerStyle={mapContainerStyle}
                         center={center}
-                        zoom={zoom}
                         onLoad={onLoad}
                         onUnmount={onUnmount}
                         onZoomChanged={onZoomChanged}
-                        options={getMapOptions()}
+                        options={mapOptions}
                     >
                         {!loading &&
                             filteredEvents.map((event) => (
