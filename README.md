@@ -156,3 +156,24 @@ Target audience: **General public** Design style: **Clean and minimalist** Color
 -   Event approval flow
 -   SMS notifications
 -   Messaging between friends
+
+---
+
+## Development Setup
+
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Start the development server:
+   ```bash
+   npm run dev
+   ```
+3. Check code quality:
+   ```bash
+   npm run lint
+   ```
+4. Format the codebase:
+   ```bash
+   npm run format
+   ```
