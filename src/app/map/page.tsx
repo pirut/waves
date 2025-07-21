@@ -4,12 +4,14 @@ import ImprovedMapView from './ImprovedMapView';
 
 export default function MapPage() {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <div className="flex-1">
-        <ImprovedMapView />
+    <>
+      <div className="flex flex-col h-screen">
+        <Header />
+        <div className="flex-1 min-h-0">
+          <ImprovedMapView />
+        </div>
       </div>
       <Footer />
-    </div>
+    </>
   );
 }

@@ -4,9 +4,10 @@ import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { trpc } from '@/lib/trpc';
 import CreateEventModal from '@/components/CreateEventModal';
-import { Search, Locate, X } from 'lucide-react';
+import { Search, Locate, X, Filter } from 'lucide-react';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 
 // Event interface to match the data structure
@@ -122,6 +123,7 @@ export default function ImprovedMapView() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [mapBounds, setMapBounds] = useState<google.maps.LatLngBounds | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(Object.keys(categoryColorMap));
   const clustererRef = useRef<MarkerClusterer | null>(null);
 
   // Handle hydration by only running client-side code after mount
@@ -193,12 +195,32 @@ export default function ImprovedMapView() {
     }
   }, [isMounted, center.lat, center.lng]);
 
-  // Memoize filtered events from viewport
+  // Memoize filtered events from viewport with search and category filtering
   const filteredEvents = useMemo(() => {
-    return eventsInViewport.filter(
-      (e) => e.location && typeof e.location.lat === 'number' && typeof e.location.lng === 'number'
-    );
-  }, [eventsInViewport]);
+    return eventsInViewport.filter((e) => {
+      // Check location validity
+      if (!e.location || typeof e.location.lat !== 'number' || typeof e.location.lng !== 'number') {
+        return false;
+      }
+      
+      // Check search query
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch = 
+          e.title?.toLowerCase().includes(query) ||
+          e.description?.toLowerCase().includes(query) ||
+          e.location?.address?.toLowerCase().includes(query);
+        if (!matchesSearch) return false;
+      }
+      
+      // Check category filter
+      if (e.category && !selectedCategories.includes(e.category)) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [eventsInViewport, searchQuery, selectedCategories]);
 
   // Detect mobile for map options (only after mount to avoid hydration issues)
   const [isMobile, setIsMobile] = useState(false);
@@ -426,63 +448,229 @@ export default function ImprovedMapView() {
   }
 
   return (
-    <div className="w-full h-full relative overflow-hidden">
-      {/* Loading indicator for enhanced features */}
-      {!isMounted && (
-        <div className="absolute top-4 left-4 right-4 z-30 pointer-events-auto">
-          <Card className="bg-card/95 backdrop-blur-sm">
-            <CardContent className="p-2 text-xs text-muted-foreground flex items-center gap-2">
-              <div className="animate-spin rounded-full h-3 w-3 border border-current border-t-transparent"></div>
-              Loading enhanced features...
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Search Bar - mobile optimized spacing */}
-      {isMounted && (
-        <div className="absolute top-2 left-2 right-2 sm:top-4 sm:left-4 sm:right-4 z-30 pointer-events-auto">
-          <div className="flex gap-1 sm:gap-2 max-w-md">
-            <div className="flex-1 relative">
-              <Input
-                placeholder="Search location..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="pr-8 text-sm h-9 sm:h-10"
-              />
-              {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 p-0"
-                  onClick={() => setSearchQuery('')}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
-            </div>
-            <Button
-              onClick={handleSearch}
-              disabled={isSearching || !searchQuery.trim()}
-              size="sm"
-              className="h-9 w-9 p-0 sm:h-10 sm:w-10"
-            >
-              <Search className="h-3 w-3 sm:h-4 sm:w-4" />
+    <div className="flex h-full bg-[#F6E8D6]">
+      {/* Left Sidebar */}
+      <div className="w-80 bg-white border-r border-[#F6E8D6] flex flex-col">
+        {/* Events Header */}
+        <div className="p-4 border-b border-[#F6E8D6]">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Events</h2>
+            <Button variant="ghost" size="sm">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
             </Button>
-            {userLocation && (
-              <Button
-                variant="outline"
-                onClick={goToUserLocation}
-                size="sm"
-                className="h-9 w-9 p-0 sm:h-10 sm:w-10"
-              >
-                <Locate className="h-3 w-3 sm:h-4 sm:w-4" />
-              </Button>
+          </div>
+          
+          {/* Search */}
+          <div className="relative mb-3">
+            <Input
+              placeholder="Search events..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 border-[#F6E8D6] focus:border-[#FFE5D4]"
+            />
+            <svg className="w-4 h-4 absolute left-2.5 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+
+          {/* Category Filter */}
+          <div className="relative">
+            <Select
+              value={selectedCategories.length === Object.keys(categoryColorMap).length ? "all" : "filtered"}
+              onValueChange={(value) => {
+                if (value === "all") {
+                  setSelectedCategories(Object.keys(categoryColorMap));
+                } else if (value === "none") {
+                  setSelectedCategories([]);
+                }
+              }}
+            >
+              <SelectTrigger className="border-[#F6E8D6] focus:border-[#FFE5D4]">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-gray-400" />
+                  <SelectValue placeholder="Filter by category" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories ({Object.keys(categoryColorMap).length})</SelectItem>
+                <SelectItem value="none">None</SelectItem>
+                <div className="border-t border-gray-200 my-1"></div>
+                {Object.entries(categoryColorMap).map(([category, color]) => (
+                  <SelectItem 
+                    key={category} 
+                    value={category}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setSelectedCategories(prev => 
+                        prev.includes(category) 
+                          ? prev.filter(c => c !== category)
+                          : [...prev, category]
+                      );
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: color }}
+                      />
+                      <span>{category}</span>
+                      {selectedCategories.includes(category) && (
+                        <svg className="w-4 h-4 ml-auto text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {/* Active filters indicator */}
+            {selectedCategories.length > 0 && selectedCategories.length < Object.keys(categoryColorMap).length && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {selectedCategories.map(category => (
+                  <span 
+                    key={category}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-[#FFE5D4] text-gray-700 rounded-full"
+                  >
+                    <div 
+                      className="w-2 h-2 rounded-full" 
+                      style={{ backgroundColor: categoryColorMap[category] }}
+                    />
+                    {category}
+                    <button
+                      onClick={() => setSelectedCategories(prev => prev.filter(c => c !== category))}
+                      className="ml-1 hover:text-gray-900"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
             )}
           </div>
         </div>
-      )}
+
+        {/* Events List */}
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="p-4 text-center text-gray-500">Loading events...</div>
+          ) : filteredEvents.length === 0 ? (
+            <div className="p-4 text-center text-gray-500">
+              {allEvents.length === 0 
+                ? "No events found" 
+                : selectedCategories.length === 0
+                  ? "No categories selected. Choose categories to see events."
+                  : searchQuery.trim()
+                    ? "No events match your search and filters"
+                    : "No events match your selected categories"
+              }
+            </div>
+          ) : (
+            filteredEvents.map((event) => (
+              <div 
+                key={event.id} 
+                className="p-4 border-b border-[#F6E8D6] hover:bg-[#FFE5D4]/20 cursor-pointer"
+                onClick={() => {
+                  setSelectedEvent(event);
+                  if (mapRef.current && event.location) {
+                    mapRef.current.panTo({ lat: event.location.lat, lng: event.location.lng });
+                    mapRef.current.setZoom(15);
+                  }
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <div 
+                    className="w-2 h-2 rounded-full mt-2" 
+                    style={{ backgroundColor: getCategoryMarkerColor(event.category || '') }} 
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-gray-900 truncate">{event.title}</h3>
+                    <p className="text-sm text-gray-600 mt-1">{event.location?.address}</p>
+                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        {event.date}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                        </svg>
+                        {event.attendees?.length || 0} attendees
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Add Event Button */}
+        <div className="p-4 border-t border-[#F6E8D6]">
+          <CreateEventModal onEventCreated={loadEvents}>
+            <Button className="w-full bg-gray-900 hover:bg-gray-800 text-white">
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add Event
+            </Button>
+          </CreateEventModal>
+        </div>
+      </div>
+
+      {/* Main Map Area */}
+      <div className="flex-1 relative overflow-hidden">
+        {/* Filter Status Indicator */}
+        {selectedCategories.length < Object.keys(categoryColorMap).length && (
+          <div className="absolute top-4 left-4 z-10">
+            <div className="bg-white/95 backdrop-blur-sm border border-[#F6E8D6] rounded-md px-3 py-2 shadow-sm">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Filter className="w-4 h-4" />
+                <span>
+                  {selectedCategories.length === 0 
+                    ? "No categories selected" 
+                    : `${selectedCategories.length} of ${Object.keys(categoryColorMap).length} categories`
+                  }
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Map Controls */}
+        <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={zoomIn} 
+            className="bg-white border-[#F6E8D6] w-10 h-10 p-0"
+          >
+            <span className="text-lg font-bold">+</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={zoomOut} 
+            className="bg-white border-[#F6E8D6] w-10 h-10 p-0"
+          >
+            <span className="text-lg font-bold">−</span>
+          </Button>
+          {userLocation && (
+            <Button
+              variant="outline"
+              onClick={goToUserLocation}
+              size="sm"
+              className="bg-white border-[#F6E8D6] w-10 h-10 p-0"
+            >
+              <Locate className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
 
       {/* Google Map - render immediately when API is loaded */}
       <GoogleMap
@@ -577,43 +765,12 @@ export default function ImprovedMapView() {
         </div>
       )}
 
-      {/* Create Event FAB */}
-      <CreateEventModal onEventCreated={loadEvents} />
 
-      {/* Custom Fast Zoom Controls - mobile optimized */}
-      <div className="absolute bottom-24 right-2 sm:bottom-20 sm:right-4 z-30 pointer-events-auto flex flex-col gap-1 sm:gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={zoomIn}
-          className="w-12 h-12 p-0 bg-background/95 backdrop-blur-sm shadow-lg sm:w-10 sm:h-10"
-          title="Zoom in (fast)"
-        >
-          <span className="text-xl font-bold sm:text-lg">+</span>
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={zoomOut}
-          className="w-12 h-12 p-0 bg-background/95 backdrop-blur-sm shadow-lg sm:w-10 sm:h-10"
-          title="Zoom out (fast)"
-        >
-          <span className="text-xl font-bold sm:text-lg">−</span>
-        </Button>
-      </div>
 
-      {/* Map Stats - mobile optimized */}
-      <div className="absolute bottom-2 left-2 sm:bottom-4 sm:left-4 z-30 pointer-events-auto">
-        <Card className="bg-card/95 backdrop-blur-sm">
-          <CardContent className="p-1.5 sm:p-2 text-xs text-muted-foreground">
-            <span className="hidden sm:inline">
-              {filteredEvents.length} of {allEvents.length} events • Zoom: {zoom}
-            </span>
-            <span className="sm:hidden">
-              {filteredEvents.length}/{allEvents.length} events
-            </span>
-          </CardContent>
-        </Card>
+        {/* Bottom Status */}
+        <div className="absolute bottom-4 left-4 z-10 bg-white px-3 py-2 rounded-md shadow-sm border border-[#F6E8D6]">
+          <p className="text-xs text-gray-600">Showing {filteredEvents.length} events in current view</p>
+        </div>
       </div>
     </div>
   );

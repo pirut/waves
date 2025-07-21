@@ -190,7 +190,7 @@ export default function MapView() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-12rem)] bg-[#F6E8D6]">
+    <div className="flex h-full bg-[#F6E8D6]">
       {/* Left Sidebar */}
       <div className="w-80 bg-white border-r border-[#F6E8D6] flex flex-col">
         {/* Events Header */}
