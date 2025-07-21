@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation";
+import { redirect } from 'next/navigation';
 
 export default function Home() {
-    // Redirect to map page as the main entry point
-    redirect("/map");
+  // Redirect to map page as the main entry point
+  redirect('/map');
 }

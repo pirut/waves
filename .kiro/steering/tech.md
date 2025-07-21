@@ -2,32 +2,32 @@
 
 ## Framework & Build System
 
--   **Next.js 15.3.5** with App Router
--   **React 19** with TypeScript
--   **Turbopack** for development (faster builds)
+- **Next.js 15.3.5** with App Router
+- **React 19** with TypeScript
+- **Turbopack** for development (faster builds)
 
 ## Styling & UI
 
--   **Tailwind CSS 4.1.11** for styling
--   **shadcn/ui** components for UI primitives (built on Radix UI)
--   **Lucide React** for icons
--   **next-themes** for dark/light mode support
--   **class-variance-authority** for component variants
+- **Tailwind CSS 4.1.11** for styling
+- **shadcn/ui** components for UI primitives (built on Radix UI)
+- **Lucide React** for icons
+- **next-themes** for dark/light mode support
+- **class-variance-authority** for component variants
 
 ## Backend & Services
 
--   **tRPC** for type-safe API layer with React Query integration
--   **Firebase** for authentication, database, and storage
-    -   Firestore for data storage
-    -   Firebase Auth with Google login
-    -   Firebase Admin SDK for server-side operations
--   **Google Maps API** via `@react-google-maps/api`
--   **Zod** for runtime type validation
+- **tRPC** for type-safe API layer with React Query integration
+- **Firebase** for authentication, database, and storage
+  - Firestore for data storage
+  - Firebase Auth with Google login
+  - Firebase Admin SDK for server-side operations
+- **Google Maps API** via `@react-google-maps/api`
+- **Zod** for runtime type validation
 
 ## Development Tools
 
--   **ESLint** with Next.js config
--   **PostCSS** with Tailwind
+- **ESLint** with Next.js config
+- **PostCSS** with Tailwind
 
 ## Common Commands
 
@@ -61,10 +61,10 @@ npm run lint         # Run ESLint
 
 ## Code Patterns
 
--   Use `"use client"` directive for client-side components
--   **tRPC** for type-safe API calls: `trpc.events.getAll.useQuery()`
--   Firebase config in `src/firebase.ts` and `src/firebaseAdmin.ts`
--   Custom hooks in `src/hooks/` (e.g., `useAuth`)
--   tRPC routers in `src/server/routers/` with Zod validation
--   API endpoint at `/api/trpc/[trpc]` for tRPC handler
--   UI components use shadcn/ui + CVA pattern for variants
+- Use `"use client"` directive for client-side components
+- **tRPC** for type-safe API calls: `trpc.events.getAll.useQuery()`
+- Firebase config in `src/firebase.ts` and `src/firebaseAdmin.ts`
+- Custom hooks in `src/hooks/` (e.g., `useAuth`)
+- tRPC routers in `src/server/routers/` with Zod validation
+- API endpoint at `/api/trpc/[trpc]` for tRPC handler
+- UI components use shadcn/ui + CVA pattern for variants

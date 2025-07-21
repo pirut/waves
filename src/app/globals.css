@@ -1,10 +1,10 @@
 html,
 body {
-    height: 100%;
+  height: 100%;
 }
 
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 @tailwind utilities;
@@ -12,285 +12,289 @@ body {
 /* Custom global styles can go here */
 
 :root {
-    /* Make Waves Color Palette */
-    --background: #FFFFFF; /* White */
-    --foreground: #374151; /* Gray-700 */
-    --card: #FFFFFF; /* White */
-    --card-foreground: #374151; /* Gray-700 */
-    --popover: #FFFFFF; /* White */
-    --popover-foreground: #374151; /* Gray-700 */
-    --primary: #FFE5D4; /* Warm Peach */
-    --primary-foreground: #374151; /* Gray-700 */
-    --secondary: #F6E8D6; /* Sand */
-    --secondary-foreground: #374151; /* Gray-700 */
-    --muted: #F6E8D6; /* Sand */
-    --muted-foreground: #6B7280; /* Gray-500 */
-    --accent: #B3DFF2; /* Baby Blue */
-    --accent-foreground: #374151; /* Gray-700 */
-    --destructive: #EF4444; /* Red-500 */
-    --destructive-foreground: #FFFFFF; /* White */
-    --border: #F6E8D6; /* Sand */
-    --input: #F6E8D6; /* Sand */
-    --ring: #FFE5D4; /* Warm Peach */
-    --chart-1: oklch(0.8602 0.0456 72.605);
-    --chart-2: oklch(0.7813 0.0735 79.5752);
-    --chart-3: oklch(0.6278 0.0716 73.2703);
-    --chart-4: oklch(0.5251 0.0609 73.071);
-    --chart-5: oklch(0.417 0.0498 72.7465);
-    --sidebar: oklch(1 0 0);
-    --sidebar-foreground: oklch(0.2077 0.0398 265.7549);
-    --sidebar-primary: oklch(0.8602 0.0456 72.605);
-    --sidebar-primary-foreground: oklch(0.2077 0.0398 265.7549);
-    --sidebar-accent: oklch(0.9288 0.0126 255.5078);
-    --sidebar-accent-foreground: oklch(0.2077 0.0398 265.7549);
-    --sidebar-border: oklch(0.9288 0.0126 255.5078);
-    --sidebar-ring: oklch(0.6278 0.0716 73.2703);
-    --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif,
-        "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-    --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
-    --font-mono: Menlo, Monaco, Consolas, "Courier New", monospace;
-    --radius: 0.5rem;
-    --shadow-2xs: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.05);
-    --shadow-xs: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.05);
-    --shadow-sm: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow-md: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
-    --shadow-lg: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
-    --shadow-xl: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
-    --shadow-2xl: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.25);
-    --tracking-normal: 0.025em;
-    --spacing: 0.25rem;
+  /* Make Waves Color Palette */
+  --background: #ffffff; /* White */
+  --foreground: #374151; /* Gray-700 */
+  --card: #ffffff; /* White */
+  --card-foreground: #374151; /* Gray-700 */
+  --popover: #ffffff; /* White */
+  --popover-foreground: #374151; /* Gray-700 */
+  --primary: #ffe5d4; /* Warm Peach */
+  --primary-foreground: #374151; /* Gray-700 */
+  --secondary: #f6e8d6; /* Sand */
+  --secondary-foreground: #374151; /* Gray-700 */
+  --muted: #f6e8d6; /* Sand */
+  --muted-foreground: #6b7280; /* Gray-500 */
+  --accent: #b3dff2; /* Baby Blue */
+  --accent-foreground: #374151; /* Gray-700 */
+  --destructive: #ef4444; /* Red-500 */
+  --destructive-foreground: #ffffff; /* White */
+  --border: #f6e8d6; /* Sand */
+  --input: #f6e8d6; /* Sand */
+  --ring: #ffe5d4; /* Warm Peach */
+  --chart-1: oklch(0.8602 0.0456 72.605);
+  --chart-2: oklch(0.7813 0.0735 79.5752);
+  --chart-3: oklch(0.6278 0.0716 73.2703);
+  --chart-4: oklch(0.5251 0.0609 73.071);
+  --chart-5: oklch(0.417 0.0498 72.7465);
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.2077 0.0398 265.7549);
+  --sidebar-primary: oklch(0.8602 0.0456 72.605);
+  --sidebar-primary-foreground: oklch(0.2077 0.0398 265.7549);
+  --sidebar-accent: oklch(0.9288 0.0126 255.5078);
+  --sidebar-accent-foreground: oklch(0.2077 0.0398 265.7549);
+  --sidebar-border: oklch(0.9288 0.0126 255.5078);
+  --sidebar-ring: oklch(0.6278 0.0716 73.2703);
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-serif: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  --font-mono: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  --radius: 0.5rem;
+  --shadow-2xs: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.05);
+  --shadow-xs: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.05);
+  --shadow-sm: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+  --shadow: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+  --shadow-md: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
+  --shadow-lg: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
+  --shadow-xl: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
+  --shadow-2xl: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.25);
+  --tracking-normal: 0.025em;
+  --spacing: 0.25rem;
 }
 
 .dark {
-    --background: oklch(0.2077 0.0398 265.7549);
-    --foreground: oklch(0.869 0.0198 252.8943);
-    --card: oklch(0.2795 0.0368 260.031);
-    --card-foreground: oklch(0.9288 0.0126 255.5078);
-    --popover: oklch(0.2795 0.0368 260.031);
-    --popover-foreground: oklch(0.9288 0.0126 255.5078);
-    --primary: oklch(0.8602 0.0456 72.605);
-    --primary-foreground: oklch(0.2077 0.0398 265.7549);
-    --secondary: oklch(0.7813 0.0735 79.5752);
-    --secondary-foreground: oklch(0.9288 0.0126 255.5078);
-    --muted: oklch(0.3717 0.0392 257.287);
-    --muted-foreground: oklch(0.7107 0.0351 256.7878);
-    --accent: oklch(0.6278 0.0716 73.2703);
-    --accent-foreground: oklch(0.2795 0.0368 260.031);
-    --destructive: oklch(0.5858 0.222 17.5846);
-    --destructive-foreground: oklch(0.9842 0.0034 247.8575);
-    --border: oklch(0.3717 0.0392 257.287);
-    --input: oklch(0.3717 0.0392 257.287);
-    --ring: oklch(0.6278 0.0716 73.2703);
-    --chart-1: oklch(0.8602 0.0456 72.605);
-    --chart-2: oklch(0.7813 0.0735 79.5752);
-    --chart-3: oklch(0.6278 0.0716 73.2703);
-    --chart-4: oklch(0.5251 0.0609 73.071);
-    --chart-5: oklch(0.417 0.0498 72.7465);
-    --sidebar: oklch(0.2795 0.0368 260.031);
-    --sidebar-foreground: oklch(0.869 0.0198 252.8943);
-    --sidebar-primary: oklch(0.8602 0.0456 72.605);
-    --sidebar-primary-foreground: oklch(0.2077 0.0398 265.7549);
-    --sidebar-accent: oklch(0.3717 0.0392 257.287);
-    --sidebar-accent-foreground: oklch(0.9288 0.0126 255.5078);
-    --sidebar-border: oklch(0.3717 0.0392 257.287);
-    --sidebar-ring: oklch(0.6278 0.0716 73.2703);
-    --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif,
-        "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-    --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
-    --font-mono: Menlo, Monaco, Consolas, "Courier New", monospace;
-    --radius: 0.5rem;
-    --shadow-2xs: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.05);
-    --shadow-xs: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.05);
-    --shadow-sm: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow-md: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
-    --shadow-lg: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
-    --shadow-xl: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
-    --shadow-2xl: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.25);
+  --background: oklch(0.2077 0.0398 265.7549);
+  --foreground: oklch(0.869 0.0198 252.8943);
+  --card: oklch(0.2795 0.0368 260.031);
+  --card-foreground: oklch(0.9288 0.0126 255.5078);
+  --popover: oklch(0.2795 0.0368 260.031);
+  --popover-foreground: oklch(0.9288 0.0126 255.5078);
+  --primary: oklch(0.8602 0.0456 72.605);
+  --primary-foreground: oklch(0.2077 0.0398 265.7549);
+  --secondary: oklch(0.7813 0.0735 79.5752);
+  --secondary-foreground: oklch(0.9288 0.0126 255.5078);
+  --muted: oklch(0.3717 0.0392 257.287);
+  --muted-foreground: oklch(0.7107 0.0351 256.7878);
+  --accent: oklch(0.6278 0.0716 73.2703);
+  --accent-foreground: oklch(0.2795 0.0368 260.031);
+  --destructive: oklch(0.5858 0.222 17.5846);
+  --destructive-foreground: oklch(0.9842 0.0034 247.8575);
+  --border: oklch(0.3717 0.0392 257.287);
+  --input: oklch(0.3717 0.0392 257.287);
+  --ring: oklch(0.6278 0.0716 73.2703);
+  --chart-1: oklch(0.8602 0.0456 72.605);
+  --chart-2: oklch(0.7813 0.0735 79.5752);
+  --chart-3: oklch(0.6278 0.0716 73.2703);
+  --chart-4: oklch(0.5251 0.0609 73.071);
+  --chart-5: oklch(0.417 0.0498 72.7465);
+  --sidebar: oklch(0.2795 0.0368 260.031);
+  --sidebar-foreground: oklch(0.869 0.0198 252.8943);
+  --sidebar-primary: oklch(0.8602 0.0456 72.605);
+  --sidebar-primary-foreground: oklch(0.2077 0.0398 265.7549);
+  --sidebar-accent: oklch(0.3717 0.0392 257.287);
+  --sidebar-accent-foreground: oklch(0.9288 0.0126 255.5078);
+  --sidebar-border: oklch(0.3717 0.0392 257.287);
+  --sidebar-ring: oklch(0.6278 0.0716 73.2703);
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-serif: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  --font-mono: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  --radius: 0.5rem;
+  --shadow-2xs: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.05);
+  --shadow-xs: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.05);
+  --shadow-sm: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+  --shadow: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+  --shadow-md: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
+  --shadow-lg: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
+  --shadow-xl: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
+  --shadow-2xl: 0 0.25rem 0.75rem 0 hsl(0 0% 0% / 0.25);
 }
 
 @theme inline {
-    --color-background: var(--background);
-    --color-foreground: var(--foreground);
-    --color-card: var(--card);
-    --color-card-foreground: var(--card-foreground);
-    --color-popover: var(--popover);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-primary: var(--primary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-secondary: var(--secondary);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-muted: var(--muted);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-accent: var(--accent);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-destructive: var(--destructive);
-    --color-destructive-foreground: var(--destructive-foreground);
-    --color-border: var(--border);
-    --color-input: var(--input);
-    --color-ring: var(--ring);
-    --color-chart-1: var(--chart-1);
-    --color-chart-2: var(--chart-2);
-    --color-chart-3: var(--chart-3);
-    --color-chart-4: var(--chart-4);
-    --color-chart-5: var(--chart-5);
-    --color-sidebar: var(--sidebar);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-sidebar-ring: var(--sidebar-ring);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 
-    --font-sans: var(--font-sans);
-    --font-mono: var(--font-mono);
-    --font-serif: var(--font-serif);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
 
-    --radius-sm: calc(var(--radius) - 4px);
-    --radius-md: calc(var(--radius) - 2px);
-    --radius-lg: var(--radius);
-    --radius-xl: calc(var(--radius) + 4px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 
-    --shadow-2xs: var(--shadow-2xs);
-    --shadow-xs: var(--shadow-xs);
-    --shadow-sm: var(--shadow-sm);
-    --shadow: var(--shadow);
-    --shadow-md: var(--shadow-md);
-    --shadow-lg: var(--shadow-lg);
-    --shadow-xl: var(--shadow-xl);
-    --shadow-2xl: var(--shadow-2xl);
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
 
-    --tracking-tighter: calc(var(--tracking-normal) - 0.05em);
-    --tracking-tight: calc(var(--tracking-normal) - 0.025em);
-    --tracking-normal: var(--tracking-normal);
-    --tracking-wide: calc(var(--tracking-normal) + 0.025em);
-    --tracking-wider: calc(var(--tracking-normal) + 0.05em);
-    --tracking-widest: calc(var(--tracking-normal) + 0.1em);
+  --tracking-tighter: calc(var(--tracking-normal) - 0.05em);
+  --tracking-tight: calc(var(--tracking-normal) - 0.025em);
+  --tracking-normal: var(--tracking-normal);
+  --tracking-wide: calc(var(--tracking-normal) + 0.025em);
+  --tracking-wider: calc(var(--tracking-normal) + 0.05em);
+  --tracking-widest: calc(var(--tracking-normal) + 0.1em);
 }
 
 body {
-    letter-spacing: var(--tracking-normal);
+  letter-spacing: var(--tracking-normal);
 }
 
 /* Map marker styles */
 .marker {
-    background: #ffe5d4; /* Warm Peach */
-    border-color: #f6e8d6; /* Sand */
-    cursor: pointer;
-    transition: all 0.2s ease;
+  background: #ffe5d4; /* Warm Peach */
+  border-color: #f6e8d6; /* Sand */
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .marker:hover {
-    transform: scale(1.2);
-    background: #b3dff2; /* Baby Blue */
-    border-color: #7f8c8d; /* Accent Gray */
+  transform: scale(1.2);
+  background: #b3dff2; /* Baby Blue */
+  border-color: #7f8c8d; /* Accent Gray */
 }
 
 /* Category-specific marker colors */
 .marker-environmental {
-    background: #4ade80; /* Green */
-    border-color: #16a34a;
+  background: #4ade80; /* Green */
+  border-color: #16a34a;
 }
 
 .marker-community {
-    background: #60a5fa; /* Blue */
-    border-color: #2563eb;
+  background: #60a5fa; /* Blue */
+  border-color: #2563eb;
 }
 
 .marker-education {
-    background: #a78bfa; /* Purple */
-    border-color: #7c3aed;
+  background: #a78bfa; /* Purple */
+  border-color: #7c3aed;
 }
 
 .marker-health {
-    background: #fb7185; /* Pink */
-    border-color: #e11d48;
+  background: #fb7185; /* Pink */
+  border-color: #e11d48;
 }
 
 .marker-arts {
-    background: #fbbf24; /* Yellow */
-    border-color: #d97706;
+  background: #fbbf24; /* Yellow */
+  border-color: #d97706;
 }
 
 .marker-social {
-    background: #f97316; /* Orange */
-    border-color: #ea580c;
+  background: #f97316; /* Orange */
+  border-color: #ea580c;
 }
 
 /* Section title and subtitle styles */
 .section-title {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--foreground);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--foreground);
 }
 
 .subtitle {
-    color: var(--muted-foreground);
-    font-size: 0.875rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
 }
 
 /* Google Maps mobile optimizations - let Google handle touch events */
 .gm-style {
-    /* Don't override touch-action - let Google Maps handle it natively */
+  /* Don't override touch-action - let Google Maps handle it natively */
 }
 
 /* Prevent iOS Safari bounce effect and enable smooth scrolling */
 html,
 body {
-    overscroll-behavior: none;
-    -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Map container optimizations */
 .map-container {
-    position: relative;
-    overflow: hidden;
-    /* DO NOT set touch-action - let Google Maps handle it */
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
+  position: relative;
+  overflow: hidden;
+  /* DO NOT set touch-action - let Google Maps handle it */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 /* Optimize map rendering on mobile */
 @media (max-width: 768px) {
-    .gm-style {
-        /* Better performance on mobile */
-        transform: translateZ(0);
-        -webkit-transform: translateZ(0);
-        will-change: transform;
-        /* Disable text selection on mobile */
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-        user-select: none;
-        /* Prevent callout on iOS */
-        -webkit-touch-callout: none;
-        -webkit-tap-highlight-color: transparent;
-    }
+  .gm-style {
+    /* Better performance on mobile */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    will-change: transform;
+    /* Disable text selection on mobile */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    /* Prevent callout on iOS */
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
 
-    /* Ensure map controls are touch-friendly */
-    .gm-style .gm-style-cc {
-        touch-action: manipulation;
-    }
+  /* Ensure map controls are touch-friendly */
+  .gm-style .gm-style-cc {
+    touch-action: manipulation;
+  }
 
-    /* Make zoom controls larger on mobile */
-    .gm-bundled-control {
-        transform: scale(1.2);
-        transform-origin: bottom right;
-    }
+  /* Make zoom controls larger on mobile */
+  .gm-bundled-control {
+    transform: scale(1.2);
+    transform-origin: bottom right;
+  }
 }
 
 @layer base {
-    * {
-        @apply border-border outline-ring/50;
-    }
-    body {
-        @apply bg-background text-foreground;
-        letter-spacing: var(--tracking-normal);
-        /* Prevent overscroll bounce on iOS */
-        overscroll-behavior: none;
-    }
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    letter-spacing: var(--tracking-normal);
+    /* Prevent overscroll bounce on iOS */
+    overscroll-behavior: none;
+  }
 }
