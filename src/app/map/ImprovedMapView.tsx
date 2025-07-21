@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { trpc } from '@/lib/trpc';
 import CreateEventModal from '@/components/CreateEventModal';
-import { Search, Locate, X, Filter } from 'lucide-react';
+import { Locate, X, Filter } from 'lucide-react';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 
 // Event interface to match the data structure
@@ -119,7 +119,6 @@ export default function ImprovedMapView() {
   const [zoom, setZoom] = useState(12);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [mapBounds, setMapBounds] = useState<google.maps.LatLngBounds | null>(null);
@@ -253,40 +252,6 @@ export default function ImprovedMapView() {
   // Memoize map options for better performance - mobile-aware
   const mapOptions = useMemo(() => getMapOptions(isMobile), [isMobile]);
 
-  // Search functionality
-  const handleSearch = useCallback(async () => {
-    if (!searchQuery.trim() || !mapRef.current || !isLoaded || typeof google === 'undefined')
-      return;
-
-    setIsSearching(true);
-
-    try {
-      const geocoder = new google.maps.Geocoder();
-      const result = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
-        geocoder.geocode({ address: searchQuery }, (results, status) => {
-          if (status === 'OK' && results && results.length > 0) {
-            resolve(results);
-          } else {
-            reject(new Error(`Geocoding failed: ${status}`));
-          }
-        });
-      });
-
-      if (result[0]) {
-        const location = result[0].geometry.location;
-        const newCenter = { lat: location.lat(), lng: location.lng() };
-        setCenter(newCenter);
-        mapRef.current.panTo(newCenter);
-        mapRef.current.setZoom(14);
-        setSearchQuery(''); // Clear search after successful search
-      }
-    } catch (error) {
-      console.error('Search failed:', error);
-      // You could add a toast notification here for user feedback
-    } finally {
-      setIsSearching(false);
-    }
-  }, [searchQuery, isLoaded]);
 
   // Go to user location
   const goToUserLocation = useCallback(() => {

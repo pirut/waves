@@ -1,8 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { Separator } from '@/components/ui/separator';
-import Footer from '@/components/Footer';
-import Header from '@/components/Header';
 import { ThemeProvider } from '@/components/theme-provider';
 import { TrpcProvider } from '@/components/TrpcProvider';
 
