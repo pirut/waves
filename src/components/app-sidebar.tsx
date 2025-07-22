@@ -157,7 +157,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {...props}
     >
       {/* Main Navigation Sidebar */}
-      <Sidebar collapsible="none" className="!w-[calc(var(--sidebar-width-icon)_+_1px)] border-r">
+      <Sidebar collapsible="none" className="!w-[calc(var(--sidebar-width-icon)_+_2px)] border-r">
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
@@ -192,7 +192,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       }}
                       onClick={() => handleNavClick(item)}
                       isActive={activeItem?.title === item.title}
-                      className="px-2.5 md:px-2"
+                      className="px-3 md:px-3"
                     >
                       <item.icon />
                       <span>{item.title}</span>
@@ -213,7 +213,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       {/* Secondary Content Sidebar */}
       <Sidebar collapsible="none" className="hidden flex-1 md:flex">
-        <SidebarHeader className="gap-3.5 border-b p-4">
+        <SidebarHeader className="gap-3.5 border-b p-5">
           <div className="flex w-full items-center justify-between">
             <div className="text-base font-medium text-foreground">{activeItem?.title}</div>
             <Label className="flex items-center gap-2 text-sm">
@@ -273,7 +273,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <Link
                       href={`/events/${event.id}`}
                       key={event.id}
-                      className="flex flex-col items-start gap-2 border-b p-4 text-sm leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      className="flex flex-col items-start gap-2 border-b p-5 text-sm leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     >
                       <div className="flex w-full items-center gap-2">
                         <span className="font-medium">{event.title}</span>
