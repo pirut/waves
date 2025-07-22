@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
+import { Event } from '@/types/event';
 import {
   Card,
   CardContent,
@@ -33,7 +33,7 @@ export default function EventsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {events.map((event: any) => (
+        {events.map((event: Event) => (
           <Card key={event.id} className="overflow-hidden">
             <div className="h-40 bg-muted flex items-center justify-center">
               <MapPin className="h-10 w-10 text-muted-foreground/50" />

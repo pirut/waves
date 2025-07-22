@@ -12,7 +12,6 @@ import {
   Heart,
   TrendingUp,
   MessageSquare,
-  Loader2,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 
@@ -79,24 +78,7 @@ const navItems = [
   },
 ];
 
-// Event interface to match Firebase data structure
-interface Event {
-  id: string;
-  title?: string;
-  description?: string;
-  category?: string;
-  location?: {
-    lat: number;
-    lng: number;
-    address?: string;
-  };
-  attendees?: string[];
-  maxAttendees?: number;
-  createdBy?: string;
-  time?: string;
-  date?: string;
-  createdAt?: string;
-}
+import { Event } from '@/types/event';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
