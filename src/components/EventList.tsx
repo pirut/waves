@@ -1,167 +1,77 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { trpc } from '@/lib/trpc';
-import { MapPin, Calendar, Users, Tag } from 'lucide-react';
-import Link from 'next/link';
-
 interface Event {
   id: string;
-  title: string;
-  description: string;
-  category: string;
-  time: string;
-  location: {
+  title?: string;
+  description?: string;
+  category?: string;
+  location?: {
     lat: number;
     lng: number;
     address?: string;
   };
-  attendees: string[];
+  attendees?: string[];
   maxAttendees?: number;
-  createdBy: string;
+  createdBy?: string;
+  time?: string;
+  date?: string;
+  createdAt?: string;
 }
 
 interface EventListProps {
-  limit?: number;
-  showCreateButton?: boolean;
+  events: Event[];
+  loading: boolean;
+  onEventSelect?: (event: Event) => void;
+  className?: string;
 }
 
-export default function EventList({ limit, showCreateButton = false }: EventListProps) {
-  const { data: allEvents = [], isLoading: loading } = trpc.events.getAll.useQuery() as {
-    data: Event[];
-    isLoading: boolean;
-  };
-
-  // Sort by date and limit if specified
-  const events = allEvents
-    .sort((a: Event, b: Event) => new Date(a.time).getTime() - new Date(b.time).getTime())
-    .slice(0, limit);
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  };
-
-  const getCategoryColor = (category: string) => {
-    const colors: { [key: string]: string } = {
-      Environmental: 'bg-green-100 text-green-800',
-      'Community Service': 'bg-blue-100 text-blue-800',
-      Education: 'bg-purple-100 text-purple-800',
-      'Health & Wellness': 'bg-pink-100 text-pink-800',
-      'Arts & Culture': 'bg-yellow-100 text-yellow-800',
-      'Social Justice': 'bg-orange-100 text-orange-800',
-      'Animal Welfare': 'bg-emerald-100 text-emerald-800',
-      'Disaster Relief': 'bg-red-100 text-red-800',
-      'Youth Development': 'bg-indigo-100 text-indigo-800',
-      'Senior Support': 'bg-violet-100 text-violet-800',
-    };
-    return colors[category] || 'bg-gray-100 text-gray-800';
-  };
-
+export default function EventList({
+  events,
+  loading,
+  onEventSelect,
+  className = '',
+}: EventListProps) {
   if (loading) {
-    return (
-      <div className="space-y-4">
-        {[...Array(3)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
-            <CardHeader>
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-3 bg-gray-200 rounded w-full mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
+    return <div className="p-4 text-center text-gray-500">Loading events...</div>;
   }
 
   if (events.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 opacity-80">
-        <svg
-          width="120"
-          height="120"
-          viewBox="0 0 120 120"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <circle cx="60" cy="60" r="56" fill="#F6E8D6" stroke="#E1CFC2" strokeWidth="4" />
-          <ellipse cx="60" cy="80" rx="28" ry="8" fill="#E1CFC2" />
-          <path d="M40 60 Q60 80 80 60" stroke="currentColor" strokeWidth="3" fill="none" />
-          <circle cx="50" cy="54" r="4" fill="currentColor" />
-          <circle cx="70" cy="54" r="4" fill="currentColor" />
-        </svg>
-        <div className="mt-6 subtitle text-center">
-          No events yet.
-          <br />
-          {showCreateButton ? 'Create the first event!' : 'Check back soon for upcoming events!'}
-        </div>
-        {showCreateButton && (
-          <Link href="/map">
-            <Button className="mt-4">Create Event</Button>
-          </Link>
-        )}
-      </div>
-    );
+    return <div className="p-4 text-center text-gray-500">No events found</div>;
   }
 
   return (
-    <div className="space-y-4">
-      {events.map((event) => (
-        <Card key={event.id} className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <CardTitle className="text-lg mb-2">{event.title}</CardTitle>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    {formatDate(event.time)}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Users className="h-4 w-4" />
-                    {event.attendees.length}
-                    {event.maxAttendees && ` / ${event.maxAttendees}`}
-                  </div>
-                </div>
-              </div>
-              <div
-                className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(event.category)}`}
-              >
-                <div className="flex items-center gap-1">
-                  <Tag className="h-3 w-3" />
-                  {event.category}
-                </div>
-              </div>
+    <div className={`overflow-y-auto ${className}`}>
+      {events.map((event: Event) => (
+        <div
+          key={event.id}
+          className="bg-white mx-4 mb-4 rounded-lg p-4 shadow-sm border border-gray-100 cursor-pointer"
+          onClick={() => onEventSelect?.(event)}
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+              </svg>
             </div>
-          </CardHeader>
-          <CardContent>
-            <CardDescription className="mb-3">{event.description}</CardDescription>
-            {event.location.address && (
-              <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
-                <MapPin className="h-4 w-4" />
-                {event.location.address}
+            <div className="flex-1">
+              <h3 className="font-semibold text-lg">{event.title}</h3>
+              <p className="text-gray-600 mb-2">{event.location?.address}</p>
+              <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
+                <span className="flex items-center gap-1">
+                  📅 {event.date} • {event.time}
+                </span>
               </div>
-            )}
-            <div className="flex gap-2">
-              <Link href={`/events/${event.id}`}>
-                <Button variant="outline" size="sm">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1 text-sm text-gray-500">
+                  👥 {event.attendees?.length || 0} attendees
+                </span>
+                <button className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm">
                   View Details
-                </Button>
-              </Link>
-              <Button size="sm">Join Event</Button>
+                </button>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ))}
     </div>
   );
