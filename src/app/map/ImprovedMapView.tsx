@@ -276,24 +276,27 @@ export default function ImprovedMapView() {
     }
   }, [userLocation]);
 
-  const onLoad = useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
+  const onLoad = useCallback(
+    (map: google.maps.Map) => {
+      mapRef.current = map;
 
-    // Initialize zoom state from map instance
-    const initialZoom = map.getZoom() || 10;
-    setZoom(initialZoom);
+      // Initialize zoom state from map instance
+      const initialZoom = map.getZoom() || 10;
+      setZoom(initialZoom);
 
-    // Set initial bounds for viewport-based loading
-    const bounds = map.getBounds();
-    if (bounds) {
-      setMapBounds(bounds);
-    }
+      // Set initial bounds for viewport-based loading
+      const bounds = map.getBounds();
+      if (bounds) {
+        setMapBounds(bounds);
+      }
 
-    // Force a resize to ensure proper rendering
-    setTimeout(() => {
-      google.maps.event.trigger(map, 'resize');
-    }, 100);
-  }, []);
+      // Force a resize to ensure proper rendering
+      setTimeout(() => {
+        google.maps.event.trigger(map, 'resize');
+      }, 100);
+    },
+    [setMapBounds]
+  );
 
   const onUnmount = useCallback(() => {
     mapRef.current = null;
@@ -315,7 +318,7 @@ export default function ImprovedMapView() {
         setMapBounds(bounds);
       }
     }
-  }, []);
+  }, [setMapBounds]);
 
   // Add custom zoom controls with better increments
   const zoomIn = useCallback(() => {

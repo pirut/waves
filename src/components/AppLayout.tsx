@@ -19,14 +19,20 @@ interface AppLayoutProps {
   children: React.ReactNode;
 }
 
+interface BreadcrumbItem {
+  label: string;
+  href: string;
+  isLast?: boolean;
+}
+
 export function AppLayout({ children }: AppLayoutProps) {
   const { user, loading } = useAuth();
   const pathname = usePathname();
 
   // Generate breadcrumbs from pathname
-  const generateBreadcrumbs = () => {
+  const generateBreadcrumbs = (): BreadcrumbItem[] => {
     const segments = pathname.split('/').filter(Boolean);
-    const breadcrumbs = [{ label: 'Home', href: '/' }];
+    const breadcrumbs: BreadcrumbItem[] = [{ label: 'Home', href: '/' }];
 
     let currentPath = '';
     segments.forEach((segment, index) => {
