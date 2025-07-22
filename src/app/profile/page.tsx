@@ -109,7 +109,8 @@ export default function ProfilePage() {
                     </div>
                     <h3 className="text-lg font-medium mb-2">No events created yet</h3>
                     <p className="text-muted-foreground mb-4">
-                      You haven't created any events yet. Create your first event to get started.
+                      You haven&apos;t created any events yet. Create your first event to get
+                      started.
                     </p>
                     <Button>Create an Event</Button>
                   </div>
@@ -129,7 +130,7 @@ export default function ProfilePage() {
                     </div>
                     <h3 className="text-lg font-medium mb-2">Not attending any events</h3>
                     <p className="text-muted-foreground mb-4">
-                      You're not attending any events yet. Find events to attend.
+                      You&apos;re not attending any events yet. Find events to attend.
                     </p>
                     <Button>Find Events</Button>
                   </div>
@@ -149,7 +150,7 @@ export default function ProfilePage() {
                     </div>
                     <h3 className="text-lg font-medium mb-2">No activity yet</h3>
                     <p className="text-muted-foreground mb-4">
-                      You don't have any activity yet. Start by attending or creating events.
+                      You don&apos;t have any activity yet. Start by attending or creating events.
                     </p>
                     <Button>Explore Events</Button>
                   </div>
