@@ -1,7 +1,8 @@
 'use client';
 
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Search, ArrowLeft, MoreVertical } from 'lucide-react';
 
 interface MobileMapHeaderProps {
   mobileView: 'map' | 'events';
@@ -35,16 +36,9 @@ export default function MobileMapHeader({
     <div className="bg-white border-b border-[#F6E8D6] p-4">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <button className="p-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-          </button>
+          <Button variant="ghost" size="icon">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 bg-[#FFE5D4] rounded-full flex items-center justify-center">
               <span className="text-gray-900 text-xs font-bold">W</span>
@@ -54,16 +48,9 @@ export default function MobileMapHeader({
             </h1>
           </div>
         </div>
-        <button className="p-2">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zM12 13a1 1 0 110-2 1 1 0 010 2zM12 20a1 1 0 110-2 1 1 0 010 2z"
-            />
-          </svg>
-        </button>
+        <Button variant="ghost" size="icon">
+          <MoreVertical className="w-5 h-5" />
+        </Button>
       </div>
 
       <div className="relative mb-4">

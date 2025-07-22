@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Search, Settings } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import { ModeToggle } from '@/components/ModeToggle';
 
 export default function Header() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -93,6 +94,8 @@ export default function Header() {
         <Button variant="ghost" size="sm" className="hover:bg-[#FFE5D4]/20">
           <Search className="h-4 w-4" />
         </Button>
+
+        <ModeToggle />
 
         {currentUser ? (
           <DropdownMenu>
