@@ -8,6 +8,7 @@ import { trpc } from '@/lib/trpc';
 import CreateEventModal from '@/components/CreateEventModal';
 import { Search, Locate, X } from 'lucide-react';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
+import { useMapBounds } from '@/contexts/MapBoundsContext';
 
 // Event interface to match the data structure
 interface Event {
@@ -121,7 +122,7 @@ export default function ImprovedMapView() {
   const [isSearching, setIsSearching] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isMounted, setIsMounted] = useState(false);
-  const [mapBounds, setMapBounds] = useState<google.maps.LatLngBounds | null>(null);
+  const { mapBounds, setMapBounds } = useMapBounds();
   const clustererRef = useRef<MarkerClusterer | null>(null);
 
   // Handle hydration by only running client-side code after mount

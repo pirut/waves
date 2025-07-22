@@ -14,6 +14,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
+import { useMapBounds } from '@/contexts/MapBoundsContext';
 
 import { NavUser } from '@/components/nav-user';
 import { Label } from '@/components/ui/label';
@@ -96,12 +97,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     error: eventsError,
   } = trpc.events.getAll.useQuery();
 
-  // Filter and sort events based on search query
+  // Get map bounds from context
+  const { mapBounds } = useMapBounds();
+
+  // Filter and sort events based on search query and map bounds
   const filteredEvents = React.useMemo(() => {
     if (!events.length) return [];
 
     // First filter by search query
-    const filtered = events.filter((event: Event) => {
+    let filtered = events.filter((event: Event) => {
       if (!searchQuery.trim()) return true;
 
       const query = searchQuery.toLowerCase();
@@ -113,6 +117,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       );
     });
 
+    // If on map view and we have map bounds, filter events by map bounds
+    if (pathname === '/map' && mapBounds && typeof google !== 'undefined') {
+      filtered = filtered.filter((event: Event) => {
+        if (
+          !event.location ||
+          typeof event.location.lat !== 'number' ||
+          typeof event.location.lng !== 'number'
+        ) {
+          return false;
+        }
+
+        const eventLatLng = new google.maps.LatLng(event.location.lat, event.location.lng);
+        return mapBounds.contains(eventLatLng);
+      });
+    }
+
     // Then sort by date (most recent first)
     return filtered.sort((a: Event, b: Event) => {
       // Try to parse dates if available
@@ -121,7 +141,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       return dateB - dateA;
     });
-  }, [events, searchQuery]);
+  }, [events, searchQuery, pathname, mapBounds]);
 
   // Get user data for sidebar
   const userData = user
@@ -215,7 +235,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <Sidebar collapsible="none" className="hidden flex-1 md:flex">
         <SidebarHeader className="gap-3.5 border-b p-5">
           <div className="flex w-full items-center justify-between">
-            <div className="text-base font-medium text-foreground">{activeItem?.title}</div>
+            <div className="text-base font-medium text-foreground">
+              {pathname === '/map' ? 'Events in View' : activeItem?.title}
+            </div>
             <Label className="flex items-center gap-2 text-sm">
               <span>Upcoming</span>
               <Switch
@@ -234,6 +256,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarContent>
           <SidebarGroup className="px-0">
             <SidebarGroupContent>
+              {pathname === '/map' && (
+                <div className="p-3 bg-muted/30 text-xs text-muted-foreground border-b">
+                  {mapBounds
+                    ? 'Showing events in the current map view'
+                    : 'Move the map to see events in that area'}
+                </div>
+              )}
               {eventsLoading ? (
                 <div className="flex flex-col gap-4 p-4">
                   {[1, 2, 3].map((i) => (
@@ -256,7 +285,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
               ) : filteredEvents.length === 0 ? (
                 <div className="p-4 text-center text-sm text-muted-foreground">
-                  {searchQuery.trim() ? 'No events match your search' : 'No events available'}
+                  {pathname === '/map'
+                    ? 'No events in the current map view'
+                    : searchQuery.trim()
+                      ? 'No events match your search'
+                      : 'No events available'}
                 </div>
               ) : (
                 filteredEvents
