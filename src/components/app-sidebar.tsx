@@ -12,9 +12,9 @@ import {
   Heart,
   TrendingUp,
   MessageSquare,
-  Moon,
-  Sun,
+  Loader2,
 } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
 
 import { NavUser } from '@/components/nav-user';
 import { Label } from '@/components/ui/label';
@@ -79,58 +79,67 @@ const navItems = [
   },
 ];
 
-// Sample recent events data
-const recentEvents = [
-  {
-    id: '1',
-    title: 'Beach Cleanup Miami',
-    location: 'South Beach, Miami',
-    date: 'Today 2:00 PM',
-    attendees: 24,
-    category: 'Environmental',
-  },
-  {
-    id: '2',
-    title: 'Community Garden Project',
-    location: 'Wynwood, Miami',
-    date: 'Tomorrow 10:00 AM',
-    attendees: 15,
-    category: 'Community Service',
-  },
-  {
-    id: '3',
-    title: 'Youth Mentorship Program',
-    location: 'Downtown Miami',
-    date: 'This Weekend',
-    attendees: 8,
-    category: 'Youth Development',
-  },
-  {
-    id: '4',
-    title: 'Senior Center Visit',
-    location: 'Coral Gables',
-    date: 'Next Week',
-    attendees: 12,
-    category: 'Senior Support',
-  },
-  {
-    id: '5',
-    title: 'Food Bank Volunteer',
-    location: 'Little Haiti',
-    date: 'Next Friday',
-    attendees: 18,
-    category: 'Community Service',
-  },
-];
+// Event interface to match Firebase data structure
+interface Event {
+  id: string;
+  title?: string;
+  description?: string;
+  category?: string;
+  location?: {
+    lat: number;
+    lng: number;
+    address?: string;
+  };
+  attendees?: string[];
+  maxAttendees?: number;
+  createdBy?: string;
+  time?: string;
+  date?: string;
+  createdAt?: string;
+}
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [activeItem, setActiveItem] = React.useState(navItems[0]);
-  const [events] = React.useState(recentEvents);
   const [showUpcoming, setShowUpcoming] = React.useState(true);
+  const [searchQuery, setSearchQuery] = React.useState('');
   const { setOpen } = useSidebar();
+
+  // Fetch events from Firebase using tRPC
+  const {
+    data: events = [],
+    isLoading: eventsLoading,
+    error: eventsError,
+  } = trpc.events.getAll.useQuery();
+
+  // Filter and sort events based on search query
+  const filteredEvents = React.useMemo(() => {
+    if (!events.length) return [];
+
+    // First filter by search query
+    const filtered = events.filter((event: Event) => {
+      if (!searchQuery.trim()) return true;
+
+      const query = searchQuery.toLowerCase();
+      return (
+        event.title?.toLowerCase().includes(query) ||
+        event.description?.toLowerCase().includes(query) ||
+        event.location?.address?.toLowerCase().includes(query) ||
+        event.category?.toLowerCase().includes(query)
+      );
+    });
+
+    // Then sort by date (most recent first)
+    return filtered.sort((a: Event, b: Event) => {
+      // Try to parse dates if available
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+
+      return dateB - dateA;
+    });
+  }, [events, searchQuery]);
 
   // Get user data for sidebar
   const userData = user
@@ -234,32 +243,75 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               />
             </Label>
           </div>
-          <SidebarInput placeholder="Search events..." />
+          <SidebarInput
+            placeholder="Search events..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup className="px-0">
             <SidebarGroupContent>
-              {events
-                .filter((event) => (showUpcoming ? true : event.date.includes('Today')))
-                .map((event) => (
-                  <Link
-                    href={`/events/${event.id}`}
-                    key={event.id}
-                    className="flex flex-col items-start gap-2 border-b p-4 text-sm leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  >
-                    <div className="flex w-full items-center gap-2">
-                      <span className="font-medium">{event.title}</span>
-                      <span className="ml-auto text-xs text-muted-foreground">{event.date}</span>
+              {eventsLoading ? (
+                <div className="flex flex-col gap-4 p-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex flex-col gap-2 animate-pulse">
+                      <div className="flex items-center justify-between">
+                        <div className="h-4 bg-muted rounded w-1/2"></div>
+                        <div className="h-3 bg-muted rounded w-1/4"></div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="h-3 bg-muted rounded w-1/3"></div>
+                        <div className="h-3 bg-muted rounded w-1/5"></div>
+                      </div>
+                      <div className="h-5 bg-muted rounded w-1/4"></div>
                     </div>
-                    <div className="flex w-full items-center gap-2 text-xs text-muted-foreground">
-                      <span>{event.location}</span>
-                      <span className="ml-auto">{event.attendees} attending</span>
-                    </div>
-                    <span className="inline-flex items-center rounded-full bg-secondary px-2 py-1 text-xs font-medium">
-                      {event.category}
-                    </span>
-                  </Link>
-                ))}
+                  ))}
+                </div>
+              ) : eventsError ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  Failed to load events
+                </div>
+              ) : filteredEvents.length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  {searchQuery.trim() ? 'No events match your search' : 'No events available'}
+                </div>
+              ) : (
+                filteredEvents
+                  .filter((event: Event) => {
+                    // If showing all upcoming events, show everything
+                    if (showUpcoming) return true;
+
+                    // Otherwise only show today's events
+                    const eventDate = event.date || '';
+                    return eventDate.toLowerCase().includes('today');
+                  })
+                  .slice(0, 5) // Limit to 5 events for better performance
+                  .map((event: Event) => (
+                    <Link
+                      href={`/events/${event.id}`}
+                      key={event.id}
+                      className="flex flex-col items-start gap-2 border-b p-4 text-sm leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    >
+                      <div className="flex w-full items-center gap-2">
+                        <span className="font-medium">{event.title}</span>
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {event.date ||
+                            (event.createdAt && new Date(event.createdAt).toLocaleDateString())}
+                        </span>
+                      </div>
+                      <div className="flex w-full items-center gap-2 text-xs text-muted-foreground">
+                        <span>{event.location?.address}</span>
+                        <span className="ml-auto">{event.attendees?.length || 0} attending</span>
+                      </div>
+                      {event.category && (
+                        <span className="inline-flex items-center rounded-full bg-secondary px-2 py-1 text-xs font-medium">
+                          {event.category}
+                        </span>
+                      )}
+                    </Link>
+                  ))
+              )}
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
