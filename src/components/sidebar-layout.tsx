@@ -3,6 +3,7 @@
 import { AppSidebar } from '@/components/app-sidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useAuth } from '@/hooks/useAuth';
+import { MapBoundsProvider } from '@/contexts/MapBoundsContext';
 import { useEffect, useState } from 'react';
 
 interface SidebarLayoutProps {
@@ -33,11 +34,13 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
   // If user is authenticated, show sidebar layout
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
-      </SidebarInset>
-    </SidebarProvider>
+    <MapBoundsProvider>
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
+        </SidebarInset>
+      </SidebarProvider>
+    </MapBoundsProvider>
   );
 }
