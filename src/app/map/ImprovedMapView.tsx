@@ -3,10 +3,10 @@ import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-map
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
 import CreateEventModal from '@/components/CreateEventModal';
-import { Search, Locate, X } from 'lucide-react';
+import { Locate, PanelLeftIcon } from 'lucide-react';
+import { useSidebar } from '@/components/ui/sidebar';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import { useMapBounds } from '@/contexts/MapBoundsContext';
 
@@ -118,11 +118,11 @@ export default function ImprovedMapView() {
   const [center, setCenter] = useState(defaultCenter);
   const [zoom, setZoom] = useState(12);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
+
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const { mapBounds, setMapBounds } = useMapBounds();
+  const { toggleSidebar } = useSidebar();
   const clustererRef = useRef<MarkerClusterer | null>(null);
 
   // Handle hydration by only running client-side code after mount
@@ -231,41 +231,6 @@ export default function ImprovedMapView() {
 
   // Memoize map options for better performance - mobile-aware
   const mapOptions = useMemo(() => getMapOptions(isMobile), [isMobile]);
-
-  // Search functionality
-  const handleSearch = useCallback(async () => {
-    if (!searchQuery.trim() || !mapRef.current || !isLoaded || typeof google === 'undefined')
-      return;
-
-    setIsSearching(true);
-
-    try {
-      const geocoder = new google.maps.Geocoder();
-      const result = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
-        geocoder.geocode({ address: searchQuery }, (results, status) => {
-          if (status === 'OK' && results && results.length > 0) {
-            resolve(results);
-          } else {
-            reject(new Error(`Geocoding failed: ${status}`));
-          }
-        });
-      });
-
-      if (result[0]) {
-        const location = result[0].geometry.location;
-        const newCenter = { lat: location.lat(), lng: location.lng() };
-        setCenter(newCenter);
-        mapRef.current.panTo(newCenter);
-        mapRef.current.setZoom(14);
-        setSearchQuery(''); // Clear search after successful search
-      }
-    } catch (error) {
-      console.error('Search failed:', error);
-      // You could add a toast notification here for user feedback
-    } finally {
-      setIsSearching(false);
-    }
-  }, [searchQuery, isLoaded]);
 
   // Go to user location
   const goToUserLocation = useCallback(() => {
@@ -443,48 +408,34 @@ export default function ImprovedMapView() {
         </div>
       )}
 
-      {/* Search Bar - mobile optimized spacing */}
+      {/* Map Controls */}
       {isMounted && (
-        <div className="absolute top-2 left-2 right-2 sm:top-4 sm:left-4 sm:right-4 z-30 pointer-events-auto">
-          <div className="flex gap-1 sm:gap-2 max-w-md">
-            <div className="flex-1 relative">
-              <Input
-                placeholder="Search location..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="pr-8 text-sm h-9 sm:h-10"
-              />
-              {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 p-0"
-                  onClick={() => setSearchQuery('')}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
-            </div>
+        <div className="absolute top-4 z-30 pointer-events-auto flex gap-2">
+          {/* Sidebar Toggle Button - Left side */}
+          <div className="absolute left-4">
             <Button
-              onClick={handleSearch}
-              disabled={isSearching || !searchQuery.trim()}
+              variant="outline"
+              onClick={toggleSidebar}
               size="sm"
-              className="h-9 w-9 p-0 sm:h-10 sm:w-10"
+              className="h-10 w-10 p-0 bg-background/95 backdrop-blur-sm shadow-lg"
             >
-              <Search className="h-3 w-3 sm:h-4 sm:w-4" />
+              <PanelLeftIcon className="h-4 w-4" />
             </Button>
-            {userLocation && (
+          </div>
+
+          {/* Location Button - Right side */}
+          {userLocation && (
+            <div className="absolute right-4">
               <Button
                 variant="outline"
                 onClick={goToUserLocation}
                 size="sm"
-                className="h-9 w-9 p-0 sm:h-10 sm:w-10"
+                className="h-10 w-10 p-0 bg-background/95 backdrop-blur-sm shadow-lg"
               >
-                <Locate className="h-3 w-3 sm:h-4 sm:w-4" />
+                <Locate className="h-4 w-4" />
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -520,7 +471,7 @@ export default function ImprovedMapView() {
 
         {/* Event markers are now handled by MarkerClusterer */}
 
-        {/* Improved InfoWindow - mobile optimized */}
+        {/* Improved InfoWindow */}
         {selectedEvent && selectedEvent.location && (
           <InfoWindow
             position={{
@@ -529,29 +480,33 @@ export default function ImprovedMapView() {
             }}
             onCloseClick={() => setSelectedEvent(null)}
           >
-            <div className="p-2 sm:p-3 max-w-xs sm:max-w-sm">
-              <h3 className="font-semibold text-sm sm:text-base mb-1 sm:mb-2">
+            <div className={isMobile ? 'p-2 max-w-xs' : 'p-3 max-w-sm'}>
+              <h3 className={`font-semibold mb-2 ${isMobile ? 'text-sm' : 'text-base'}`}>
                 {selectedEvent.title}
               </h3>
               {selectedEvent.category && (
-                <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
+                <div className={`flex items-center gap-2 mb-2`}>
                   <span
-                    className="inline-block w-2 h-2 sm:w-3 sm:h-3 rounded-full"
+                    className={`inline-block rounded-full ${isMobile ? 'w-2 h-2' : 'w-3 h-3'}`}
                     style={{ backgroundColor: getCategoryMarkerColor(selectedEvent.category) }}
                   />
-                  <span className="text-xs sm:text-sm text-gray-600">{selectedEvent.category}</span>
+                  <span className={`text-gray-600 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                    {selectedEvent.category}
+                  </span>
                 </div>
               )}
               {selectedEvent.description && (
-                <p className="text-xs sm:text-sm text-gray-700 mb-2 sm:mb-3 line-clamp-2 sm:line-clamp-3">
+                <p
+                  className={`text-gray-700 mb-3 ${isMobile ? 'text-xs line-clamp-2' : 'text-sm line-clamp-3'}`}
+                >
                   {selectedEvent.description}
                 </p>
               )}
-              <div className="flex gap-1 sm:gap-2">
+              <div className={`flex gap-2`}>
                 <Button
                   size="sm"
                   onClick={() => (window.location.href = `/events/${selectedEvent.id}`)}
-                  className="flex-1 text-xs sm:text-sm h-8 sm:h-9"
+                  className={`flex-1 ${isMobile ? 'text-xs h-8' : 'text-sm h-9'}`}
                 >
                   View Details
                 </Button>
@@ -559,7 +514,7 @@ export default function ImprovedMapView() {
                   variant="outline"
                   size="sm"
                   onClick={() => setSelectedEvent(null)}
-                  className="text-xs sm:text-sm h-8 sm:h-9"
+                  className={isMobile ? 'text-xs h-8' : 'text-sm h-9'}
                 >
                   Close
                 </Button>
@@ -584,38 +539,41 @@ export default function ImprovedMapView() {
       {/* Create Event FAB */}
       <CreateEventModal onEventCreated={loadEvents} />
 
-      {/* Custom Fast Zoom Controls - mobile optimized */}
-      <div className="absolute bottom-24 right-2 sm:bottom-20 sm:right-4 z-30 pointer-events-auto flex flex-col gap-1 sm:gap-2">
+      {/* Custom Fast Zoom Controls */}
+      <div className="absolute bottom-24 right-4 z-30 pointer-events-auto flex flex-col gap-2">
         <Button
           variant="outline"
           size="sm"
           onClick={zoomIn}
-          className="w-12 h-12 p-0 bg-background/95 backdrop-blur-sm shadow-lg sm:w-10 sm:h-10"
+          className="w-10 h-10 p-0 bg-background/95 backdrop-blur-sm shadow-lg"
           title="Zoom in (fast)"
         >
-          <span className="text-xl font-bold sm:text-lg">+</span>
+          <span className="text-lg font-bold">+</span>
         </Button>
         <Button
           variant="outline"
           size="sm"
           onClick={zoomOut}
-          className="w-12 h-12 p-0 bg-background/95 backdrop-blur-sm shadow-lg sm:w-10 sm:h-10"
+          className="w-10 h-10 p-0 bg-background/95 backdrop-blur-sm shadow-lg"
           title="Zoom out (fast)"
         >
-          <span className="text-xl font-bold sm:text-lg">−</span>
+          <span className="text-lg font-bold">−</span>
         </Button>
       </div>
 
-      {/* Map Stats - mobile optimized */}
-      <div className="absolute bottom-2 left-2 sm:bottom-4 sm:left-4 z-30 pointer-events-auto">
+      {/* Map Stats */}
+      <div className="absolute bottom-4 left-4 z-30 pointer-events-auto">
         <Card className="bg-card/95 backdrop-blur-sm">
-          <CardContent className="p-1.5 sm:p-2 text-xs text-muted-foreground">
-            <span className="hidden sm:inline">
-              {filteredEvents.length} of {allEvents.length} events • Zoom: {zoom}
-            </span>
-            <span className="sm:hidden">
-              {filteredEvents.length}/{allEvents.length} events
-            </span>
+          <CardContent className="p-2 text-xs text-muted-foreground">
+            {isMobile ? (
+              <span>
+                {filteredEvents.length}/{allEvents.length} events
+              </span>
+            ) : (
+              <span>
+                {filteredEvents.length} of {allEvents.length} events • Zoom: {zoom}
+              </span>
+            )}
           </CardContent>
         </Card>
       </div>

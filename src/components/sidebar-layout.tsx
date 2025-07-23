@@ -10,6 +10,8 @@ interface SidebarLayoutProps {
   children: React.ReactNode;
 }
 
+// No longer need breadcrumb interfaces
+
 export function SidebarLayout({ children }: SidebarLayoutProps) {
   const { user, loading } = useAuth();
   const [isMounted, setIsMounted] = useState(false);
@@ -17,6 +19,9 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Generate breadcrumbs from pathname
+  // We've removed the breadcrumbs as requested
 
   // Show loading state during hydration and auth check
   if (!isMounted || loading) {
@@ -38,6 +43,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
+          {/* No header for cleaner UI */}
           <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
         </SidebarInset>
       </SidebarProvider>
