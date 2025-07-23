@@ -1,6 +1,6 @@
 'use client';
 import { GoogleMap, useJsApiLoader, InfoWindow, Marker } from '@react-google-maps/api';
-import { useCallback, useMemo, useState, useEffect, useRef, useContext } from 'react';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
@@ -41,17 +41,13 @@ const defaultCenter = {
 };
 
 // Define libraries array as a static constant to prevent reloading
-const mapLibraries = ['places', 'geometry'];
+// Using proper type for Google Maps libraries
+const mapLibraries: ('places' | 'geometry' | 'drawing' | 'visualization')[] = [
+  'places',
+  'geometry',
+];
 
-// SVG marker content for markers
-const createMarkerSvg = (color: string): string => {
-  return `
-    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="16" cy="16" r="12" fill="${color}" stroke="#ffffff" stroke-width="3"/>
-      <circle cx="16" cy="16" r="6" fill="#ffffff" opacity="0.8"/>
-    </svg>
-  `;
-};
+// We don't need this function as we're using createMarkerIcon instead
 
 // Optimized marker icon creation with caching
 const markerIconCache = new Map<string, google.maps.Icon>();
@@ -125,33 +121,7 @@ const getMapOptions = (isMobile: boolean = false): google.maps.MapOptions => {
   };
 };
 
-// Category color mapping
-const categoryColorMap: { [key: string]: string } = {
-  Environmental: '#4ade80',
-  'Community Service': '#60a5fa',
-  Education: '#a78bfa',
-  'Health & Wellness': '#fb7185',
-  'Arts & Culture': '#fbbf24',
-  'Social Justice': '#f97316',
-  'Animal Welfare': '#10b981',
-  'Disaster Relief': '#ef4444',
-  'Youth Development': '#6366f1',
-  'Senior Support': '#8b5cf6',
-};
-
-// SVG marker content for advanced markers
-const createMarkerSvg = (color: string): string => {
-  return `
-    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="16" cy="16" r="12" fill="${color}" stroke="#ffffff" stroke-width="3"/>
-      <circle cx="16" cy="16" r="6" fill="#ffffff" opacity="0.8"/>
-    </svg>
-  `;
-};
-
-const getCategoryMarkerColor = (category: string) => {
-  return categoryColorMap[category] || '#FFE5D4';
-};
+// These are already defined above, removing duplicates
 
 export default function ImprovedMapView() {
   // Use ref for map instance for better performance
