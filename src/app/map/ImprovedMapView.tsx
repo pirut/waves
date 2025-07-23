@@ -1,5 +1,5 @@
 'use client';
-import { GoogleMap, useJsApiLoader, InfoWindow, Marker } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, InfoWindow } from '@react-google-maps/api';
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,15 +41,56 @@ const defaultCenter = {
 };
 
 // Define libraries array as a static constant to prevent reloading
-// Using proper type for Google Maps libraries
-const mapLibraries: ('places' | 'geometry' | 'drawing' | 'visualization')[] = [
+// Using proper type for Google Maps libraries - including marker for Advanced Markers
+const mapLibraries: ('places' | 'geometry' | 'drawing' | 'visualization' | 'marker')[] = [
   'places',
   'geometry',
+  'marker',
 ];
 
 // We don't need this function anymore
 
-// Removed UserLocationMarker component - using standard Marker component instead
+// Advanced Marker component for user location
+function UserLocationAdvancedMarker({
+  position,
+  map,
+}: {
+  position: { lat: number; lng: number };
+  map: google.maps.Map | null;
+}) {
+  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+
+  useEffect(() => {
+    if (!map || typeof google === 'undefined' || !google.maps.marker) return;
+
+    // Create marker element
+    const markerDiv = document.createElement('div');
+    markerDiv.innerHTML = `
+      <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="10" cy="10" r="8" fill="#3b82f6" stroke="#ffffff" stroke-width="2"/>
+        <circle cx="10" cy="10" r="3" fill="#ffffff"/>
+      </svg>
+    `;
+
+    // Create advanced marker
+    const marker = new google.maps.marker.AdvancedMarkerElement({
+      position,
+      content: markerDiv,
+      title: 'Your Location',
+      map,
+    });
+
+    markerRef.current = marker;
+
+    return () => {
+      if (markerRef.current) {
+        markerRef.current.map = null;
+      }
+    };
+  }, [position, map]);
+
+  return null;
+}
 
 // Optimized marker icon creation with caching
 const markerIconCache = new Map<string, google.maps.Icon>();
@@ -325,16 +366,44 @@ export default function ImprovedMapView() {
       clustererRef.current.clearMarkers();
     }
 
-    // Create standard markers for clustering
+    // Create advanced markers for clustering
     const markers = filteredEvents.map((event) => {
-      // Create the standard marker
-      const marker = new google.maps.Marker({
+      if (!google.maps.marker) {
+        // Fallback to standard markers if Advanced Markers not available
+        const marker = new google.maps.Marker({
+          position: {
+            lat: event.location!.lat,
+            lng: event.location!.lng,
+          },
+          icon: createMarkerIcon(getCategoryMarkerColor(event.category || '')),
+          title: event.title,
+        });
+
+        marker.addListener('click', () => {
+          setSelectedEvent(event);
+        });
+
+        return marker;
+      }
+
+      // Create the marker element for Advanced Marker
+      const markerDiv = document.createElement('div');
+      markerDiv.innerHTML = `
+        <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="16" cy="16" r="12" fill="${getCategoryMarkerColor(event.category || '')}" stroke="#ffffff" stroke-width="3"/>
+          <circle cx="16" cy="16" r="6" fill="#ffffff" opacity="0.8"/>
+        </svg>
+      `;
+
+      // Create the advanced marker
+      const marker = new google.maps.marker.AdvancedMarkerElement({
         position: {
           lat: event.location!.lat,
           lng: event.location!.lng,
         },
-        icon: createMarkerIcon(getCategoryMarkerColor(event.category || '')),
+        content: markerDiv,
         title: event.title,
+        map: mapRef.current,
       });
 
       // Add click listener to marker
@@ -464,24 +533,14 @@ export default function ImprovedMapView() {
         {...(!isMobile && { onZoomChanged })} // Only track zoom changes on desktop
         onBoundsChanged={onBoundsChanged} // Track viewport changes for event loading
         onClick={onMapClick}
-        options={mapOptions}
+        options={{
+          ...mapOptions,
+          mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_ID,
+        }}
       >
-        {/* User location marker */}
+        {/* User location marker using Advanced Marker */}
         {userLocation && (
-          <Marker
-            position={userLocation}
-            icon={{
-              url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-                <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="10" cy="10" r="8" fill="#3b82f6" stroke="#ffffff" stroke-width="2"/>
-                  <circle cx="10" cy="10" r="3" fill="#ffffff"/>
-                </svg>
-              `)}`,
-              scaledSize: new google.maps.Size(20, 20),
-              anchor: new google.maps.Point(10, 10),
-            }}
-            title="Your Location"
-          />
+          <UserLocationAdvancedMarker position={userLocation} map={mapRef.current} />
         )}
 
         {/* Event markers are now handled by MarkerClusterer */}
