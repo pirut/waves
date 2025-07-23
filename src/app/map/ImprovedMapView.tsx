@@ -40,6 +40,9 @@ const defaultCenter = {
   lng: -80.13,
 };
 
+// Define libraries array as a static constant to prevent reloading
+const mapLibraries = ['places', 'geometry'];
+
 // Improved map options for better UX - mobile-aware
 const getMapOptions = (isMobile: boolean = false): google.maps.MapOptions => {
   return {
@@ -158,7 +161,7 @@ export default function ImprovedMapView() {
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     version: 'weekly',
-    libraries: ['places', 'geometry'],
+    libraries: mapLibraries,
   });
 
   // Get user location on mount (only after hydration) - but don't block map rendering
