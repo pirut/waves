@@ -277,6 +277,9 @@ export default function ImprovedMapView() {
     setIsMobile(detectMobile());
   }, [isMounted]);
 
+  // Ensure Map ID is available
+  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_ID || '15a6e838f93a0ca12caba8f6';
+
   // Memoize map options for better performance - mobile-aware
   const mapOptions = useMemo(() => getMapOptions(isMobile), [isMobile]);
 
@@ -460,8 +463,8 @@ export default function ImprovedMapView() {
     setSelectedEvent(null);
   }, []);
 
-  // Show loading state only while Google Maps API is loading
-  if (!isLoaded) {
+  // Show loading state while Google Maps API is loading or during hydration
+  if (!isLoaded || !isMounted) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-muted">
         <div className="text-center">
@@ -474,17 +477,7 @@ export default function ImprovedMapView() {
 
   return (
     <div className="w-full h-full relative overflow-hidden">
-      {/* Loading indicator for enhanced features */}
-      {!isMounted && (
-        <div className="absolute top-4 left-4 right-4 z-30 pointer-events-auto">
-          <Card className="bg-card/95 backdrop-blur-sm">
-            <CardContent className="p-2 text-xs text-muted-foreground flex items-center gap-2">
-              <div className="animate-spin rounded-full h-3 w-3 border border-current border-t-transparent"></div>
-              Loading enhanced features...
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {/* Loading indicator removed to prevent hydration issues */}
 
       {/* Map Controls */}
       {isMounted && (
@@ -529,7 +522,7 @@ export default function ImprovedMapView() {
         onClick={onMapClick}
         options={{
           ...mapOptions,
-          mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_ID,
+          mapId: mapId,
         }}
       >
         {/* User location marker using Advanced Marker */}
