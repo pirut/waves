@@ -1,5 +1,5 @@
 'use client';
-import { GoogleMap, useJsApiLoader, InfoWindow } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, InfoWindow, Marker } from '@react-google-maps/api';
 import { useCallback, useMemo, useState, useEffect, useRef, useContext } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,52 +41,60 @@ const defaultCenter = {
 };
 
 // Define libraries array as a static constant to prevent reloading
-const mapLibraries = ['places', 'geometry', 'marker'];
+const mapLibraries = ['places', 'geometry'];
 
-// User location marker component using AdvancedMarkerElement
-function UserLocationMarker({ position }: { position: { lat: number; lng: number } }) {
-  const [markerRef, setMarkerRef] = useState<google.maps.marker.AdvancedMarkerElement | null>(null);
+// SVG marker content for markers
+const createMarkerSvg = (color: string): string => {
+  return `
+    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="16" cy="16" r="12" fill="${color}" stroke="#ffffff" stroke-width="3"/>
+      <circle cx="16" cy="16" r="6" fill="#ffffff" opacity="0.8"/>
+    </svg>
+  `;
+};
 
-  useEffect(() => {
-    if (typeof google === 'undefined') return;
+// Optimized marker icon creation with caching
+const markerIconCache = new Map<string, google.maps.Icon>();
 
-    // Create marker element
-    const markerDiv = document.createElement('div');
-    markerDiv.innerHTML = `
-      <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="10" cy="10" r="8" fill="#3b82f6" stroke="#ffffff" stroke-width="2"/>
-        <circle cx="10" cy="10" r="3" fill="#ffffff"/>
-      </svg>
-    `;
+const createMarkerIcon = (color: string): google.maps.Icon | undefined => {
+  if (typeof google === 'undefined') return undefined;
 
-    // Create advanced marker
-    const marker = new google.maps.marker.AdvancedMarkerElement({
-      position,
-      content: markerDiv,
-      title: 'Your Location',
-    });
+  if (markerIconCache.has(color)) {
+    return markerIconCache.get(color);
+  }
 
-    setMarkerRef(marker);
+  const icon = {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+            <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="16" cy="16" r="12" fill="${color}" stroke="#ffffff" stroke-width="3"/>
+                <circle cx="16" cy="16" r="6" fill="#ffffff" opacity="0.8"/>
+            </svg>
+        `)}`,
+    scaledSize: new google.maps.Size(32, 32),
+    anchor: new google.maps.Point(16, 16),
+  };
 
-    return () => {
-      if (markerRef) {
-        markerRef.map = null;
-      }
-    };
-  }, [position]);
+  markerIconCache.set(color, icon);
+  return icon;
+};
 
-  // We need to get the map instance from the parent component
-  const mapContext = useContext(GoogleMap.context);
+// Category color mapping
+const categoryColorMap: { [key: string]: string } = {
+  Environmental: '#4ade80',
+  'Community Service': '#60a5fa',
+  Education: '#a78bfa',
+  'Health & Wellness': '#fb7185',
+  'Arts & Culture': '#fbbf24',
+  'Social Justice': '#f97316',
+  'Animal Welfare': '#10b981',
+  'Disaster Relief': '#ef4444',
+  'Youth Development': '#6366f1',
+  'Senior Support': '#8b5cf6',
+};
 
-  useEffect(() => {
-    if (markerRef && mapContext) {
-      markerRef.position = position;
-      markerRef.map = mapContext;
-    }
-  }, [markerRef, position, mapContext]);
-
-  return null;
-}
+const getCategoryMarkerColor = (category: string) => {
+  return categoryColorMap[category] || '#FFE5D4';
+};
 
 // Improved map options for better UX - mobile-aware
 const getMapOptions = (isMobile: boolean = false): google.maps.MapOptions => {
@@ -156,9 +164,7 @@ export default function ImprovedMapView() {
   const [isMounted, setIsMounted] = useState(false);
   const { mapBounds, setMapBounds } = useMapBounds();
   const { toggleSidebar } = useSidebar();
-  const clustererRef = useRef<MarkerClusterer<google.maps.marker.AdvancedMarkerElement> | null>(
-    null
-  );
+  const clustererRef = useRef<MarkerClusterer | null>(null);
 
   // Handle hydration by only running client-side code after mount
   useEffect(() => {
@@ -347,20 +353,15 @@ export default function ImprovedMapView() {
       clustererRef.current.clearMarkers();
     }
 
-    // Create advanced markers for clustering
+    // Create standard markers for clustering
     const markers = filteredEvents.map((event) => {
-      // Create the marker element
-      const markerDiv = document.createElement('div');
-      markerDiv.innerHTML = createMarkerSvg(getCategoryMarkerColor(event.category || ''));
-
-      // Create the advanced marker
-      const marker = new google.maps.marker.AdvancedMarkerElement({
-        map: mapRef.current,
+      // Create the standard marker
+      const marker = new google.maps.Marker({
         position: {
           lat: event.location!.lat,
           lng: event.location!.lng,
         },
-        content: markerDiv,
+        icon: createMarkerIcon(getCategoryMarkerColor(event.category || '')),
         title: event.title,
       });
 
@@ -494,7 +495,22 @@ export default function ImprovedMapView() {
         options={mapOptions}
       >
         {/* User location marker */}
-        {userLocation && isLoaded && <UserLocationMarker position={userLocation} />}
+        {userLocation && (
+          <Marker
+            position={userLocation}
+            icon={{
+              url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+                <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="10" cy="10" r="8" fill="#3b82f6" stroke="#ffffff" stroke-width="2"/>
+                  <circle cx="10" cy="10" r="3" fill="#ffffff"/>
+                </svg>
+              `)}`,
+              scaledSize: new google.maps.Size(20, 20),
+              anchor: new google.maps.Point(10, 10),
+            }}
+            title="Your Location"
+          />
+        )}
 
         {/* Event markers are now handled by MarkerClusterer */}
 
