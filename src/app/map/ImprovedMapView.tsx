@@ -34,10 +34,10 @@ const mapContainerStyle = {
   height: '100%',
 };
 
-// Default center (Miami) - will be updated with user location
+// Default center (West Palm Beach) - will be updated with user location
 const defaultCenter = {
-  lat: 25.79,
-  lng: -80.13,
+  lat: 26.7145,
+  lng: -80.0549,
 };
 
 // Define libraries array as a static constant to prevent reloading
@@ -163,6 +163,7 @@ const getMapOptions = (isMobile: boolean = false): google.maps.MapOptions => {
 export default function ImprovedMapView() {
   // Use ref for map instance for better performance
   const mapRef = useRef<google.maps.Map | null>(null);
+  const boundsUpdateTimeout = useRef<NodeJS.Timeout | null>(null);
   const [center, setCenter] = useState(defaultCenter);
   const [zoom, setZoom] = useState(12);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -320,18 +321,25 @@ export default function ImprovedMapView() {
 
   const onZoomChanged = useCallback(() => {
     if (mapRef.current) {
-      // Update zoom directly from map for smoother interactions
+      // Throttle zoom updates to improve performance
       const currentZoom = mapRef.current.getZoom() || 10;
-      setZoom(currentZoom);
+      // Only update if zoom actually changed
+      setZoom((prevZoom) => (prevZoom !== currentZoom ? currentZoom : prevZoom));
     }
   }, []);
 
-  // Handle bounds change for viewport-based loading
+  // Handle bounds change for viewport-based loading (throttled)
   const onBoundsChanged = useCallback(() => {
     if (mapRef.current) {
       const bounds = mapRef.current.getBounds();
       if (bounds) {
-        setMapBounds(bounds);
+        // Throttle bounds updates to improve performance
+        if (boundsUpdateTimeout.current) {
+          clearTimeout(boundsUpdateTimeout.current);
+        }
+        boundsUpdateTimeout.current = setTimeout(() => {
+          setMapBounds(bounds);
+        }, 100);
       }
     }
   }, [setMapBounds]);
@@ -353,18 +361,13 @@ export default function ImprovedMapView() {
     }
   }, []);
 
-  // Initialize marker clustering
-  useEffect(() => {
-    if (!mapRef.current || !isLoaded || !filteredEvents.length || typeof google === 'undefined')
-      return;
-
-    // Clean up existing clusterer
-    if (clustererRef.current) {
-      clustererRef.current.clearMarkers();
+  // Memoize marker creation to prevent recreation on every render
+  const markers = useMemo(() => {
+    if (!mapRef.current || !isLoaded || !filteredEvents.length || typeof google === 'undefined') {
+      return [];
     }
 
-    // Create advanced markers for clustering
-    const markers = filteredEvents.map((event) => {
+    return filteredEvents.map((event) => {
       if (!google.maps.marker) {
         // Fallback to standard markers if Advanced Markers not available
         const marker = new google.maps.Marker({
@@ -383,7 +386,7 @@ export default function ImprovedMapView() {
         return marker;
       }
 
-      // Create the marker element for Advanced Marker
+      // Create the marker element for Advanced Marker (cached)
       const markerDiv = document.createElement('div');
       markerDiv.innerHTML = `
         <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
@@ -410,41 +413,47 @@ export default function ImprovedMapView() {
 
       return marker;
     });
+  }, [isLoaded, filteredEvents]);
+
+  // Initialize marker clustering (only when markers change)
+  useEffect(() => {
+    if (!mapRef.current || !markers.length) return;
+
+    // Clean up existing clusterer
+    if (clustererRef.current) {
+      clustererRef.current.clearMarkers();
+    }
 
     // Create or update clusterer with simplified configuration
-    if (markers.length > 0) {
-      clustererRef.current = new MarkerClusterer({
-        map: mapRef.current,
-        markers,
-      });
-    }
+    clustererRef.current = new MarkerClusterer({
+      map: mapRef.current,
+      markers,
+    });
 
     return () => {
       if (clustererRef.current) {
         clustererRef.current.clearMarkers();
       }
     };
-  }, [isLoaded, filteredEvents]);
+  }, [markers]);
 
-  // Override scroll wheel behavior ONLY on desktop (not mobile)
+  // Override scroll wheel behavior ONLY on desktop (not mobile) - optimized
   useEffect(() => {
     if (!mapRef.current || !isMounted || isMobile) return;
 
-    console.log('Desktop detected - using custom scroll wheel handling');
-
     const handleWheel = (e: WheelEvent) => {
       // Only handle actual wheel events, not touch
-      if (e.type !== 'wheel') return;
+      if (e.type !== 'wheel' || !mapRef.current) return;
 
       e.preventDefault();
       e.stopPropagation();
 
-      const currentZoom = mapRef.current!.getZoom() || 10;
+      const currentZoom = mapRef.current.getZoom() || 10;
       // Much smaller increment for scroll wheel - 0.25 levels for very smooth feel
       const delta = e.deltaY > 0 ? -0.25 : 0.25;
       const newZoom = Math.max(3, Math.min(18, currentZoom + delta));
 
-      mapRef.current!.setZoom(newZoom);
+      mapRef.current.setZoom(newZoom);
     };
 
     const mapDiv = mapRef.current.getDiv();
