@@ -1,6 +1,6 @@
 'use client';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
-import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { GoogleMap, useJsApiLoader, InfoWindow } from '@react-google-maps/api';
+import { useCallback, useMemo, useState, useEffect, useRef, useContext } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
@@ -41,7 +41,52 @@ const defaultCenter = {
 };
 
 // Define libraries array as a static constant to prevent reloading
-const mapLibraries = ['places', 'geometry'];
+const mapLibraries = ['places', 'geometry', 'marker'];
+
+// User location marker component using AdvancedMarkerElement
+function UserLocationMarker({ position }: { position: { lat: number; lng: number } }) {
+  const [markerRef, setMarkerRef] = useState<google.maps.marker.AdvancedMarkerElement | null>(null);
+
+  useEffect(() => {
+    if (typeof google === 'undefined') return;
+
+    // Create marker element
+    const markerDiv = document.createElement('div');
+    markerDiv.innerHTML = `
+      <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="10" cy="10" r="8" fill="#3b82f6" stroke="#ffffff" stroke-width="2"/>
+        <circle cx="10" cy="10" r="3" fill="#ffffff"/>
+      </svg>
+    `;
+
+    // Create advanced marker
+    const marker = new google.maps.marker.AdvancedMarkerElement({
+      position,
+      content: markerDiv,
+      title: 'Your Location',
+    });
+
+    setMarkerRef(marker);
+
+    return () => {
+      if (markerRef) {
+        markerRef.map = null;
+      }
+    };
+  }, [position]);
+
+  // We need to get the map instance from the parent component
+  const mapContext = useContext(GoogleMap.context);
+
+  useEffect(() => {
+    if (markerRef && mapContext) {
+      markerRef.position = position;
+      markerRef.map = mapContext;
+    }
+  }, [markerRef, position, mapContext]);
+
+  return null;
+}
 
 // Improved map options for better UX - mobile-aware
 const getMapOptions = (isMobile: boolean = false): google.maps.MapOptions => {
@@ -86,29 +131,14 @@ const categoryColorMap: { [key: string]: string } = {
   'Senior Support': '#8b5cf6',
 };
 
-// Optimized marker icon creation with caching
-const markerIconCache = new Map<string, google.maps.Icon>();
-
-const createMarkerIcon = (color: string): google.maps.Icon | undefined => {
-  if (typeof google === 'undefined') return undefined;
-
-  if (markerIconCache.has(color)) {
-    return markerIconCache.get(color);
-  }
-
-  const icon = {
-    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-            <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="16" cy="16" r="12" fill="${color}" stroke="#ffffff" stroke-width="3"/>
-                <circle cx="16" cy="16" r="6" fill="#ffffff" opacity="0.8"/>
-            </svg>
-        `)}`,
-    scaledSize: new google.maps.Size(32, 32),
-    anchor: new google.maps.Point(16, 16),
-  };
-
-  markerIconCache.set(color, icon);
-  return icon;
+// SVG marker content for advanced markers
+const createMarkerSvg = (color: string): string => {
+  return `
+    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="16" cy="16" r="12" fill="${color}" stroke="#ffffff" stroke-width="3"/>
+      <circle cx="16" cy="16" r="6" fill="#ffffff" opacity="0.8"/>
+    </svg>
+  `;
 };
 
 const getCategoryMarkerColor = (category: string) => {
@@ -126,7 +156,9 @@ export default function ImprovedMapView() {
   const [isMounted, setIsMounted] = useState(false);
   const { mapBounds, setMapBounds } = useMapBounds();
   const { toggleSidebar } = useSidebar();
-  const clustererRef = useRef<MarkerClusterer | null>(null);
+  const clustererRef = useRef<MarkerClusterer<google.maps.marker.AdvancedMarkerElement> | null>(
+    null
+  );
 
   // Handle hydration by only running client-side code after mount
   useEffect(() => {
@@ -307,21 +339,28 @@ export default function ImprovedMapView() {
 
   // Initialize marker clustering
   useEffect(() => {
-    if (!mapRef.current || !isLoaded || !filteredEvents.length) return;
+    if (!mapRef.current || !isLoaded || !filteredEvents.length || typeof google === 'undefined')
+      return;
 
     // Clean up existing clusterer
     if (clustererRef.current) {
       clustererRef.current.clearMarkers();
     }
 
-    // Create markers for clustering
+    // Create advanced markers for clustering
     const markers = filteredEvents.map((event) => {
-      const marker = new google.maps.Marker({
+      // Create the marker element
+      const markerDiv = document.createElement('div');
+      markerDiv.innerHTML = createMarkerSvg(getCategoryMarkerColor(event.category || ''));
+
+      // Create the advanced marker
+      const marker = new google.maps.marker.AdvancedMarkerElement({
+        map: mapRef.current,
         position: {
           lat: event.location!.lat,
           lng: event.location!.lng,
         },
-        icon: createMarkerIcon(getCategoryMarkerColor(event.category || '')),
+        content: markerDiv,
         title: event.title,
       });
 
@@ -455,22 +494,7 @@ export default function ImprovedMapView() {
         options={mapOptions}
       >
         {/* User location marker */}
-        {userLocation && (
-          <Marker
-            position={userLocation}
-            icon={{
-              url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-                                <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="10" cy="10" r="8" fill="#3b82f6" stroke="#ffffff" stroke-width="2"/>
-                                    <circle cx="10" cy="10" r="3" fill="#ffffff"/>
-                                </svg>
-                            `)}`,
-              scaledSize: new google.maps.Size(20, 20),
-              anchor: new google.maps.Point(10, 10),
-            }}
-            title="Your Location"
-          />
-        )}
+        {userLocation && isLoaded && <UserLocationMarker position={userLocation} />}
 
         {/* Event markers are now handled by MarkerClusterer */}
 
