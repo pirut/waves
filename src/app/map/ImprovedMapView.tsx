@@ -153,14 +153,8 @@ const getMapOptions = (isMobile: boolean = false): google.maps.MapOptions => {
     tilt: 0,
     rotateControl: false,
     disableDoubleClickZoom: false,
-    // Better styling
-    styles: [
-      {
-        featureType: 'poi',
-        elementType: 'labels',
-        stylers: [{ visibility: 'off' }],
-      },
-    ],
+    // Note: styles cannot be used when mapId is present
+    // Map styling must be configured in Google Cloud Console
   };
 };
 
