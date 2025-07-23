@@ -1,179 +1,51 @@
-# Make Waves App Design Spec
+# Make Waves
 
-## 🌊 Overview
+Map-centric social app for real-world good.
 
-**Make Waves** is a map-centric social app where users discover, attend, and post about real-world events focused on doing good. Users can only create posts if they are attached to an attended event, which ensures all shared content is rooted in real-life impact.
+## Setup
 
-Target audience: **General public** Design style: **Clean and minimalist** Color theme: **Pastel peachy palette** (baby blue, sand, peach, white)
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Create a `.env.local` file with the following variables:
 
----
+```
+# Firebase
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
 
-## 🛠️ Tech Stack Recommendations
+# Google Maps
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
+NEXT_PUBLIC_GOOGLE_MAPS_ID=  # Required for Advanced Markers
 
-### Frontend
-
--   **Framework**: Next.js (deployed on Vercel)
--   **Styling**: Tailwind CSS
--   **Map**: `@react-google-maps/api` (Google Maps JS API)
--   **State Management**: Zustand (simple and scalable)
-
-### Backend
-
--   **Auth, DB, Functions**: Firebase
-    -   Firestore for users, events, posts, friendships
-    -   Firebase Auth (Google login)
-    -   Firebase Functions for logic (e.g., validate posts)
--   **Media CDN**: UploadThing (for photos/videos)
-
----
-
-## 🌍 Core Screens & Layouts
-
-### 1. **Landing Page**
-
--   Hero section: Logo text ("Make Waves") + short description
--   CTA: "Find Events Near You"
--   Sign-in: Google login button
-
-### 2. **Main Map Screen**
-
--   Full-screen map with:
-    -   Event pins (category-color coded)
-    -   Current location marker
--   Top bar: Search input, category filters
--   Bottom sheet (optional): List view of upcoming events in view
--   Floating Action Button: ➕ Create Event (optional/admin only)
-
-### 3. **Event Details Page**
-
--   Event title, category, date/time
--   Location map snippet
--   Description
--   RSVP / Join button
--   Event image carousel (from attendee posts)
--   Button: "Post about this event"
-
-### 4. **Post Creation Modal**
-
--   File upload (image/video) via UploadThing
--   Text area for caption
--   Dropdown to pick event (joined + recent)
--   Submit button (disabled unless event selected)
-
-### 5. **Social Feed**
-
--   Scrollable feed of posts
--   Each post shows:
-    -   Media
-    -   User name, profile photo
-    -   Event it was attached to
-    -   Likes, comments (if implemented later)
-
-### 6. **User Profile Page**
-
--   Profile photo + name
--   Stats: # Events attended, # Friends
--   Badges (e.g., "10 Waves Made")
--   Grid of media posts
-
-### 7. **Friends System**
-
--   Follow/unfollow or friend requests
--   Optional: Messaging (future feature)
-
----
-
-## 🔢 Firestore Data Models
-
-### users
-
-```json
-{
-    "id": "user_123",
-    "name": "Jane Doe",
-    "profilePhotoUrl": "...",
-    "friends": ["user_456"],
-    "attendedEvents": ["event_001"],
-    "badges": ["10_events"]
-}
+# Firebase Admin SDK (for server-side)
+FIREBASE_PROJECT_ID=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_PRIVATE_KEY=
 ```
 
-### events
+4. Run the development server: `npm run dev`
 
-```json
-{
-    "id": "event_001",
-    "title": "Beach Cleanup",
-    "description": "Join us for a local cleanup.",
-    "location": { "lat": 26.7, "lng": -80.0 },
-    "time": "2025-07-10T15:00:00Z",
-    "category": "Environmental",
-    "attendees": ["user_123"]
-}
-```
+## Google Maps Advanced Markers
 
-### posts
+To use Google Maps Advanced Markers, you need to create a Map ID in the Google Cloud Console:
 
-```json
-{
-    "id": "post_001",
-    "userId": "user_123",
-    "eventId": "event_001",
-    "mediaUrl": "...",
-    "caption": "Had a blast cleaning the beach!",
-    "timestamp": "2025-07-10T17:00:00Z"
-}
-```
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
+2. Select your project
+3. Navigate to the Google Maps Platform > Maps Management
+4. Click "Create Map ID"
+5. Give your map a name (e.g., "MakeWavesMap")
+6. Select "Vector" as the map type
+7. Click "Create"
+8. Copy the generated Map ID to your `.env.local` file as `NEXT_PUBLIC_GOOGLE_MAPS_ID`
 
----
+## Features
 
-## 📊 App Flow Summary
-
-1. User signs in via Google
-2. Map loads nearby events (pins)
-3. User taps an event pin
-4. They RSVP and attend the event
-5. After event, they upload photos tied to that event
-6. Post appears in feed and on event page
-7. Friends can view, like, and attend their own events
-
----
-
-## 🔹 Color Palette
-
--   Baby Blue: `#B3DFF2`
--   Sand: `#F6E8D6`
--   Warm Peach: `#FFE5D4`
--   White: `#FFFFFF`
--   Accent Gray: `#7F8C8D` (optional text color)
-
----
-
-## 🌌 Future Features
-
--   Leaderboards: Top contributors
--   AI event suggestions
--   Event approval flow
--   SMS notifications
--   Messaging between friends
-
----
-
-## Development Setup
-
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Start the development server:
-   ```bash
-   npm run dev
-   ```
-3. Check code quality:
-   ```bash
-   npm run lint
-   ```
-4. Format the codebase:
-   ```bash
-   npm run format
-   ```
+- Interactive map with event discovery
+- Event attendance tracking
+- Post creation tied to attended events
+- Social feed and user profiles
+- Friends system
