@@ -48,8 +48,6 @@ const mapLibraries: ('places' | 'geometry' | 'drawing' | 'visualization' | 'mark
   'marker',
 ];
 
-// We don't need this function anymore
-
 // Advanced Marker component for user location
 function UserLocationAdvancedMarker({
   position,
@@ -157,8 +155,6 @@ const getMapOptions = (isMobile: boolean = false): google.maps.MapOptions => {
     // Map styling must be configured in Google Cloud Console
   };
 };
-
-// These are already defined above, removing duplicates
 
 export default function ImprovedMapView() {
   // Use ref for map instance for better performance
@@ -486,8 +482,6 @@ export default function ImprovedMapView() {
 
   return (
     <div className="w-full h-full relative overflow-hidden">
-      {/* Loading indicator removed to prevent hydration issues */}
-
       {/* Map Controls */}
       {isMounted && (
         <div className="absolute top-4 z-30 pointer-events-auto flex gap-2">
