@@ -475,7 +475,7 @@ export default function ImprovedMapView() {
         </svg>
       `;
 
-      // Create the advanced marker
+      // Create the advanced marker (don't add to map directly, let clusterer handle it)
       const marker = new google.maps.marker.AdvancedMarkerElement({
         position: {
           lat: event.location!.lat,
@@ -483,7 +483,6 @@ export default function ImprovedMapView() {
         },
         content: markerDiv,
         title: event.title,
-        map: mapRef.current,
       });
 
       // Add click listener to marker

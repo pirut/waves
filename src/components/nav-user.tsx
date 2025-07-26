@@ -37,20 +37,19 @@ export function NavUser({ user }: NavUserProps) {
   };
 
   const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase();
+    // Get just the first letter of the first name
+    return name.charAt(0).toUpperCase();
   };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <SidebarMenuButton className="px-2.5 md:px-2">
+        <SidebarMenuButton className="px-2.5 md:px-2 justify-center">
           <Avatar className="h-6 w-6">
             <AvatarImage src={user.avatar} alt={user.name} />
-            <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
+            <AvatarFallback className="text-xs font-semibold">
+              {getInitials(user.name)}
+            </AvatarFallback>
           </Avatar>
           <span>{user.name}</span>
         </SidebarMenuButton>
