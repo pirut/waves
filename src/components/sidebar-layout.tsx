@@ -20,6 +20,9 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
     setIsMounted(true);
   }, []);
 
+  // Check if we're on the map page
+  const isMapPage = typeof window !== 'undefined' && window.location.pathname === '/map';
+
   // Generate breadcrumbs from pathname
   // We've removed the breadcrumbs as requested
 
@@ -44,7 +47,13 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
         <AppSidebar />
         <SidebarInset>
           {/* No header for cleaner UI */}
-          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
+          {isMapPage ? (
+            // Map page takes full space without padding
+            <div className="flex flex-1 flex-col h-screen">{children}</div>
+          ) : (
+            // Other pages use normal padding
+            <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
+          )}
         </SidebarInset>
       </SidebarProvider>
     </MapBoundsProvider>
