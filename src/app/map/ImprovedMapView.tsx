@@ -141,16 +141,17 @@ const getMapOptions = (isMobile: boolean = false): google.maps.MapOptions => {
     streetViewControl: false,
     mapTypeControl: false,
     fullscreenControl: false, // Disable fullscreen
-    gestureHandling: 'greedy',
-    isFractionalZoomEnabled: isMobile, // Enable fractional zoom on mobile for smoother pinch
+    gestureHandling: 'greedy', // Allow all gestures without restrictions
+    isFractionalZoomEnabled: true, // Enable fractional zoom for smoother interactions
     clickableIcons: false,
     keyboardShortcuts: !isMobile, // Disable keyboard shortcuts on mobile
     minZoom: 3,
     maxZoom: 18,
-    scrollwheel: !isMobile, // Disable scroll wheel on mobile
+    scrollwheel: true, // Enable scroll wheel for smoother zooming
     tilt: 0,
     rotateControl: false,
     disableDoubleClickZoom: false,
+    draggable: true, // Ensure dragging is enabled
     // Note: styles cannot be used when mapId is present
     // Map styling must be configured in Google Cloud Console
   };
@@ -173,6 +174,13 @@ export default function ImprovedMapView() {
   // Handle hydration by only running client-side code after mount
   useEffect(() => {
     setIsMounted(true);
+
+    // Cleanup on unmount
+    return () => {
+      if (boundsUpdateTimeout.current) {
+        clearTimeout(boundsUpdateTimeout.current);
+      }
+    };
   }, []);
 
   // Use tRPC to fetch events - we'll implement viewport-based loading later
@@ -312,30 +320,36 @@ export default function ImprovedMapView() {
   );
 
   const onUnmount = useCallback(() => {
+    // Clean up timeouts to prevent memory leaks
+    if (boundsUpdateTimeout.current) {
+      clearTimeout(boundsUpdateTimeout.current);
+    }
     mapRef.current = null;
   }, []);
 
   const onZoomChanged = useCallback(() => {
     if (mapRef.current) {
-      // Throttle zoom updates to improve performance
+      // Debounce zoom updates to prevent interference with interactions
       const currentZoom = mapRef.current.getZoom() || 10;
-      // Only update if zoom actually changed
-      setZoom((prevZoom) => (prevZoom !== currentZoom ? currentZoom : prevZoom));
+      // Use requestAnimationFrame for smoother updates
+      requestAnimationFrame(() => {
+        setZoom((prevZoom) => (Math.abs(prevZoom - currentZoom) > 0.1 ? currentZoom : prevZoom));
+      });
     }
   }, []);
 
-  // Handle bounds change for viewport-based loading (throttled)
+  // Handle bounds change for viewport-based loading (throttled and debounced)
   const onBoundsChanged = useCallback(() => {
     if (mapRef.current) {
       const bounds = mapRef.current.getBounds();
       if (bounds) {
-        // Throttle bounds updates to improve performance
+        // Debounce bounds updates to prevent interference with dragging
         if (boundsUpdateTimeout.current) {
           clearTimeout(boundsUpdateTimeout.current);
         }
         boundsUpdateTimeout.current = setTimeout(() => {
           setMapBounds(bounds);
-        }, 100);
+        }, 300); // Increased delay to reduce interference with drag operations
       }
     }
   }, [setMapBounds]);
@@ -433,35 +447,8 @@ export default function ImprovedMapView() {
     };
   }, [markers]);
 
-  // Override scroll wheel behavior ONLY on desktop (not mobile) - optimized
-  useEffect(() => {
-    if (!mapRef.current || !isMounted || isMobile) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      // Only handle actual wheel events, not touch
-      if (e.type !== 'wheel' || !mapRef.current) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      const currentZoom = mapRef.current.getZoom() || 10;
-      // Much smaller increment for scroll wheel - 0.25 levels for very smooth feel
-      const delta = e.deltaY > 0 ? -0.25 : 0.25;
-      const newZoom = Math.max(3, Math.min(18, currentZoom + delta));
-
-      mapRef.current.setZoom(newZoom);
-    };
-
-    const mapDiv = mapRef.current.getDiv();
-    if (mapDiv) {
-      // Only add wheel listener on desktop
-      mapDiv.addEventListener('wheel', handleWheel, { passive: false });
-
-      return () => {
-        mapDiv.removeEventListener('wheel', handleWheel);
-      };
-    }
-  }, [isMounted, isMobile]);
+  // Removed custom scroll wheel handler to prevent interference with drag behavior
+  // Google Maps handles scroll wheel zooming natively and more smoothly
 
   // Close info window when clicking elsewhere
   const onMapClick = useCallback(() => {
