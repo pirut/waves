@@ -184,7 +184,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenuButton
                 size="lg"
                 onClick={() => router.push('/')}
-                className="md:h-8 md:p-0"
+                className="md:h-8 md:p-0 justify-center data-[state=collapsed]:justify-center"
               >
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                   <div className="w-6 h-6 bg-[#FFE5D4] rounded-full flex items-center justify-center">
@@ -223,7 +223,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter className="flex flex-col gap-2">
+        <SidebarFooter className="flex flex-col gap-2 items-center">
           <NavUser user={userData} />
           <div className="px-2.5 md:px-2 flex justify-center">
             <ModeToggle />

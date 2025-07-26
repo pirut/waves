@@ -44,14 +44,14 @@ export function NavUser({ user }: NavUserProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <SidebarMenuButton className="px-2.5 md:px-2 justify-center">
-          <Avatar className="h-6 w-6">
+        <SidebarMenuButton className="px-2.5 md:px-2 justify-center data-[state=collapsed]:justify-center w-full">
+          <Avatar className="h-6 w-6 flex-shrink-0">
             <AvatarImage src={user.avatar} alt={user.name} />
             <AvatarFallback className="text-xs font-semibold">
               {getInitials(user.name)}
             </AvatarFallback>
           </Avatar>
-          <span>{user.name}</span>
+          <span className="truncate">{user.name}</span>
         </SidebarMenuButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
