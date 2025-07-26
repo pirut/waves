@@ -66,8 +66,13 @@ export const eventsRouter = router({
   }),
 
   create: protectedProcedure.input(eventSchema).mutation(async ({ input, ctx }) => {
+    // Filter out undefined values to avoid Firestore errors
+    const cleanInput = Object.fromEntries(
+      Object.entries(input).filter(([, value]) => value !== undefined)
+    );
+
     const eventData = {
-      ...input,
+      ...cleanInput,
       createdBy: ctx.user.uid,
       createdAt: new Date().toISOString(),
       attendees: [],
@@ -98,11 +103,16 @@ export const eventsRouter = router({
         throw new Error('Unauthorized');
       }
 
+      // Filter out undefined values to avoid Firestore errors
+      const cleanData = Object.fromEntries(
+        Object.entries(input.data).filter(([, value]) => value !== undefined)
+      );
+
       await adminDb
         .collection('events')
         .doc(input.id)
         .update({
-          ...input.data,
+          ...cleanData,
           updatedAt: new Date().toISOString(),
         });
 
