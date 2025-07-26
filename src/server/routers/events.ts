@@ -1,95 +1,128 @@
-import { z } from "zod";
-import { router, publicProcedure, protectedProcedure } from "../trpc";
-import { adminDb } from "@/firebaseAdmin";
+import { z } from 'zod';
+import { router, publicProcedure, protectedProcedure } from '../trpc';
+import { adminDb } from '@/firebaseAdmin';
 
 const eventSchema = z.object({
-    title: z.string().min(1),
-    description: z.string().optional(),
-    category: z.string(),
-    location: z.object({
-        lat: z.number(),
-        lng: z.number(),
-    }),
-    date: z.string(),
-    maxAttendees: z.number().optional(),
+  title: z.string().min(1),
+  description: z.string().optional(),
+  category: z.string(),
+  location: z.object({
+    lat: z.number(),
+    lng: z.number(),
+  }),
+  date: z.string(),
+  maxAttendees: z.number().optional(),
 });
 
 export const eventsRouter = router({
-    getAll: publicProcedure.query(async () => {
-        const eventsSnapshot = await adminDb.collection("events").get();
-        return eventsSnapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-        }));
+  getAll: publicProcedure.query(async () => {
+    const eventsSnapshot = await adminDb.collection('events').get();
+    return eventsSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+  }),
+
+  getByBounds: publicProcedure
+    .input(
+      z.object({
+        north: z.number(),
+        south: z.number(),
+        east: z.number(),
+        west: z.number(),
+      })
+    )
+    .query(async ({ input }) => {
+      const eventsSnapshot = await adminDb
+        .collection('events')
+        .where('location.lat', '>=', input.south)
+        .where('location.lat', '<=', input.north)
+        .get();
+
+      // Filter by longitude in memory since Firestore doesn't support multiple range queries
+      const events = eventsSnapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .filter((event) => {
+          const eventData = event as { location?: { lng: number } };
+          const lng = eventData.location?.lng;
+          return lng !== undefined && lng >= input.west && lng <= input.east;
+        });
+
+      return events;
     }),
 
-    getById: publicProcedure.input(z.object({ id: z.string() })).query(async ({ input }) => {
-        const eventDoc = await adminDb.collection("events").doc(input.id).get();
-        if (!eventDoc.exists) {
-            throw new Error("Event not found");
-        }
-        return {
-            id: eventDoc.id,
-            ...eventDoc.data(),
-        };
+  getById: publicProcedure.input(z.object({ id: z.string() })).query(async ({ input }) => {
+    const eventDoc = await adminDb.collection('events').doc(input.id).get();
+    if (!eventDoc.exists) {
+      throw new Error('Event not found');
+    }
+    return {
+      id: eventDoc.id,
+      ...eventDoc.data(),
+    };
+  }),
+
+  create: protectedProcedure.input(eventSchema).mutation(async ({ input, ctx }) => {
+    const eventData = {
+      ...input,
+      createdBy: ctx.user.uid,
+      createdAt: new Date().toISOString(),
+      attendees: [],
+    };
+
+    const docRef = await adminDb.collection('events').add(eventData);
+    return {
+      id: docRef.id,
+      ...eventData,
+    };
+  }),
+
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        data: eventSchema.partial(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const eventDoc = await adminDb.collection('events').doc(input.id).get();
+      if (!eventDoc.exists) {
+        throw new Error('Event not found');
+      }
+
+      const eventData = eventDoc.data();
+      if (eventData?.createdBy !== ctx.user.uid) {
+        throw new Error('Unauthorized');
+      }
+
+      await adminDb
+        .collection('events')
+        .doc(input.id)
+        .update({
+          ...input.data,
+          updatedAt: new Date().toISOString(),
+        });
+
+      return { success: true };
     }),
 
-    create: protectedProcedure.input(eventSchema).mutation(async ({ input, ctx }) => {
-        const eventData = {
-            ...input,
-            createdBy: ctx.user.uid,
-            createdAt: new Date().toISOString(),
-            attendees: [],
-        };
+  delete: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const eventDoc = await adminDb.collection('events').doc(input.id).get();
+      if (!eventDoc.exists) {
+        throw new Error('Event not found');
+      }
 
-        const docRef = await adminDb.collection("events").add(eventData);
-        return {
-            id: docRef.id,
-            ...eventData,
-        };
-    }),
+      const eventData = eventDoc.data();
+      if (eventData?.createdBy !== ctx.user.uid) {
+        throw new Error('Unauthorized');
+      }
 
-    update: protectedProcedure
-        .input(
-            z.object({
-                id: z.string(),
-                data: eventSchema.partial(),
-            })
-        )
-        .mutation(async ({ input, ctx }) => {
-            const eventDoc = await adminDb.collection("events").doc(input.id).get();
-            if (!eventDoc.exists) {
-                throw new Error("Event not found");
-            }
-
-            const eventData = eventDoc.data();
-            if (eventData?.createdBy !== ctx.user.uid) {
-                throw new Error("Unauthorized");
-            }
-
-            await adminDb
-                .collection("events")
-                .doc(input.id)
-                .update({
-                    ...input.data,
-                    updatedAt: new Date().toISOString(),
-                });
-
-            return { success: true };
-        }),
-
-    delete: protectedProcedure.input(z.object({ id: z.string() })).mutation(async ({ input, ctx }) => {
-        const eventDoc = await adminDb.collection("events").doc(input.id).get();
-        if (!eventDoc.exists) {
-            throw new Error("Event not found");
-        }
-
-        const eventData = eventDoc.data();
-        if (eventData?.createdBy !== ctx.user.uid) {
-            throw new Error("Unauthorized");
-        }
-
-        await adminDb.collection("events").doc(input.id).delete();
-        return { success: true };
+      await adminDb.collection('events').doc(input.id).delete();
+      return { success: true };
     }),
 });

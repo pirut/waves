@@ -26,6 +26,7 @@ interface Event {
   createdBy?: string;
   time?: string;
   date?: string;
+  [key: string]: unknown;
 }
 
 // Google Maps configuration - Better mobile support
@@ -167,9 +168,12 @@ export default function ImprovedMapView() {
 
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isMounted, setIsMounted] = useState(false);
-  const { mapBounds, setMapBounds } = useMapBounds();
+  const { setMapBounds } = useMapBounds();
   const { toggleSidebar } = useSidebar();
   const clustererRef = useRef<MarkerClusterer | null>(null);
+
+  // State for viewport-based loading
+  const [currentBounds, setCurrentBounds] = useState<google.maps.LatLngBounds | null>(null);
 
   // Handle hydration by only running client-side code after mount
   useEffect(() => {
@@ -183,28 +187,74 @@ export default function ImprovedMapView() {
     };
   }, []);
 
-  // Use tRPC to fetch events - we'll implement viewport-based loading later
+  // Load all events initially
   const {
     data: allEvents = [],
     isLoading: loading,
     refetch: loadEvents,
-  } = trpc.events.getAll.useQuery() as {
-    data: Event[];
-    isLoading: boolean;
-    refetch: () => void;
-  };
+  } = trpc.events.getAll.useQuery();
 
-  // Filter events based on viewport bounds for performance
-  const eventsInViewport = useMemo(() => {
-    if (!mapBounds || !allEvents.length) return allEvents;
+  // Real-time updates with Firebase (with proper error handling)
+  useEffect(() => {
+    if (!isMounted) return;
+
+    let unsubscribe: (() => void) | undefined;
+
+    const setupRealtimeListener = async () => {
+      try {
+        const { db } = await import('@/firebase');
+        const { collection, onSnapshot } = await import('firebase/firestore');
+
+        unsubscribe = onSnapshot(
+          collection(db, 'events'),
+          () => {
+            // Trigger a refetch when data changes
+            loadEvents();
+          },
+          (error) => {
+            console.error('Realtime events error:', error);
+            // Fallback to periodic refresh if real-time fails
+            const interval = setInterval(() => {
+              if (!document.hidden) {
+                loadEvents();
+              }
+            }, 30000);
+            return () => clearInterval(interval);
+          }
+        );
+      } catch (error) {
+        console.error('Failed to set up realtime listener:', error);
+        // Fallback to periodic refresh
+        const interval = setInterval(() => {
+          if (!document.hidden) {
+            loadEvents();
+          }
+        }, 30000);
+        return () => clearInterval(interval);
+      }
+    };
+
+    setupRealtimeListener();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [isMounted, loadEvents]);
+
+  // Filter events by current viewport
+  const eventsToShow = useMemo(() => {
+    if (!currentBounds || !allEvents.length) return allEvents;
 
     return allEvents.filter((event) => {
-      if (!event.location) return false;
+      const eventData = event as Event;
+      if (!eventData.location) return false;
 
-      const eventLatLng = new google.maps.LatLng(event.location.lat, event.location.lng);
-      return mapBounds.contains(eventLatLng);
+      const eventLatLng = new google.maps.LatLng(eventData.location.lat, eventData.location.lng);
+      return currentBounds.contains(eventLatLng);
     });
-  }, [allEvents, mapBounds]);
+  }, [allEvents, currentBounds]);
 
   // Load Google Maps API with clustering
   const { isLoaded } = useJsApiLoader({
@@ -214,18 +264,19 @@ export default function ImprovedMapView() {
     libraries: mapLibraries,
   });
 
-  // Get user location on mount (only after hydration) - but don't block map rendering
+  // Get user location on mount and search that area
   useEffect(() => {
     if (!isMounted) return;
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const userPos = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
           };
           setUserLocation(userPos);
+
           // Only update center if we haven't moved from default location
           if (center.lat === defaultCenter.lat && center.lng === defaultCenter.lng) {
             setCenter(userPos);
@@ -249,10 +300,15 @@ export default function ImprovedMapView() {
 
   // Memoize filtered events from viewport
   const filteredEvents = useMemo(() => {
-    return eventsInViewport.filter(
-      (e) => e.location && typeof e.location.lat === 'number' && typeof e.location.lng === 'number'
-    );
-  }, [eventsInViewport]);
+    return eventsToShow.filter((e): e is Event => {
+      const event = e as Event;
+      return !!(
+        event.location &&
+        typeof event.location.lat === 'number' &&
+        typeof event.location.lng === 'number'
+      );
+    });
+  }, [eventsToShow]);
 
   // Detect mobile for map options (only after mount to avoid hydration issues)
   const [isMobile, setIsMobile] = useState(false);
@@ -309,6 +365,7 @@ export default function ImprovedMapView() {
       const bounds = map.getBounds();
       if (bounds) {
         setMapBounds(bounds);
+        setCurrentBounds(bounds);
       }
 
       // Force a resize to ensure proper rendering
@@ -349,7 +406,8 @@ export default function ImprovedMapView() {
         }
         boundsUpdateTimeout.current = setTimeout(() => {
           setMapBounds(bounds);
-        }, 300); // Increased delay to reduce interference with drag operations
+          setCurrentBounds(bounds);
+        }, 300);
       }
     }
   }, [setMapBounds]);
@@ -432,17 +490,43 @@ export default function ImprovedMapView() {
     // Clean up existing clusterer
     if (clustererRef.current) {
       clustererRef.current.clearMarkers();
+      clustererRef.current.setMap(null);
     }
 
-    // Create or update clusterer with simplified configuration
+    // Create new clusterer with improved configuration
     clustererRef.current = new MarkerClusterer({
       map: mapRef.current,
       markers,
+      renderer: {
+        render: ({ count, position }) => {
+          // Custom cluster marker styling
+          const color = count < 10 ? '#FFE5D4' : count < 50 ? '#F6E8D6' : '#B3DFF2';
+          const size = count < 10 ? 40 : count < 50 ? 50 : 60;
+
+          const svg = `
+            <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 2}" fill="${color}" stroke="#ffffff" stroke-width="3"/>
+              <text x="${size / 2}" y="${size / 2}" text-anchor="middle" dy="0.3em" font-family="Arial, sans-serif" font-size="${size / 3}" font-weight="bold" fill="#333">${count}</text>
+            </svg>
+          `;
+
+          return new google.maps.marker.AdvancedMarkerElement({
+            position,
+            content: (() => {
+              const div = document.createElement('div');
+              div.innerHTML = svg;
+              return div.firstElementChild as HTMLElement;
+            })(),
+            zIndex: 1000 + count,
+          });
+        },
+      },
     });
 
     return () => {
       if (clustererRef.current) {
         clustererRef.current.clearMarkers();
+        clustererRef.current.setMap(null);
       }
     };
   }, [markers]);
@@ -471,33 +555,35 @@ export default function ImprovedMapView() {
     <div className="w-full h-full relative overflow-hidden">
       {/* Map Controls */}
       {isMounted && (
-        <div className="absolute top-4 z-30 pointer-events-auto flex gap-2">
-          {/* Sidebar Toggle Button - Left side */}
-          <div className="absolute left-4">
-            <Button
-              variant="outline"
-              onClick={toggleSidebar}
-              size="sm"
-              className="h-10 w-10 p-0 bg-background/95 backdrop-blur-sm shadow-lg"
-            >
-              <PanelLeftIcon className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Location Button - Right side */}
-          {userLocation && (
-            <div className="absolute right-4">
+        <>
+          {/* Top Controls */}
+          <div className="absolute top-4 left-4 right-4 z-30 pointer-events-none">
+            <div className="flex justify-between items-center">
+              {/* Sidebar Toggle Button - Left side */}
               <Button
                 variant="outline"
-                onClick={goToUserLocation}
+                onClick={toggleSidebar}
                 size="sm"
-                className="h-10 w-10 p-0 bg-background/95 backdrop-blur-sm shadow-lg"
+                className="h-10 w-10 p-0 bg-background/95 backdrop-blur-sm shadow-lg pointer-events-auto"
               >
-                <Locate className="h-4 w-4" />
+                <PanelLeftIcon className="h-4 w-4" />
               </Button>
+
+              {/* Location Button - Right side */}
+              {userLocation && (
+                <Button
+                  variant="outline"
+                  onClick={goToUserLocation}
+                  size="sm"
+                  className="h-10 w-10 p-0 bg-background/95 backdrop-blur-sm shadow-lg pointer-events-auto"
+                  title="Go to my location"
+                >
+                  <Locate className="h-4 w-4" />
+                </Button>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        </>
       )}
 
       {/* Google Map - render immediately when API is loaded */}
@@ -588,7 +674,7 @@ export default function ImprovedMapView() {
       )}
 
       {/* Create Event FAB */}
-      <CreateEventModal onEventCreated={loadEvents} />
+      <CreateEventModal />
 
       {/* Custom Fast Zoom Controls */}
       <div className="absolute bottom-24 right-4 z-30 pointer-events-auto flex flex-col gap-2">
@@ -617,12 +703,10 @@ export default function ImprovedMapView() {
         <Card className="bg-card/95 backdrop-blur-sm">
           <CardContent className="p-2 text-xs text-muted-foreground">
             {isMobile ? (
-              <span>
-                {filteredEvents.length}/{allEvents.length} events
-              </span>
+              <span>{filteredEvents.length} events in view</span>
             ) : (
               <span>
-                {filteredEvents.length} of {allEvents.length} events • Zoom: {zoom}
+                {filteredEvents.length} events in view • Zoom: {zoom}
               </span>
             )}
           </CardContent>
