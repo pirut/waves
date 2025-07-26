@@ -194,7 +194,7 @@ export default function ImprovedMapView() {
     refetch: loadEvents,
   } = trpc.events.getAll.useQuery();
 
-  // Real-time updates with Firebase (with proper error handling)
+  // Firebase real-time updates
   useEffect(() => {
     if (!isMounted) return;
 
@@ -202,8 +202,20 @@ export default function ImprovedMapView() {
 
     const setupRealtimeListener = async () => {
       try {
-        const { db } = await import('@/firebase');
+        const { db, auth } = await import('@/firebase');
         const { collection, onSnapshot } = await import('firebase/firestore');
+
+        // Wait for auth state to be determined
+        const waitForAuth = () => {
+          return new Promise<void>((resolve) => {
+            const unsubscribeAuth = auth.onAuthStateChanged(() => {
+              unsubscribeAuth();
+              resolve();
+            });
+          });
+        };
+
+        await waitForAuth();
 
         unsubscribe = onSnapshot(
           collection(db, 'events'),
