@@ -178,13 +178,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     >
       {/* Main Navigation Sidebar */}
       <Sidebar collapsible="none" className="!w-[calc(var(--sidebar-width-icon)_+_2px)] border-r">
-        <SidebarHeader>
-          <SidebarMenu>
-            <SidebarMenuItem>
+        <SidebarHeader className="flex justify-center items-center w-full">
+          <SidebarMenu className="flex justify-center w-full">
+            <SidebarMenuItem className="flex justify-center items-center w-full">
               <SidebarMenuButton
                 size="lg"
                 onClick={() => router.push('/')}
-                className="md:h-8 md:p-0 justify-center data-[state=collapsed]:justify-center"
+                className="md:h-8 md:p-0 justify-center w-full data-[state=collapsed]:justify-center mx-auto"
               >
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                   <div className="w-6 h-6 bg-[#FFE5D4] rounded-full flex items-center justify-center">
@@ -223,9 +223,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter className="flex flex-col gap-2 items-center">
-          <NavUser user={userData} />
-          <div className="px-2.5 md:px-2 flex justify-center">
+        <SidebarFooter className="flex flex-col gap-2 items-center justify-center w-full">
+          <SidebarMenu className="flex justify-center w-full">
+            <SidebarMenuItem className="flex justify-center items-center w-full">
+              <NavUser user={userData} />
+            </SidebarMenuItem>
+          </SidebarMenu>
+          <div className="flex justify-center w-full">
             <ModeToggle />
           </div>
         </SidebarFooter>

@@ -44,7 +44,7 @@ export function NavUser({ user }: NavUserProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <SidebarMenuButton className="px-2.5 md:px-2 justify-center data-[state=collapsed]:justify-center w-full">
+        <SidebarMenuButton className="px-2.5 md:px-2 justify-center data-[state=collapsed]:justify-center w-full mx-auto">
           <Avatar className="h-6 w-6 flex-shrink-0">
             <AvatarImage src={user.avatar} alt={user.name} />
             <AvatarFallback className="text-xs font-semibold">
