@@ -33,6 +33,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
 
 // Navigation data for Make Waves
@@ -171,174 +172,182 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   };
 
   return (
-    <Sidebar
-      collapsible="icon"
-      className="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row"
-      {...props}
-    >
-      {/* Main Navigation Sidebar */}
-      <Sidebar collapsible="none" className="!w-[calc(var(--sidebar-width-icon)_+_2px)] border-r">
-        <SidebarHeader className="flex justify-center items-center w-full p-2">
-          <SidebarMenu className="flex justify-center w-full m-0">
-            <SidebarMenuItem className="flex justify-center items-center w-full list-none">
-              <div className="flex justify-center items-center w-full">
-                <SidebarMenuButton
-                  size="lg"
-                  onClick={() => router.push('/')}
-                  className="md:h-8 md:p-2 justify-center items-center data-[state=collapsed]:justify-center !text-center"
-                >
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                    <div className="w-6 h-6 bg-[#FFE5D4] rounded-full flex items-center justify-center">
-                      <span className="text-gray-900 text-xs font-bold">W</span>
-                    </div>
-                  </div>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">Make Waves</span>
-                    <span className="truncate text-xs">Social Impact</span>
-                  </div>
-                </SidebarMenuButton>
-              </div>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupContent className="px-1.5 md:px-0">
-              <SidebarMenu>
-                {navItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      tooltip={{
-                        children: item.title,
-                        hidden: false,
-                      }}
-                      onClick={() => handleNavClick(item)}
-                      isActive={activeItem?.title === item.title}
-                      className="px-3 md:px-3"
-                    >
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarFooter className="flex flex-col gap-2 items-center justify-center w-full p-2">
-          <SidebarMenu className="flex justify-center w-full m-0">
-            <SidebarMenuItem className="flex justify-center items-center w-full list-none">
-              <div className="flex justify-center items-center w-full">
-                <NavUser user={userData} />
-              </div>
-            </SidebarMenuItem>
-          </SidebarMenu>
-          <div className="flex justify-center w-full">
-            <ModeToggle />
-          </div>
-        </SidebarFooter>
-      </Sidebar>
-
-      {/* Secondary Content Sidebar */}
-      <Sidebar collapsible="none" className="hidden flex-1 md:flex">
-        <SidebarHeader className="gap-3.5 border-b p-5">
-          <div className="flex w-full items-center justify-between">
-            <div className="text-base font-medium text-foreground">
-              {pathname === '/map' ? 'Events in View' : activeItem?.title}
-            </div>
-            <Label className="flex items-center gap-2 text-sm">
-              <span>Upcoming</span>
-              <Switch
-                className="shadow-none"
-                checked={showUpcoming}
-                onCheckedChange={setShowUpcoming}
-              />
-            </Label>
-          </div>
-          <SidebarInput
-            placeholder="Search events..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup className="px-0">
-            <SidebarGroupContent>
-              {pathname === '/map' && (
-                <div className="p-3 bg-muted/30 text-xs text-muted-foreground border-b">
-                  {mapBounds
-                    ? 'Showing events in the current map view'
-                    : 'Move the map to see events in that area'}
+    <TooltipProvider>
+      <Sidebar
+        collapsible="icon"
+        className="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row"
+        {...props}
+      >
+        {/* Main Navigation Sidebar */}
+        <Sidebar collapsible="none" className="!w-[calc(var(--sidebar-width-icon)_+_2px)] border-r">
+          <SidebarHeader className="flex justify-center items-center w-full p-2">
+            <SidebarMenu className="flex justify-center w-full m-0">
+              <SidebarMenuItem className="flex justify-center items-center w-full list-none">
+                <div className="flex justify-center items-center w-full">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <SidebarMenuButton
+                        size="lg"
+                        onClick={() => router.push('/')}
+                        className="h-10 w-10 p-0 justify-center items-center !text-center"
+                      >
+                        <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                          <div className="w-6 h-6 bg-[#FFE5D4] rounded-full flex items-center justify-center">
+                            <span className="text-gray-900 text-xs font-bold">W</span>
+                          </div>
+                        </div>
+                      </SidebarMenuButton>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      <div className="text-center">
+                        <p className="font-semibold">Make Waves</p>
+                        <p className="text-xs text-muted-foreground">Social Impact</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
-              )}
-              {eventsLoading ? (
-                <div className="flex flex-col gap-4 p-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex flex-col gap-2 animate-pulse">
-                      <div className="flex items-center justify-between">
-                        <div className="h-4 bg-muted rounded w-1/2"></div>
-                        <div className="h-3 bg-muted rounded w-1/4"></div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="h-3 bg-muted rounded w-1/3"></div>
-                        <div className="h-3 bg-muted rounded w-1/5"></div>
-                      </div>
-                      <div className="h-5 bg-muted rounded w-1/4"></div>
-                    </div>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupContent className="px-1.5 md:px-0">
+                <SidebarMenu>
+                  {navItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        tooltip={{
+                          children: item.title,
+                          hidden: false,
+                        }}
+                        onClick={() => handleNavClick(item)}
+                        isActive={activeItem?.title === item.title}
+                        className="px-3 md:px-3"
+                      >
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
                   ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+          <SidebarFooter className="flex flex-col gap-2 items-center justify-center w-full p-2">
+            <SidebarMenu className="flex justify-center w-full m-0">
+              <SidebarMenuItem className="flex justify-center items-center w-full list-none">
+                <div className="flex justify-center items-center w-full">
+                  <NavUser user={userData} />
                 </div>
-              ) : eventsError ? (
-                <div className="p-4 text-center text-sm text-muted-foreground">
-                  Failed to load events
-                </div>
-              ) : filteredEvents.length === 0 ? (
-                <div className="p-4 text-center text-sm text-muted-foreground">
-                  {pathname === '/map'
-                    ? 'No events in the current map view'
-                    : searchQuery.trim()
-                      ? 'No events match your search'
-                      : 'No events available'}
-                </div>
-              ) : (
-                filteredEvents
-                  .filter((event: Event) => {
-                    // If showing all upcoming events, show everything
-                    if (showUpcoming) return true;
+              </SidebarMenuItem>
+            </SidebarMenu>
+            <div className="flex justify-center w-full">
+              <ModeToggle />
+            </div>
+          </SidebarFooter>
+        </Sidebar>
 
-                    // Otherwise only show today's events
-                    const eventDate = event.date || '';
-                    return eventDate.toLowerCase().includes('today');
-                  })
-                  .slice(0, 5) // Limit to 5 events for better performance
-                  .map((event: Event) => (
-                    <Link
-                      href={`/events/${event.id}`}
-                      key={event.id}
-                      className="flex flex-col items-start gap-2 border-b p-5 text-sm leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                    >
-                      <div className="flex w-full items-center gap-2">
-                        <span className="font-medium">{event.title}</span>
-                        <span className="ml-auto text-xs text-muted-foreground">
-                          {event.date ||
-                            (event.createdAt && new Date(event.createdAt).toLocaleDateString())}
-                        </span>
+        {/* Secondary Content Sidebar */}
+        <Sidebar collapsible="none" className="hidden flex-1 md:flex">
+          <SidebarHeader className="gap-3.5 border-b p-5">
+            <div className="flex w-full items-center justify-between">
+              <div className="text-base font-medium text-foreground">
+                {pathname === '/map' ? 'Events in View' : activeItem?.title}
+              </div>
+              <Label className="flex items-center gap-2 text-sm">
+                <span>Upcoming</span>
+                <Switch
+                  className="shadow-none"
+                  checked={showUpcoming}
+                  onCheckedChange={setShowUpcoming}
+                />
+              </Label>
+            </div>
+            <SidebarInput
+              placeholder="Search events..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarGroup className="px-0">
+              <SidebarGroupContent>
+                {pathname === '/map' && (
+                  <div className="p-3 bg-muted/30 text-xs text-muted-foreground border-b">
+                    {mapBounds
+                      ? 'Showing events in the current map view'
+                      : 'Move the map to see events in that area'}
+                  </div>
+                )}
+                {eventsLoading ? (
+                  <div className="flex flex-col gap-4 p-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex flex-col gap-2 animate-pulse">
+                        <div className="flex items-center justify-between">
+                          <div className="h-4 bg-muted rounded w-1/2"></div>
+                          <div className="h-3 bg-muted rounded w-1/4"></div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="h-3 bg-muted rounded w-1/3"></div>
+                          <div className="h-3 bg-muted rounded w-1/5"></div>
+                        </div>
+                        <div className="h-5 bg-muted rounded w-1/4"></div>
                       </div>
-                      <div className="flex w-full items-center gap-2 text-xs text-muted-foreground">
-                        <span>{event.location?.address}</span>
-                        <span className="ml-auto">{event.attendees?.length || 0} attending</span>
-                      </div>
-                      {event.category && (
-                        <span className="inline-flex items-center rounded-full bg-secondary px-2 py-1 text-xs font-medium">
-                          {event.category}
-                        </span>
-                      )}
-                    </Link>
-                  ))
-              )}
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
+                    ))}
+                  </div>
+                ) : eventsError ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    Failed to load events
+                  </div>
+                ) : filteredEvents.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    {pathname === '/map'
+                      ? 'No events in the current map view'
+                      : searchQuery.trim()
+                        ? 'No events match your search'
+                        : 'No events available'}
+                  </div>
+                ) : (
+                  filteredEvents
+                    .filter((event: Event) => {
+                      // If showing all upcoming events, show everything
+                      if (showUpcoming) return true;
+
+                      // Otherwise only show today's events
+                      const eventDate = event.date || '';
+                      return eventDate.toLowerCase().includes('today');
+                    })
+                    .slice(0, 5) // Limit to 5 events for better performance
+                    .map((event: Event) => (
+                      <Link
+                        href={`/events/${event.id}`}
+                        key={event.id}
+                        className="flex flex-col items-start gap-2 border-b p-5 text-sm leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      >
+                        <div className="flex w-full items-center gap-2">
+                          <span className="font-medium">{event.title}</span>
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            {event.date ||
+                              (event.createdAt && new Date(event.createdAt).toLocaleDateString())}
+                          </span>
+                        </div>
+                        <div className="flex w-full items-center gap-2 text-xs text-muted-foreground">
+                          <span>{event.location?.address}</span>
+                          <span className="ml-auto">{event.attendees?.length || 0} attending</span>
+                        </div>
+                        {event.category && (
+                          <span className="inline-flex items-center rounded-full bg-secondary px-2 py-1 text-xs font-medium">
+                            {event.category}
+                          </span>
+                        )}
+                      </Link>
+                    ))
+                )}
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+        </Sidebar>
       </Sidebar>
-    </Sidebar>
+    </TooltipProvider>
   );
 }

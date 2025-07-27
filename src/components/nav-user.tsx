@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SidebarMenuButton } from '@/components/ui/sidebar';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface NavUserProps {
   user: {
@@ -44,15 +45,24 @@ export function NavUser({ user }: NavUserProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <SidebarMenuButton className="px-2 py-2 justify-center items-center data-[state=collapsed]:justify-center mx-auto !text-center">
-          <Avatar className="h-6 w-6 flex-shrink-0">
-            <AvatarImage src={user.avatar} alt={user.name} />
-            <AvatarFallback className="text-xs font-semibold">
-              {getInitials(user.name)}
-            </AvatarFallback>
-          </Avatar>
-          <span className="truncate">{user.name}</span>
-        </SidebarMenuButton>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <SidebarMenuButton className="h-8 w-8 p-0 justify-center items-center !text-center">
+              <Avatar className="h-6 w-6 flex-shrink-0">
+                <AvatarImage src={user.avatar} alt={user.name} />
+                <AvatarFallback className="text-xs font-semibold">
+                  {getInitials(user.name)}
+                </AvatarFallback>
+              </Avatar>
+            </SidebarMenuButton>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            <div className="text-center">
+              <p className="font-medium">{user.name}</p>
+              {user.email && <p className="text-xs text-muted-foreground">{user.email}</p>}
+            </div>
+          </TooltipContent>
+        </Tooltip>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
         <div className="flex items-center justify-start gap-2 p-2">
