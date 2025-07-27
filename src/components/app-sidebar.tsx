@@ -81,7 +81,6 @@ const navItems = [
 ];
 
 import { Event } from '@/types/event';
-import { Button } from './ui/button';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
@@ -236,9 +235,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarFooter className="flex flex-col gap-2 items-center justify-center w-full p-2">
             <SidebarMenu className="flex justify-center w-full m-0">
               <SidebarMenuItem className="flex justify-center items-center w-full list-none">
-                <Button variant={'outline'} size={'icon'}>
+                <div className="flex justify-center items-center w-full">
                   <NavUser user={userData} />
-                </Button>
+                </div>
               </SidebarMenuItem>
             </SidebarMenu>
             <div className="flex justify-center w-full">

@@ -14,7 +14,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { SidebarMenuButton } from '@/components/ui/sidebar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface NavUserProps {
@@ -47,14 +46,14 @@ export function NavUser({ user }: NavUserProps) {
       <DropdownMenu>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton className="h-8 w-8 p-0 justify-center items-center !text-center">
+            <button className="h-8 w-8 p-0 flex justify-center items-center rounded-md hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
               <Avatar className="h-6 w-6 flex-shrink-0">
                 <AvatarImage src={user.avatar} alt={user.name} />
                 <AvatarFallback className="text-xs font-semibold">
                   {getInitials(user.name)}
                 </AvatarFallback>
               </Avatar>
-            </SidebarMenuButton>
+            </button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
         <DropdownMenuContent align="start" className="w-56">
