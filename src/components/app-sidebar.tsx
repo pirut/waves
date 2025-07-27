@@ -178,24 +178,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     >
       {/* Main Navigation Sidebar */}
       <Sidebar collapsible="none" className="!w-[calc(var(--sidebar-width-icon)_+_2px)] border-r">
-        <SidebarHeader className="flex justify-center items-center w-full">
-          <SidebarMenu className="flex justify-center w-full">
-            <SidebarMenuItem className="flex justify-center items-center w-full">
-              <SidebarMenuButton
-                size="lg"
-                onClick={() => router.push('/')}
-                className="md:h-8 md:p-0 justify-center w-full data-[state=collapsed]:justify-center mx-auto"
-              >
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <div className="w-6 h-6 bg-[#FFE5D4] rounded-full flex items-center justify-center">
-                    <span className="text-gray-900 text-xs font-bold">W</span>
+        <SidebarHeader className="flex justify-center items-center w-full p-2">
+          <SidebarMenu className="flex justify-center w-full m-0">
+            <SidebarMenuItem className="flex justify-center items-center w-full list-none">
+              <div className="flex justify-center items-center w-full">
+                <SidebarMenuButton
+                  size="lg"
+                  onClick={() => router.push('/')}
+                  className="md:h-8 md:p-2 justify-center items-center data-[state=collapsed]:justify-center !text-center"
+                >
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                    <div className="w-6 h-6 bg-[#FFE5D4] rounded-full flex items-center justify-center">
+                      <span className="text-gray-900 text-xs font-bold">W</span>
+                    </div>
                   </div>
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Make Waves</span>
-                  <span className="truncate text-xs">Social Impact</span>
-                </div>
-              </SidebarMenuButton>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-semibold">Make Waves</span>
+                    <span className="truncate text-xs">Social Impact</span>
+                  </div>
+                </SidebarMenuButton>
+              </div>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
@@ -223,10 +225,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter className="flex flex-col gap-2 items-center justify-center w-full">
-          <SidebarMenu className="flex justify-center w-full">
-            <SidebarMenuItem className="flex justify-center items-center w-full">
-              <NavUser user={userData} />
+        <SidebarFooter className="flex flex-col gap-2 items-center justify-center w-full p-2">
+          <SidebarMenu className="flex justify-center w-full m-0">
+            <SidebarMenuItem className="flex justify-center items-center w-full list-none">
+              <div className="flex justify-center items-center w-full">
+                <NavUser user={userData} />
+              </div>
             </SidebarMenuItem>
           </SidebarMenu>
           <div className="flex justify-center w-full">
