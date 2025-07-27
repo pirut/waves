@@ -12,7 +12,6 @@ import {
   Heart,
   TrendingUp,
   MessageSquare,
-  icons,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { useMapBounds } from '@/contexts/MapBoundsContext';

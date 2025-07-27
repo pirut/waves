@@ -43,10 +43,10 @@ export function NavUser({ user }: NavUserProps) {
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Tooltip>
-          <TooltipTrigger asChild>
+    <Tooltip>
+      <DropdownMenu>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
             <SidebarMenuButton className="h-8 w-8 p-0 justify-center items-center !text-center">
               <Avatar className="h-6 w-6 flex-shrink-0">
                 <AvatarImage src={user.avatar} alt={user.name} />
@@ -55,37 +55,37 @@ export function NavUser({ user }: NavUserProps) {
                 </AvatarFallback>
               </Avatar>
             </SidebarMenuButton>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            <div className="text-center">
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <DropdownMenuContent align="start" className="w-56">
+          <div className="flex items-center justify-start gap-2 p-2">
+            <div className="flex flex-col space-y-1 leading-none">
               <p className="font-medium">{user.name}</p>
               {user.email && <p className="text-xs text-muted-foreground">{user.email}</p>}
             </div>
-          </TooltipContent>
-        </Tooltip>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-56">
-        <div className="flex items-center justify-start gap-2 p-2">
-          <div className="flex flex-col space-y-1 leading-none">
-            <p className="font-medium">{user.name}</p>
-            {user.email && <p className="text-xs text-muted-foreground">{user.email}</p>}
           </div>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => router.push('/profile')}>
+            <User className="mr-2 h-4 w-4" />
+            <span>Profile</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push('/settings')}>
+            <Settings className="mr-2 h-4 w-4" />
+            <span>Settings</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleSignOut}>
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Log out</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <TooltipContent side="right">
+        <div className="text-center">
+          <p className="font-medium">{user.name}</p>
+          {user.email && <p className="text-xs text-muted-foreground">{user.email}</p>}
         </div>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => router.push('/profile')}>
-          <User className="mr-2 h-4 w-4" />
-          <span>Profile</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => router.push('/settings')}>
-          <Settings className="mr-2 h-4 w-4" />
-          <span>Settings</span>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut}>
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Log out</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </TooltipContent>
+    </Tooltip>
   );
 }
