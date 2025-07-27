@@ -12,6 +12,7 @@ import {
   Heart,
   TrendingUp,
   MessageSquare,
+  icons,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { useMapBounds } from '@/contexts/MapBoundsContext';
@@ -81,6 +82,7 @@ const navItems = [
 ];
 
 import { Event } from '@/types/event';
+import { Button } from './ui/button';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
@@ -201,7 +203,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <TooltipContent side="right">
                       <div className="text-center">
                         <p className="font-semibold">Make Waves</p>
-                        <p className="text-xs text-muted-foreground">Social Impact</p>
                       </div>
                     </TooltipContent>
                   </Tooltip>
@@ -236,9 +237,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarFooter className="flex flex-col gap-2 items-center justify-center w-full p-2">
             <SidebarMenu className="flex justify-center w-full m-0">
               <SidebarMenuItem className="flex justify-center items-center w-full list-none">
-                <div className="flex justify-center items-center w-full">
+                <Button variant={'outline'} size={'icon'}>
                   <NavUser user={userData} />
-                </div>
+                </Button>
               </SidebarMenuItem>
             </SidebarMenu>
             <div className="flex justify-center w-full">
