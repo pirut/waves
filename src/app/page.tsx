@@ -43,7 +43,7 @@ export default function Home() {
   }, []);
 
   // Filter events for different sections
-  const nearbyEvents = events.slice(0, 5); // Mock nearby events
+  const nearbyEvents = events; // Show all events to test scroll area
   const upcomingEvents = events
     .filter((event) => {
       // Mock filter for user's events - in real app, check if user is attending

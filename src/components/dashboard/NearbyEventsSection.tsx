@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { MapPin, Users, Eye } from 'lucide-react';
 import { Event } from '@/types/event';
 import { useRouter } from 'next/navigation';
@@ -68,25 +69,33 @@ export function NearbyEventsSection({ events }: NearbyEventsSectionProps) {
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Mini Map */}
           <div className="order-2 lg:order-1">
-            <MiniMapView events={events} className="h-[300px]" />
+            <MiniMapView events={events} className="h-[400px]" />
           </div>
 
           {/* Events List */}
-          <div className="order-1 lg:order-2 space-y-3">
+          <div className="order-1 lg:order-2">
             {events.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8 text-muted-foreground h-[400px] flex flex-col items-center justify-center">
                 <MapPin className="w-12 h-12 mx-auto mb-3 opacity-50" />
                 <p>No nearby events found</p>
                 <p className="text-sm">Try expanding your search area</p>
               </div>
             ) : (
-              events.slice(0, 5).map((event) => <EventCard key={event.id} event={event} />)
-            )}
+              <div className="h-[400px] flex flex-col">
+                <ScrollArea className="flex-1 h-[340px]">
+                  <div className="space-y-3 pr-4">
+                    {events.map((event) => (
+                      <EventCard key={event.id} event={event} />
+                    ))}
+                  </div>
+                </ScrollArea>
 
-            {events.length > 5 && (
-              <Button variant="outline" className="w-full mt-4" onClick={() => router.push('/map')}>
-                View All Nearby Events
-              </Button>
+                <div className="mt-3">
+                  <Button variant="outline" className="w-full" onClick={() => router.push('/map')}>
+                    View All on Map ({events.length} total)
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
         </div>

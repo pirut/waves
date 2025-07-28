@@ -11,10 +11,10 @@ const mapContainerStyle = {
   height: '100%',
 };
 
-// Default center (West Palm Beach)
+// Default center (United States center)
 const defaultCenter = {
-  lat: 26.7145,
-  lng: -80.0549,
+  lat: 39.8283,
+  lng: -98.5795,
 };
 
 // Define libraries array as a static constant
@@ -84,32 +84,46 @@ export function MiniMapView({ events, className = '' }: MiniMapViewProps) {
   useEffect(() => {
     if (!isMounted || typeof window === 'undefined' || !navigator.geolocation) return;
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const userPos = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          };
-          setUserLocation(userPos);
-          setCenter(userPos);
-        },
-        (error) => {
-          console.log('Geolocation error:', error);
-          // Keep default center if geolocation fails
-        },
-        {
-          enableHighAccuracy: false,
-          timeout: 5000,
-          maximumAge: 300000, // 5 minutes
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const userPos = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+        console.log('User location detected:', userPos);
+        setUserLocation(userPos);
+        setCenter(userPos);
+
+        // If map is already loaded, center it immediately
+        if (mapRef.current) {
+          mapRef.current.setCenter(userPos);
+          mapRef.current.setZoom(13);
         }
-      );
-    }
+      },
+      (error) => {
+        console.log('Geolocation error:', error);
+        // Keep default center if geolocation fails
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 300000, // 5 minutes
+      }
+    );
   }, [isMounted]);
 
-  const onLoad = useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
-  }, []);
+  const onLoad = useCallback(
+    (map: google.maps.Map) => {
+      mapRef.current = map;
+
+      // If we already have user location, center on it immediately
+      if (userLocation) {
+        map.setCenter(userLocation);
+        map.setZoom(13);
+      }
+    },
+    [userLocation]
+  );
 
   const onUnmount = useCallback(() => {
     // Clean up markers
@@ -178,7 +192,24 @@ export function MiniMapView({ events, className = '' }: MiniMapViewProps) {
 
   // Fit map to show all events
   useEffect(() => {
-    if (!isMounted || !mapRef.current || !events.length || typeof window === 'undefined') return;
+    if (!isMounted || !mapRef.current || typeof window === 'undefined') return;
+
+    // If we have user location but no events, center on user
+    if (userLocation && events.length === 0) {
+      mapRef.current.setCenter(userLocation);
+      mapRef.current.setZoom(13);
+      return;
+    }
+
+    // If no events, don't do anything
+    if (events.length === 0) return;
+
+    // If we have user location and only 1-2 events, prioritize user location
+    if (userLocation && events.length <= 2) {
+      mapRef.current.setCenter(userLocation);
+      mapRef.current.setZoom(12);
+      return;
+    }
 
     const bounds = new google.maps.LatLngBounds();
 
@@ -198,20 +229,22 @@ export function MiniMapView({ events, className = '' }: MiniMapViewProps) {
     });
 
     // Only fit bounds if we have multiple points
-    if (events.length > 1 || (events.length === 1 && userLocation)) {
+    if (events.length > 2 || (events.length > 0 && !userLocation)) {
       mapRef.current.fitBounds(bounds, {
-        top: 20,
-        right: 20,
-        bottom: 20,
-        left: 20,
+        top: 40,
+        right: 40,
+        bottom: 40,
+        left: 40,
       });
-    } else if (events.length === 1) {
-      // Single event - center on it with reasonable zoom
-      mapRef.current.setCenter({
-        lat: events[0].location!.lat,
-        lng: events[0].location!.lng,
-      });
-      mapRef.current.setZoom(13);
+    }
+
+    // If only one event and user location, ensure reasonable zoom level
+    if (events.length === 1 && userLocation) {
+      setTimeout(() => {
+        if (mapRef.current && mapRef.current.getZoom() && mapRef.current.getZoom()! > 15) {
+          mapRef.current.setZoom(14);
+        }
+      }, 100);
     }
   }, [events, userLocation, isMounted]);
 
