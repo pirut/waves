@@ -184,6 +184,21 @@ export default function ImprovedMapView() {
       if (boundsUpdateTimeout.current) {
         clearTimeout(boundsUpdateTimeout.current);
       }
+
+      // Clean up all markers
+      for (const [, marker] of markersRef.current.entries()) {
+        if ('map' in marker) {
+          marker.map = null;
+        }
+      }
+      markersRef.current.clear();
+
+      // Clean up clusterer
+      if (clustererRef.current) {
+        clustererRef.current.clearMarkers();
+        clustererRef.current.setMap(null);
+        clustererRef.current = null;
+      }
     };
   }, []);
 
@@ -255,9 +270,9 @@ export default function ImprovedMapView() {
     };
   }, [isMounted, loadEvents]);
 
-  // Filter events by current viewport
+  // Filter events by current viewport with stable reference
   const eventsToShow = useMemo(() => {
-    if (!currentBounds || !allEvents.length) return allEvents;
+    if (!currentBounds || !allEvents.length || typeof google === 'undefined') return allEvents;
 
     return allEvents.filter((event) => {
       const eventData = event as Event;
@@ -417,12 +432,18 @@ export default function ImprovedMapView() {
           clearTimeout(boundsUpdateTimeout.current);
         }
         boundsUpdateTimeout.current = setTimeout(() => {
-          setMapBounds(bounds);
-          setCurrentBounds(bounds);
-        }, 300);
+          // Only update if bounds actually changed significantly
+          const currentBoundsStr = currentBounds?.toString();
+          const newBoundsStr = bounds.toString();
+
+          if (currentBoundsStr !== newBoundsStr) {
+            setMapBounds(bounds);
+            setCurrentBounds(bounds);
+          }
+        }, 500); // Increased debounce time to reduce flashing
       }
     }
-  }, [setMapBounds]);
+  }, [setMapBounds, currentBounds]);
 
   // Add custom zoom controls with better increments
   const zoomIn = useCallback(() => {
@@ -441,103 +462,136 @@ export default function ImprovedMapView() {
     }
   }, []);
 
-  // Memoize marker creation to prevent recreation on every render
+  // Store markers in a ref to prevent recreation and flashing
+  const markersRef = useRef<
+    Map<string, google.maps.marker.AdvancedMarkerElement | google.maps.Marker>
+  >(new Map());
+
+  // Create or update markers only when events actually change
   const markers = useMemo(() => {
     if (!mapRef.current || !isLoaded || !filteredEvents.length || typeof google === 'undefined') {
       return [];
     }
 
-    return filteredEvents.map((event) => {
-      if (!google.maps.marker) {
-        // Fallback to standard markers if Advanced Markers not available
-        const marker = new google.maps.Marker({
-          position: {
-            lat: event.location!.lat,
-            lng: event.location!.lng,
-          },
-          icon: createMarkerIcon(getCategoryMarkerColor(event.category || '')),
-          title: event.title,
-        });
+    const newMarkers: (google.maps.marker.AdvancedMarkerElement | google.maps.Marker)[] = [];
+    const currentEventIds = new Set(filteredEvents.map((event) => event.id));
 
-        marker.addListener('click', () => {
-          setSelectedEvent(event);
-        });
+    // Remove markers for events that are no longer visible
+    for (const [eventId, marker] of markersRef.current.entries()) {
+      if (!currentEventIds.has(eventId)) {
+        // Remove marker from map and cache
+        if ('map' in marker) {
+          marker.map = null;
+        }
+        markersRef.current.delete(eventId);
+      }
+    }
 
-        return marker;
+    // Create or reuse markers for current events
+    filteredEvents.forEach((event) => {
+      let marker = markersRef.current.get(event.id);
+
+      if (!marker) {
+        // Create new marker only if it doesn't exist
+        if (!google.maps.marker) {
+          // Fallback to standard markers if Advanced Markers not available
+          marker = new google.maps.Marker({
+            position: {
+              lat: event.location!.lat,
+              lng: event.location!.lng,
+            },
+            icon: createMarkerIcon(getCategoryMarkerColor(event.category || '')),
+            title: event.title,
+          });
+
+          marker.addListener('click', () => {
+            setSelectedEvent(event);
+          });
+        } else {
+          // Create the marker element for Advanced Marker
+          const markerDiv = document.createElement('div');
+          markerDiv.innerHTML = `
+            <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="16" cy="16" r="12" fill="${getCategoryMarkerColor(event.category || '')}" stroke="#ffffff" stroke-width="3"/>
+              <circle cx="16" cy="16" r="6" fill="#ffffff" opacity="0.8"/>
+            </svg>
+          `;
+
+          marker = new google.maps.marker.AdvancedMarkerElement({
+            position: {
+              lat: event.location!.lat,
+              lng: event.location!.lng,
+            },
+            content: markerDiv,
+            title: event.title,
+          });
+
+          marker.addListener('click', () => {
+            setSelectedEvent(event);
+          });
+        }
+
+        // Cache the marker
+        markersRef.current.set(event.id, marker);
       }
 
-      // Create the marker element for Advanced Marker (cached)
-      const markerDiv = document.createElement('div');
-      markerDiv.innerHTML = `
-        <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="16" cy="16" r="12" fill="${getCategoryMarkerColor(event.category || '')}" stroke="#ffffff" stroke-width="3"/>
-          <circle cx="16" cy="16" r="6" fill="#ffffff" opacity="0.8"/>
-        </svg>
-      `;
-
-      // Create the advanced marker (don't add to map directly, let clusterer handle it)
-      const marker = new google.maps.marker.AdvancedMarkerElement({
-        position: {
-          lat: event.location!.lat,
-          lng: event.location!.lng,
-        },
-        content: markerDiv,
-        title: event.title,
-      });
-
-      // Add click listener to marker
-      marker.addListener('click', () => {
-        setSelectedEvent(event);
-      });
-
-      return marker;
+      newMarkers.push(marker);
     });
+
+    return newMarkers;
   }, [isLoaded, filteredEvents]);
 
   // Initialize marker clustering (only when markers change)
   useEffect(() => {
-    if (!mapRef.current || !markers.length) return;
-
-    // Clean up existing clusterer
-    if (clustererRef.current) {
-      clustererRef.current.clearMarkers();
-      clustererRef.current.setMap(null);
+    if (!mapRef.current || !markers.length) {
+      // Clear clusterer if no markers
+      if (clustererRef.current) {
+        clustererRef.current.clearMarkers();
+      }
+      return;
     }
 
-    // Create new clusterer with improved configuration
-    clustererRef.current = new MarkerClusterer({
-      map: mapRef.current,
-      markers,
-      renderer: {
-        render: ({ count, position }) => {
-          // Custom cluster marker styling
-          const color = count < 10 ? '#FFE5D4' : count < 50 ? '#F6E8D6' : '#B3DFF2';
-          const size = count < 10 ? 40 : count < 50 ? 50 : 60;
+    // Initialize clusterer only once
+    if (!clustererRef.current) {
+      clustererRef.current = new MarkerClusterer({
+        map: mapRef.current,
+        markers: [],
+        renderer: {
+          render: ({ count, position }) => {
+            // Custom cluster marker styling
+            const color = count < 10 ? '#FFE5D4' : count < 50 ? '#F6E8D6' : '#B3DFF2';
+            const size = count < 10 ? 40 : count < 50 ? 50 : 60;
 
-          const svg = `
-            <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 2}" fill="${color}" stroke="#ffffff" stroke-width="3"/>
-              <text x="${size / 2}" y="${size / 2}" text-anchor="middle" dy="0.3em" font-family="Arial, sans-serif" font-size="${size / 3}" font-weight="bold" fill="#333">${count}</text>
-            </svg>
-          `;
+            const svg = `
+              <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 2}" fill="${color}" stroke="#ffffff" stroke-width="3"/>
+                <text x="${size / 2}" y="${size / 2}" text-anchor="middle" dy="0.3em" font-family="Arial, sans-serif" font-size="${size / 3}" font-weight="bold" fill="#333">${count}</text>
+              </svg>
+            `;
 
-          return new google.maps.marker.AdvancedMarkerElement({
-            position,
-            content: (() => {
-              const div = document.createElement('div');
-              div.innerHTML = svg;
-              return div.firstElementChild as HTMLElement;
-            })(),
-            zIndex: 1000 + count,
-          });
+            return new google.maps.marker.AdvancedMarkerElement({
+              position,
+              content: (() => {
+                const div = document.createElement('div');
+                div.innerHTML = svg;
+                return div.firstElementChild as HTMLElement;
+              })(),
+              zIndex: 1000 + count,
+            });
+          },
         },
-      },
-    });
+      });
+    }
+
+    // Update markers in clusterer without recreating it
+    clustererRef.current.clearMarkers();
+    clustererRef.current.addMarkers(markers);
 
     return () => {
       if (clustererRef.current) {
         clustererRef.current.clearMarkers();
         clustererRef.current.setMap(null);
+        clustererRef.current = null;
       }
     };
   }, [markers]);
@@ -707,21 +761,6 @@ export default function ImprovedMapView() {
         >
           <span className="text-lg font-bold">−</span>
         </Button>
-      </div>
-
-      {/* Map Stats */}
-      <div className="absolute bottom-4 left-4 z-30 pointer-events-auto">
-        <Card className="bg-card/95 backdrop-blur-sm">
-          <CardContent className="p-2 text-xs text-muted-foreground">
-            {isMobile ? (
-              <span>{filteredEvents.length} events in view</span>
-            ) : (
-              <span>
-                {filteredEvents.length} events in view • Zoom: {zoom}
-              </span>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
