@@ -189,16 +189,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <SidebarMenuButton
                         size="lg"
                         onClick={() => router.push('/')}
-                        className="h-10 w-10 p-0 justify-center items-center !text-center"
+                        className="h-10 w-10 md:w-10 p-0 justify-center md:justify-center items-center !text-center group-data-[collapsible=icon]:w-10"
                       >
                         <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                           <div className="w-6 h-6 bg-[#FFE5D4] rounded-full flex items-center justify-center">
                             <span className="text-gray-900 text-xs font-bold">W</span>
                           </div>
                         </div>
+                        <span className="ml-2 font-semibold text-sm md:hidden group-data-[collapsible=icon]:hidden">
+                          Make Waves
+                        </span>
                       </SidebarMenuButton>
                     </TooltipTrigger>
-                    <TooltipContent side="right">
+                    <TooltipContent side="right" className="md:block hidden">
                       <div className="text-center">
                         <p className="font-semibold">Make Waves</p>
                       </div>
@@ -232,15 +235,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
-          <SidebarFooter className="flex flex-col gap-2 items-center justify-center w-full p-2">
+          <SidebarFooter className="flex flex-col md:gap-2 gap-0 items-center justify-center w-full p-2">
             <SidebarMenu className="flex justify-center w-full m-0">
               <SidebarMenuItem className="flex justify-center items-center w-full list-none">
-                <div className="flex justify-center items-center w-full">
+                <div className="flex md:flex-col flex-row md:gap-2 gap-4 justify-center items-center w-full">
                   <NavUser user={userData} />
+                  <div className="md:hidden block">
+                    <ModeToggle />
+                  </div>
                 </div>
               </SidebarMenuItem>
             </SidebarMenu>
-            <div className="flex justify-center w-full">
+            <div className="md:flex hidden justify-center w-full">
               <ModeToggle />
             </div>
           </SidebarFooter>
