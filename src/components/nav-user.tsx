@@ -46,13 +46,18 @@ export function NavUser({ user }: NavUserProps) {
     <Tooltip>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon">
+          <Button
+            variant="outline"
+            size="icon"
+            className="md:w-10 md:h-10 !w-auto !h-auto !p-1 !justify-start !gap-2 md:!justify-center md:!gap-0"
+          >
             <Avatar className="h-6 w-6 flex-shrink-0">
               <AvatarImage src={user.avatar} alt={user.name} />
               <AvatarFallback className="text-xs font-semibold">
                 {getInitials(user.name)}
               </AvatarFallback>
             </Avatar>
+            <span className="md:hidden text-sm font-medium truncate max-w-20">{user.name}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
