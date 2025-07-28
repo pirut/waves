@@ -94,10 +94,18 @@ export function MiniMapView({ events, className = '' }: MiniMapViewProps) {
         setUserLocation(userPos);
         setCenter(userPos);
 
-        // If map is already loaded, center it immediately
+        // If map is already loaded, center it immediately and force it
         if (mapRef.current) {
+          console.log('Centering map on user location:', userPos);
           mapRef.current.setCenter(userPos);
           mapRef.current.setZoom(13);
+
+          // Force a slight delay to ensure it sticks
+          setTimeout(() => {
+            if (mapRef.current) {
+              mapRef.current.setCenter(userPos);
+            }
+          }, 100);
         }
       },
       (error) => {
@@ -107,7 +115,7 @@ export function MiniMapView({ events, className = '' }: MiniMapViewProps) {
       {
         enableHighAccuracy: true,
         timeout: 15000,
-        maximumAge: 300000, // 5 minutes
+        maximumAge: 60000, // 1 minute for better accuracy
       }
     );
   }, [isMounted]);
@@ -115,9 +123,11 @@ export function MiniMapView({ events, className = '' }: MiniMapViewProps) {
   const onLoad = useCallback(
     (map: google.maps.Map) => {
       mapRef.current = map;
+      console.log('Map loaded, user location:', userLocation);
 
       // If we already have user location, center on it immediately
       if (userLocation) {
+        console.log('Centering map on load with user location:', userLocation);
         map.setCenter(userLocation);
         map.setZoom(13);
       }
@@ -133,6 +143,15 @@ export function MiniMapView({ events, className = '' }: MiniMapViewProps) {
     markersRef.current.clear();
     mapRef.current = null;
   }, []);
+
+  // Ensure map centers on user location when both map and location are available
+  useEffect(() => {
+    if (mapRef.current && userLocation && isLoaded) {
+      console.log('Force centering map on user location:', userLocation);
+      mapRef.current.setCenter(userLocation);
+      mapRef.current.setZoom(13);
+    }
+  }, [userLocation, isLoaded]);
 
   // Create markers for events
   useMemo(() => {
@@ -190,26 +209,20 @@ export function MiniMapView({ events, className = '' }: MiniMapViewProps) {
     return;
   }, [events, isLoaded, isMounted]);
 
-  // Fit map to show all events
+  // Fit map to show all events (but prioritize user location)
   useEffect(() => {
     if (!isMounted || !mapRef.current || typeof window === 'undefined') return;
 
-    // If we have user location but no events, center on user
-    if (userLocation && events.length === 0) {
+    // Always prioritize user location if available
+    if (userLocation) {
+      console.log('Prioritizing user location in bounds fitting:', userLocation);
       mapRef.current.setCenter(userLocation);
-      mapRef.current.setZoom(13);
+      mapRef.current.setZoom(events.length === 0 ? 13 : 12);
       return;
     }
 
-    // If no events, don't do anything
+    // If no user location and no events, don't do anything
     if (events.length === 0) return;
-
-    // If we have user location and only 1-2 events, prioritize user location
-    if (userLocation && events.length <= 2) {
-      mapRef.current.setCenter(userLocation);
-      mapRef.current.setZoom(12);
-      return;
-    }
 
     const bounds = new google.maps.LatLngBounds();
 
