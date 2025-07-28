@@ -180,7 +180,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       >
         {/* Main Navigation Sidebar */}
         <Sidebar collapsible="none" className="!w-[calc(var(--sidebar-width-icon)_+_2px)] border-r">
-          <SidebarHeader className="flex md:justify-center justify-between items-center w-full p-2">
+          <SidebarHeader className="flex flex-row md:justify-center justify-between items-center w-full p-2">
             <div className="md:hidden flex items-center">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -252,7 +252,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
-          <SidebarFooter className="flex flex-col md:gap-2 gap-0 items-center md:justify-center justify-between w-full p-2">
+          <SidebarFooter className="flex md:flex-col flex-row md:gap-2 gap-0 items-center md:justify-center justify-between w-full p-2">
             <div className="md:hidden flex justify-between items-center w-full">
               <NavUser user={userData} />
               <ModeToggle />
