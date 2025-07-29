@@ -19,11 +19,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { DatePicker } from '@/components/ui/date-picker';
 import { TimePicker } from '@/components/ui/time-picker';
+import { UploadButton } from '@/lib/uploadthing';
 import {
   Plus,
   MapPin,
@@ -35,27 +38,22 @@ import {
   Clock,
   Tag,
   UserCheck,
+  Image as ImageIcon,
+  X,
+  DollarSign,
+  Phone,
+  Mail,
+  Globe,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/hooks/useAuth';
+import { EVENT_CATEGORIES, type CreateEventInput } from '@/types/event';
+import { toast } from 'sonner';
 
 interface CreateEventModalProps {
   onEventCreated?: () => void;
   defaultLocation?: { lat: number; lng: number };
 }
-
-const EVENT_CATEGORIES = [
-  'Environmental',
-  'Community Service',
-  'Education',
-  'Health & Wellness',
-  'Arts & Culture',
-  'Social Justice',
-  'Animal Welfare',
-  'Disaster Relief',
-  'Youth Development',
-  'Senior Support',
-];
 
 export default function CreateEventModal({
   onEventCreated,
@@ -65,6 +63,10 @@ export default function CreateEventModal({
   const [open, setOpen] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [geocodeStatus, setGeocodeStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [uploading, setUploading] = useState(false);
+  const [tagInput, setTagInput] = useState('');
+  const [requirementInput, setRequirementInput] = useState('');
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -77,37 +79,93 @@ export default function CreateEventModal({
       address: '',
     },
     maxAttendees: '',
+    images: [] as string[],
+    coverImage: '',
+    tags: [] as string[],
+    isPrivate: false,
+    contactInfo: {
+      email: '',
+      phone: '',
+      website: '',
+    },
+    requirements: [] as string[],
+    ageRestriction: {
+      min: '',
+      max: '',
+    },
+    cost: {
+      amount: '',
+      currency: 'USD',
+      description: '',
+    },
+    duration: {
+      hours: '',
+      minutes: '',
+    },
   });
 
   const createEventMutation = trpc.events.create.useMutation({
     onSuccess: () => {
+      toast.success('Event created successfully!');
       onEventCreated?.();
       setOpen(false);
-      // Reset form
-      setFormData({
-        title: '',
-        description: '',
-        category: '',
-        date: undefined,
-        time: '',
-        location: {
-          lat: defaultLocation?.lat || 25.79,
-          lng: defaultLocation?.lng || -80.13,
-          address: '',
-        },
-        maxAttendees: '',
-      });
+      resetForm();
     },
     onError: (error) => {
-      console.error('Failed to create event:', error);
+      toast.error(error.message || 'Failed to create event');
     },
   });
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      category: '',
+      date: undefined,
+      time: '',
+      location: {
+        lat: defaultLocation?.lat || 25.79,
+        lng: defaultLocation?.lng || -80.13,
+        address: '',
+      },
+      maxAttendees: '',
+      images: [],
+      coverImage: '',
+      tags: [],
+      isPrivate: false,
+      contactInfo: {
+        email: '',
+        phone: '',
+        website: '',
+      },
+      requirements: [],
+      ageRestriction: {
+        min: '',
+        max: '',
+      },
+      cost: {
+        amount: '',
+        currency: 'USD',
+        description: '',
+      },
+      duration: {
+        hours: '',
+        minutes: '',
+      },
+    });
+    setTagInput('');
+    setRequirementInput('');
+    setGeocodeStatus('idle');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    if (!formData.date) return;
+    if (!formData.date) {
+      toast.error('Please select an event date');
+      return;
+    }
 
     // Combine date and time
     const eventDateTime = new Date(formData.date);
@@ -116,16 +174,41 @@ export default function CreateEventModal({
       eventDateTime.setHours(parseInt(hours), parseInt(minutes));
     }
 
-    const eventData = {
+    // Prepare event data according to CreateEventInput interface
+    const eventData: CreateEventInput = {
       title: formData.title,
-      description: formData.description,
+      description: formData.description || undefined,
       category: formData.category,
-      date: eventDateTime.toISOString(),
+      time: eventDateTime.toISOString(),
       location: {
         lat: formData.location.lat,
         lng: formData.location.lng,
+        address: formData.location.address || undefined,
       },
       maxAttendees: formData.maxAttendees ? parseInt(formData.maxAttendees) : undefined,
+      images: formData.images.length > 0 ? formData.images : undefined,
+      coverImage: formData.coverImage || undefined,
+      tags: formData.tags.length > 0 ? formData.tags : undefined,
+      isPrivate: formData.isPrivate || undefined,
+      contactInfo: (formData.contactInfo.email || formData.contactInfo.phone || formData.contactInfo.website) ? {
+        email: formData.contactInfo.email || undefined,
+        phone: formData.contactInfo.phone || undefined,
+        website: formData.contactInfo.website || undefined,
+      } : undefined,
+      requirements: formData.requirements.length > 0 ? formData.requirements : undefined,
+      ageRestriction: (formData.ageRestriction.min || formData.ageRestriction.max) ? {
+        min: formData.ageRestriction.min ? parseInt(formData.ageRestriction.min) : undefined,
+        max: formData.ageRestriction.max ? parseInt(formData.ageRestriction.max) : undefined,
+      } : undefined,
+      cost: (formData.cost.amount || formData.cost.description) ? {
+        amount: formData.cost.amount ? parseFloat(formData.cost.amount) : undefined,
+        currency: formData.cost.currency,
+        description: formData.cost.description || undefined,
+      } : undefined,
+      duration: (formData.duration.hours || formData.duration.minutes) ? {
+        hours: formData.duration.hours ? parseInt(formData.duration.hours) : undefined,
+        minutes: formData.duration.minutes ? parseInt(formData.duration.minutes) : undefined,
+      } : undefined,
     };
 
     createEventMutation.mutate(eventData);
@@ -163,11 +246,11 @@ export default function CreateEventModal({
         setGeocodeStatus('success');
       } else {
         setGeocodeStatus('error');
-        console.error('Geocoding failed:', data.error);
+        toast.error('Could not find this address. Please check and try again.');
       }
     } catch (error) {
       setGeocodeStatus('error');
-      console.error('Geocoding error:', error);
+      toast.error('Error finding location. Please try again.');
     } finally {
       setGeocoding(false);
     }
@@ -182,7 +265,6 @@ export default function CreateEventModal({
       },
     }));
 
-    // Reset geocode status when user types
     if (geocodeStatus !== 'idle') {
       setGeocodeStatus('idle');
     }
@@ -201,6 +283,48 @@ export default function CreateEventModal({
         ...prev.location,
         [field]: value,
       },
+    }));
+  };
+
+  const addTag = () => {
+    if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
+      setFormData((prev) => ({
+        ...prev,
+        tags: [...prev.tags, tagInput.trim()],
+      }));
+      setTagInput('');
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove),
+    }));
+  };
+
+  const addRequirement = () => {
+    if (requirementInput.trim() && !formData.requirements.includes(requirementInput.trim())) {
+      setFormData((prev) => ({
+        ...prev,
+        requirements: [...prev.requirements, requirementInput.trim()],
+      }));
+      setRequirementInput('');
+    }
+  };
+
+  const removeRequirement = (reqToRemove: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      requirements: prev.requirements.filter(req => req !== reqToRemove),
+    }));
+  };
+
+  const removeImage = (imageToRemove: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter(img => img !== imageToRemove),
+      coverImage: prev.coverImage === imageToRemove ? '' : prev.coverImage,
     }));
   };
 
@@ -231,18 +355,26 @@ export default function CreateEventModal({
 
         <form onSubmit={handleSubmit}>
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="details" className="flex items-center gap-2">
-                <Tag className="h-4 w-4" />
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="details" className="flex items-center gap-1 text-xs">
+                <Tag className="h-3 w-3" />
                 Details
               </TabsTrigger>
-              <TabsTrigger value="schedule" className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
+              <TabsTrigger value="schedule" className="flex items-center gap-1 text-xs">
+                <Calendar className="h-3 w-3" />
                 Schedule
               </TabsTrigger>
-              <TabsTrigger value="location" className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
+              <TabsTrigger value="location" className="flex items-center gap-1 text-xs">
+                <MapPin className="h-3 w-3" />
                 Location
+              </TabsTrigger>
+              <TabsTrigger value="media" className="flex items-center gap-1 text-xs">
+                <ImageIcon className="h-3 w-3" />
+                Media
+              </TabsTrigger>
+              <TabsTrigger value="additional" className="flex items-center gap-1 text-xs">
+                <Users className="h-3 w-3" />
+                More
               </TabsTrigger>
             </TabsList>
 
@@ -301,6 +433,58 @@ export default function CreateEventModal({
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <div>
+                    <Label>Tags</Label>
+                    <div className="flex gap-2 mb-2">
+                      <Input
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addTag();
+                          }
+                        }}
+                        placeholder="Add a tag and press Enter"
+                        className="flex-1"
+                      />
+                      <Button type="button" onClick={addTag} variant="outline" size="sm">
+                        Add
+                      </Button>
+                    </div>
+                    {formData.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {formData.tags.map((tag) => (
+                          <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                            {tag}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-auto p-0 ml-1"
+                              onClick={() => removeTag(tag)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isPrivate"
+                      checked={formData.isPrivate}
+                      onCheckedChange={(checked) =>
+                        setFormData((prev) => ({ ...prev, isPrivate: checked as boolean }))
+                      }
+                    />
+                    <Label htmlFor="isPrivate" className="text-sm">
+                      Private event (invite-only)
+                    </Label>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -343,6 +527,43 @@ export default function CreateEventModal({
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="duration-hours">Duration (Hours)</Label>
+                      <Input
+                        id="duration-hours"
+                        type="number"
+                        min="0"
+                        max="24"
+                        value={formData.duration.hours}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            duration: { ...prev.duration, hours: e.target.value },
+                          }))
+                        }
+                        placeholder="2"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="duration-minutes">Duration (Minutes)</Label>
+                      <Input
+                        id="duration-minutes"
+                        type="number"
+                        min="0"
+                        max="59"
+                        value={formData.duration.minutes}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            duration: { ...prev.duration, minutes: e.target.value },
+                          }))
+                        }
+                        placeholder="30"
+                      />
+                    </div>
+                  </div>
+
                   <Separator />
 
                   <div>
@@ -360,9 +581,6 @@ export default function CreateEventModal({
                       }
                       placeholder="Leave empty for unlimited"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Set a limit if your venue has capacity constraints
-                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -424,14 +642,9 @@ export default function CreateEventModal({
                         Could not find this address. Please check and try again.
                       </div>
                     )}
-
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Enter the full address and click the search button to automatically set
-                      coordinates
-                    </p>
                   </div>
 
-                  {/* Coordinates - now read-only and auto-populated */}
+                  {/* Coordinates */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="lat">Latitude</Label>
@@ -460,38 +673,285 @@ export default function CreateEventModal({
                       />
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-                  {geocodeStatus === 'success' && (
-                    <p className="text-xs text-muted-foreground">
-                      Coordinates were automatically set from the address. You can manually adjust
-                      them if needed.
+            <TabsContent value="media" className="space-y-4 mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4" />
+                    Event Images
+                  </CardTitle>
+                  <CardDescription>
+                    Add photos to make your event more appealing (optional)
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Upload Images</Label>
+                    <div className="mt-2">
+                      <UploadButton
+                        endpoint="eventImageUploader"
+                        onClientUploadComplete={(res) => {
+                          if (res && res.length > 0) {
+                            const newImages = res.map(file => file.url);
+                            setFormData((prev) => ({
+                              ...prev,
+                              images: [...prev.images, ...newImages],
+                              coverImage: prev.coverImage || newImages[0],
+                            }));
+                            toast.success('Images uploaded successfully!');
+                          }
+                        }}
+                        onUploadError={(error: Error) => {
+                          toast.error(`Upload failed: ${error.message}`);
+                        }}
+                        onUploadBegin={() => {
+                          setUploading(true);
+                        }}
+                        onUploadComplete={() => {
+                          setUploading(false);
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Maximum 5 images, 4MB each. Supported formats: JPG, PNG, WebP
                     </p>
-                  )}
+                  </div>
 
-                  {/* Location Preview */}
-                  {geocodeStatus === 'success' && (
-                    <Card className="mt-4">
-                      <CardHeader>
-                        <CardTitle className="text-sm">Location Preview</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="border rounded-lg overflow-hidden h-48 bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center">
-                          <div className="text-center text-muted-foreground">
-                            <MapPin className="h-8 w-8 mx-auto mb-2 text-green-600" />
-                            <p className="font-medium">{formData.title || 'Event Location'}</p>
-                            <p className="text-sm">{formData.location.address}</p>
-                            <p className="text-xs mt-1">
-                              📍 {formData.location.lat.toFixed(4)},{' '}
-                              {formData.location.lng.toFixed(4)}
-                            </p>
+                  {formData.images.length > 0 && (
+                    <div>
+                      <Label>Uploaded Images</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2">
+                        {formData.images.map((image, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={image}
+                              alt={`Event image ${index + 1}`}
+                              className="w-full h-24 object-cover rounded-lg"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => removeImage(image)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                            {formData.coverImage === image && (
+                              <Badge className="absolute bottom-1 left-1 text-xs">Cover</Badge>
+                            )}
+                            {formData.coverImage !== image && (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                className="absolute bottom-1 left-1 h-6 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() =>
+                                  setFormData((prev) => ({ ...prev, coverImage: image }))
+                                }
+                              >
+                                Set Cover
+                              </Button>
+                            )}
                           </div>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          This is where your event will appear on the map
-                        </p>
-                      </CardContent>
-                    </Card>
+                        ))}
+                      </div>
+                    </div>
                   )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="additional" className="space-y-4 mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Cost & Requirements
+                  </CardTitle>
+                  <CardDescription>Additional event details (optional)</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="cost-amount">Cost ($)</Label>
+                      <Input
+                        id="cost-amount"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.cost.amount}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            cost: { ...prev.cost, amount: e.target.value },
+                          }))
+                        }
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="cost-description">Cost Description</Label>
+                      <Input
+                        id="cost-description"
+                        value={formData.cost.description}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            cost: { ...prev.cost, description: e.target.value },
+                          }))
+                        }
+                        placeholder="Suggested donation, includes lunch, etc."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="age-min">Minimum Age</Label>
+                      <Input
+                        id="age-min"
+                        type="number"
+                        min="0"
+                        max="120"
+                        value={formData.ageRestriction.min}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            ageRestriction: { ...prev.ageRestriction, min: e.target.value },
+                          }))
+                        }
+                        placeholder="18"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="age-max">Maximum Age</Label>
+                      <Input
+                        id="age-max"
+                        type="number"
+                        min="0"
+                        max="120"
+                        value={formData.ageRestriction.max}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            ageRestriction: { ...prev.ageRestriction, max: e.target.value },
+                          }))
+                        }
+                        placeholder="65"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>What to bring/Requirements</Label>
+                    <div className="flex gap-2 mb-2">
+                      <Input
+                        value={requirementInput}
+                        onChange={(e) => setRequirementInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addRequirement();
+                          }
+                        }}
+                        placeholder="Water bottle, sunscreen, etc."
+                        className="flex-1"
+                      />
+                      <Button type="button" onClick={addRequirement} variant="outline" size="sm">
+                        Add
+                      </Button>
+                    </div>
+                    {formData.requirements.length > 0 && (
+                      <ul className="space-y-1">
+                        {formData.requirements.map((req, index) => (
+                          <li key={index} className="flex items-center justify-between bg-muted p-2 rounded">
+                            <span className="text-sm">{req}</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeRequirement(req)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Contact Information
+                  </CardTitle>
+                  <CardDescription>How can attendees reach you? (optional)</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="contact-email" className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      Email
+                    </Label>
+                    <Input
+                      id="contact-email"
+                      type="email"
+                      value={formData.contactInfo.email}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          contactInfo: { ...prev.contactInfo, email: e.target.value },
+                        }))
+                      }
+                      placeholder="organizer@example.com"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="contact-phone" className="flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      Phone
+                    </Label>
+                    <Input
+                      id="contact-phone"
+                      type="tel"
+                      value={formData.contactInfo.phone}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          contactInfo: { ...prev.contactInfo, phone: e.target.value },
+                        }))
+                      }
+                      placeholder="+1 (555) 123-4567"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="contact-website" className="flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      Website
+                    </Label>
+                    <Input
+                      id="contact-website"
+                      type="url"
+                      value={formData.contactInfo.website}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          contactInfo: { ...prev.contactInfo, website: e.target.value },
+                        }))
+                      }
+                      placeholder="https://myorganization.com"
+                    />
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -519,15 +979,18 @@ export default function CreateEventModal({
                 !formData.date ||
                 !formData.time ||
                 !formData.location.address ||
-                geocoding
+                geocoding ||
+                uploading
               }
               className="flex-1"
             >
               {createEventMutation.isPending
                 ? 'Creating...'
-                : geocoding
-                  ? 'Finding Location...'
-                  : 'Create Event'}
+                : uploading
+                  ? 'Uploading Images...'
+                  : geocoding
+                    ? 'Finding Location...'
+                    : 'Create Event'}
             </Button>
           </div>
         </form>
