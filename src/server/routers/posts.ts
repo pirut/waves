@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { router, publicProcedure, protectedProcedure } from "../trpc";
-import { adminDb } from "@/firebaseAdmin";
+import { adminDb, isFirebaseInitialized } from "@/firebaseAdmin";
 
 const postSchema = z.object({
     content: z.string().min(1),
@@ -10,6 +10,10 @@ const postSchema = z.object({
 
 export const postsRouter = router({
     getAll: publicProcedure.query(async () => {
+        if (!isFirebaseInitialized() || !adminDb) {
+            throw new Error('Firebase not initialized');
+        }
+        
         const postsSnapshot = await adminDb.collection("posts").orderBy("createdAt", "desc").get();
         return postsSnapshot.docs.map((doc) => ({
             id: doc.id,
@@ -18,6 +22,10 @@ export const postsRouter = router({
     }),
 
     getById: publicProcedure.input(z.object({ id: z.string() })).query(async ({ input }) => {
+        if (!isFirebaseInitialized() || !adminDb) {
+            throw new Error('Firebase not initialized');
+        }
+        
         const postDoc = await adminDb.collection("posts").doc(input.id).get();
         if (!postDoc.exists) {
             throw new Error("Post not found");
@@ -29,6 +37,10 @@ export const postsRouter = router({
     }),
 
     getByEventId: publicProcedure.input(z.object({ eventId: z.string() })).query(async ({ input }) => {
+        if (!isFirebaseInitialized() || !adminDb) {
+            throw new Error('Firebase not initialized');
+        }
+        
         const postsSnapshot = await adminDb.collection("posts").where("eventId", "==", input.eventId).orderBy("createdAt", "desc").get();
 
         return postsSnapshot.docs.map((doc) => ({
@@ -38,6 +50,10 @@ export const postsRouter = router({
     }),
 
     create: protectedProcedure.input(postSchema).mutation(async ({ input, ctx }) => {
+        if (!isFirebaseInitialized() || !adminDb) {
+            throw new Error('Firebase not initialized');
+        }
+        
         // Verify user attended the event
         const userDoc = await adminDb.collection("users").doc(ctx.user.uid).get();
         const userData = userDoc.data();
@@ -68,6 +84,10 @@ export const postsRouter = router({
             })
         )
         .mutation(async ({ input, ctx }) => {
+            if (!isFirebaseInitialized() || !adminDb) {
+                throw new Error('Firebase not initialized');
+            }
+            
             const postDoc = await adminDb.collection("posts").doc(input.id).get();
             if (!postDoc.exists) {
                 throw new Error("Post not found");
@@ -90,6 +110,10 @@ export const postsRouter = router({
         }),
 
     delete: protectedProcedure.input(z.object({ id: z.string() })).mutation(async ({ input, ctx }) => {
+        if (!isFirebaseInitialized() || !adminDb) {
+            throw new Error('Firebase not initialized');
+        }
+        
         const postDoc = await adminDb.collection("posts").doc(input.id).get();
         if (!postDoc.exists) {
             throw new Error("Post not found");

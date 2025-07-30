@@ -23,6 +23,8 @@ export default function Header() {
 
     useEffect(() => {
         setIsMounted(true);
+        if (!auth) return;
+        
         const unsub = onAuthStateChanged(auth, (user) => setCurrentUser(user));
         return () => unsub();
     }, []);
@@ -105,7 +107,7 @@ export default function Header() {
                                 <Link href="/events">Upcoming Events</Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => signOut(auth)}>Sign Out</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => auth && signOut(auth)}>Sign Out</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 ) : (

@@ -22,6 +22,10 @@ export function TrpcProvider({ children }: { children: React.ReactNode }) {
           url: `${getBaseUrl()}/api/trpc`,
           transformer: superjson,
           headers: async () => {
+            if (!auth) {
+              return {};
+            }
+            
             const user = auth.currentUser;
             if (user) {
               const token = await user.getIdToken();

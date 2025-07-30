@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { router, publicProcedure, protectedProcedure } from "../trpc";
-import { adminDb } from "@/firebaseAdmin";
+import { adminDb, isFirebaseInitialized } from "@/firebaseAdmin";
 
 const userSchema = z.object({
     displayName: z.string().optional(),
@@ -11,6 +11,10 @@ const userSchema = z.object({
 
 export const usersRouter = router({
     getAll: publicProcedure.query(async () => {
+        if (!isFirebaseInitialized() || !adminDb) {
+            throw new Error('Firebase not initialized');
+        }
+        
         const usersSnapshot = await adminDb.collection("users").get();
         return usersSnapshot.docs.map((doc) => ({
             id: doc.id,
@@ -19,6 +23,10 @@ export const usersRouter = router({
     }),
 
     getById: publicProcedure.input(z.object({ id: z.string() })).query(async ({ input }) => {
+        if (!isFirebaseInitialized() || !adminDb) {
+            throw new Error('Firebase not initialized');
+        }
+        
         const userDoc = await adminDb.collection("users").doc(input.id).get();
         if (!userDoc.exists) {
             throw new Error("User not found");
@@ -30,6 +38,10 @@ export const usersRouter = router({
     }),
 
     create: protectedProcedure.input(userSchema).mutation(async ({ input, ctx }) => {
+        if (!isFirebaseInitialized() || !adminDb) {
+            throw new Error('Firebase not initialized');
+        }
+        
         const userData = {
             ...input,
             uid: ctx.user.uid,
@@ -44,6 +56,10 @@ export const usersRouter = router({
     }),
 
     update: protectedProcedure.input(userSchema.partial()).mutation(async ({ input, ctx }) => {
+        if (!isFirebaseInitialized() || !adminDb) {
+            throw new Error('Firebase not initialized');
+        }
+        
         await adminDb
             .collection("users")
             .doc(ctx.user.uid)
@@ -56,6 +72,10 @@ export const usersRouter = router({
     }),
 
     getProfile: protectedProcedure.query(async ({ ctx }) => {
+        if (!isFirebaseInitialized() || !adminDb) {
+            throw new Error('Firebase not initialized');
+        }
+        
         const userDoc = await adminDb.collection("users").doc(ctx.user.uid).get();
         if (!userDoc.exists) {
             return null;

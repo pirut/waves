@@ -178,20 +178,24 @@ export default function ImprovedMapView() {
   // Handle hydration by only running client-side code after mount
   useEffect(() => {
     setIsMounted(true);
+  }, []);
 
-    // Cleanup on unmount
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
       if (boundsUpdateTimeout.current) {
         clearTimeout(boundsUpdateTimeout.current);
       }
 
-      // Clean up all markers
-      for (const [, marker] of markersRef.current.entries()) {
+      // Clean up all markers - capture ref value to avoid stale closure
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const currentMarkers = markersRef.current;
+      for (const [, marker] of currentMarkers.entries()) {
         if ('map' in marker) {
           marker.map = null;
         }
       }
-      markersRef.current.clear();
+      currentMarkers.clear();
 
       // Clean up clusterer
       if (clustererRef.current) {
@@ -219,6 +223,11 @@ export default function ImprovedMapView() {
       try {
         const { db, auth } = await import('@/firebase');
         const { collection, onSnapshot } = await import('firebase/firestore');
+
+        // Check if Firebase is available
+        if (!db || !auth) {
+          throw new Error('Firebase not available');
+        }
 
         // Wait for auth state to be determined
         const waitForAuth = () => {

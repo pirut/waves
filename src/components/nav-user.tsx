@@ -29,6 +29,11 @@ export function NavUser({ user }: NavUserProps) {
   const router = useRouter();
 
   const handleSignOut = async () => {
+    if (!auth) {
+      console.error('Auth not available');
+      return;
+    }
+    
     try {
       await signOut(auth);
       router.push('/login');

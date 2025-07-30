@@ -21,6 +21,11 @@ export default function LoginPage() {
   const router = useRouter();
 
   const handleGoogleSignIn = async () => {
+    if (!auth) {
+      setError('Authentication not available. Please check your connection.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
