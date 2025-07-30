@@ -58,7 +58,7 @@ export function EventMapView({
     maxZoom: 20,
   }), []);
 
-  const onLoad = useCallback((map: google.maps.Map) => {
+  const onLoad = useCallback(() => {
     // Optional: Fit bounds if you want to show surrounding area
   }, []);
 

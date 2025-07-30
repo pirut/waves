@@ -1,12 +1,12 @@
 import { type FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
-import { adminAuth } from "@/firebaseAdmin";
+import { adminAuth, isFirebaseInitialized } from "@/firebaseAdmin";
 
 export async function createContext({ req }: FetchCreateContextFnOptions) {
     // Get the authorization header
     const authHeader = req.headers.get("authorization");
     let user = null;
 
-    if (authHeader?.startsWith("Bearer ")) {
+    if (authHeader?.startsWith("Bearer ") && isFirebaseInitialized() && adminAuth) {
         try {
             const token = authHeader.substring(7);
             const decodedToken = await adminAuth.verifyIdToken(token);

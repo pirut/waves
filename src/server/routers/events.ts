@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { router, publicProcedure, protectedProcedure } from '../trpc';
-import { adminDb } from '@/firebaseAdmin';
+import { adminDb, isFirebaseInitialized } from '@/firebaseAdmin';
 
 const eventSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -49,7 +49,11 @@ export const eventsRouter = router({
       upcoming: z.boolean().optional(),
     }).optional())
     .query(async ({ input = {} }) => {
-      let query = adminDb.collection('events');
+      if (!isFirebaseInitialized() || !adminDb) {
+        throw new Error('Firebase not initialized');
+      }
+      
+      let query: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = adminDb.collection('events');
       
       // Filter by category
       if (input.category) {
@@ -69,7 +73,7 @@ export const eventsRouter = router({
       if (input.offset && input.offset > 0) {
         query = query.offset(input.offset);
       }
-      query = query.limit(input.limit);
+      query = query.limit(input.limit || 50);
       
       const eventsSnapshot = await query.get();
       let events = eventsSnapshot.docs.map((doc) => ({
@@ -80,17 +84,24 @@ export const eventsRouter = router({
       // Apply client-side filters that Firestore can't handle
       if (input.search) {
         const searchLower = input.search.toLowerCase();
-        events = events.filter((event: any) => 
-          event.title?.toLowerCase().includes(searchLower) ||
-          event.description?.toLowerCase().includes(searchLower) ||
-          event.location?.address?.toLowerCase().includes(searchLower)
-        );
+        events = events.filter((event) => {
+          const eventData = event as Record<string, unknown>;
+          const title = eventData.title as string | undefined;
+          const description = eventData.description as string | undefined;
+          const location = eventData.location as { address?: string } | undefined;
+          
+          return title?.toLowerCase().includes(searchLower) ||
+                 description?.toLowerCase().includes(searchLower) ||
+                 location?.address?.toLowerCase().includes(searchLower);
+        });
       }
       
       if (input.tags && input.tags.length > 0) {
-        events = events.filter((event: any) => 
-          event.tags?.some((tag: string) => input.tags!.includes(tag))
-        );
+        events = events.filter((event) => {
+          const eventData = event as Record<string, unknown>;
+          const tags = eventData.tags as string[] | undefined;
+          return tags?.some((tag: string) => input.tags!.includes(tag));
+        });
       }
       
       return events;
@@ -108,7 +119,11 @@ export const eventsRouter = router({
       })
     )
     .query(async ({ input }) => {
-      let query = adminDb.collection('events');
+      if (!isFirebaseInitialized() || !adminDb) {
+        throw new Error('Firebase not initialized');
+      }
+      
+      let query: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = adminDb.collection('events');
       
       // Filter upcoming events
       if (input.upcoming) {
@@ -119,7 +134,7 @@ export const eventsRouter = router({
       const eventsSnapshot = await query
         .where('location.lat', '>=', input.south)
         .where('location.lat', '<=', input.north)
-        .limit(input.limit)
+        .limit(input.limit || 100)
         .get();
 
       // Filter by longitude in memory since Firestore doesn't support multiple range queries
@@ -138,6 +153,10 @@ export const eventsRouter = router({
     }),
 
   getById: publicProcedure.input(z.object({ id: z.string() })).query(async ({ input }) => {
+    if (!isFirebaseInitialized() || !adminDb) {
+      throw new Error('Firebase not initialized');
+    }
+    
     const eventDoc = await adminDb.collection('events').doc(input.id).get();
     if (!eventDoc.exists) {
       throw new Error('Event not found');
@@ -154,7 +173,11 @@ export const eventsRouter = router({
       upcoming: z.boolean().optional(),
     }))
     .query(async ({ input, ctx }) => {
-      let query = adminDb.collection('events');
+      if (!isFirebaseInitialized() || !adminDb) {
+        throw new Error('Firebase not initialized');
+      }
+      
+      let query: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = adminDb.collection('events');
       
       if (input.type === 'created') {
         query = query.where('createdBy', '==', ctx.user.uid);
@@ -177,6 +200,10 @@ export const eventsRouter = router({
     }),
 
   create: protectedProcedure.input(eventSchema).mutation(async ({ input, ctx }) => {
+    if (!isFirebaseInitialized() || !adminDb) {
+      throw new Error('Firebase not initialized');
+    }
+    
     // Validate that event time is in the future
     const eventTime = new Date(input.time);
     if (eventTime <= new Date()) {
@@ -210,6 +237,10 @@ export const eventsRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      if (!isFirebaseInitialized() || !adminDb) {
+        throw new Error('Firebase not initialized');
+      }
+      
       const eventDoc = await adminDb.collection('events').doc(input.id).get();
       if (!eventDoc.exists) {
         throw new Error('Event not found');
@@ -239,6 +270,10 @@ export const eventsRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
+      if (!isFirebaseInitialized() || !adminDb) {
+        throw new Error('Firebase not initialized');
+      }
+      
       const eventDoc = await adminDb.collection('events').doc(input.id).get();
       if (!eventDoc.exists) {
         throw new Error('Event not found');
@@ -256,6 +291,10 @@ export const eventsRouter = router({
   join: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
+      if (!isFirebaseInitialized() || !adminDb) {
+        throw new Error('Firebase not initialized');
+      }
+      
       const eventDoc = await adminDb.collection('events').doc(input.id).get();
       if (!eventDoc.exists) {
         throw new Error('Event not found');
@@ -290,6 +329,10 @@ export const eventsRouter = router({
   leave: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
+      if (!isFirebaseInitialized() || !adminDb) {
+        throw new Error('Firebase not initialized');
+      }
+      
       const eventDoc = await adminDb.collection('events').doc(input.id).get();
       if (!eventDoc.exists) {
         throw new Error('Event not found');
@@ -314,6 +357,10 @@ export const eventsRouter = router({
   getAttendees: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input }) => {
+      if (!isFirebaseInitialized() || !adminDb) {
+        throw new Error('Firebase not initialized');
+      }
+      
       const eventDoc = await adminDb.collection('events').doc(input.id).get();
       if (!eventDoc.exists) {
         throw new Error('Event not found');

@@ -13,10 +13,15 @@ export default function AuthWidget() {
     const [mode, setMode] = useState<"login" | "signup">("login");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
-    const user = auth.currentUser;
+    const user = auth?.currentUser;
 
     async function handleEmailAuth(e: React.FormEvent) {
         e.preventDefault();
+        if (!auth) {
+            setError("Authentication not available");
+            return;
+        }
+        
         setError("");
         setLoading(true);
         try {
@@ -33,6 +38,11 @@ export default function AuthWidget() {
     }
 
     async function handleGoogle() {
+        if (!auth) {
+            setError("Authentication not available");
+            return;
+        }
+        
         setError("");
         setLoading(true);
         try {
@@ -45,7 +55,9 @@ export default function AuthWidget() {
     }
 
     async function handleSignOut() {
-        await signOut(auth);
+        if (auth) {
+            await signOut(auth);
+        }
     }
 
     if (user) {

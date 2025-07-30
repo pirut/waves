@@ -207,7 +207,7 @@ export default function EventsPage() {
             </Select>
 
             {/* Time Filter */}
-            <Select value={timeFilter} onValueChange={setTimeFilter as any}>
+                         <Select value={timeFilter} onValueChange={(value: 'all' | 'upcoming' | 'past') => setTimeFilter(value)}>
               <SelectTrigger className="w-full sm:w-32">
                 <SelectValue />
               </SelectTrigger>

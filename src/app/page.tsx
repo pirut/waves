@@ -24,9 +24,13 @@ export default function Home() {
 
   // Sync user to Firestore on sign-in
   useEffect(() => {
+    if (!auth || !db) {
+      return;
+    }
+    
     const unsub = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      if (user) {
+      if (user && db) {
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
         if (!userSnap.exists()) {

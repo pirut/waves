@@ -27,6 +27,7 @@ import { Separator } from '@/components/ui/separator';
 import { DatePicker } from '@/components/ui/date-picker';
 import { TimePicker } from '@/components/ui/time-picker';
 import { UploadButton } from '@/lib/uploadthing';
+import Image from 'next/image';
 import {
   Plus,
   MapPin,
@@ -248,7 +249,7 @@ export default function CreateEventModal({
         setGeocodeStatus('error');
         toast.error('Could not find this address. Please check and try again.');
       }
-    } catch (error) {
+    } catch {
       setGeocodeStatus('error');
       toast.error('Error finding location. Please try again.');
     } finally {
@@ -692,29 +693,28 @@ export default function CreateEventModal({
                   <div>
                     <Label>Upload Images</Label>
                     <div className="mt-2">
-                      <UploadButton
-                        endpoint="eventImageUploader"
-                        onClientUploadComplete={(res) => {
-                          if (res && res.length > 0) {
-                            const newImages = res.map(file => file.url);
-                            setFormData((prev) => ({
-                              ...prev,
-                              images: [...prev.images, ...newImages],
-                              coverImage: prev.coverImage || newImages[0],
-                            }));
-                            toast.success('Images uploaded successfully!');
-                          }
-                        }}
-                        onUploadError={(error: Error) => {
-                          toast.error(`Upload failed: ${error.message}`);
-                        }}
-                        onUploadBegin={() => {
-                          setUploading(true);
-                        }}
-                        onUploadComplete={() => {
-                          setUploading(false);
-                        }}
-                      />
+                                             <UploadButton
+                         endpoint="eventImageUploader"
+                         onClientUploadComplete={(res) => {
+                           if (res && res.length > 0) {
+                             const newImages = res.map(file => file.url);
+                             setFormData((prev) => ({
+                               ...prev,
+                               images: [...prev.images, ...newImages],
+                               coverImage: prev.coverImage || newImages[0],
+                             }));
+                             toast.success('Images uploaded successfully!');
+                           }
+                           setUploading(false);
+                         }}
+                         onUploadError={(error: Error) => {
+                           toast.error(`Upload failed: ${error.message}`);
+                           setUploading(false);
+                         }}
+                         onUploadBegin={() => {
+                           setUploading(true);
+                         }}
+                       />
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
                       Maximum 5 images, 4MB each. Supported formats: JPG, PNG, WebP
@@ -726,12 +726,14 @@ export default function CreateEventModal({
                       <Label>Uploaded Images</Label>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2">
                         {formData.images.map((image, index) => (
-                          <div key={index} className="relative group">
-                            <img
-                              src={image}
-                              alt={`Event image ${index + 1}`}
-                              className="w-full h-24 object-cover rounded-lg"
-                            />
+                                                     <div key={index} className="relative group">
+                             <Image
+                               src={image}
+                               alt={`Event image ${index + 1}`}
+                               width={200}
+                               height={96}
+                               className="w-full h-24 object-cover rounded-lg"
+                             />
                             <Button
                               type="button"
                               variant="destructive"

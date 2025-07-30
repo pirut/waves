@@ -1,11 +1,15 @@
 import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { UploadThingError } from "uploadthing/server";
-import { adminAuth } from "@/firebaseAdmin";
+import { adminAuth, isFirebaseInitialized } from "@/firebaseAdmin";
 
 const f = createUploadthing();
 
 // Auth function to verify user
 const auth = async (req: Request): Promise<{ id: string; email?: string }> => {
+  if (!isFirebaseInitialized() || !adminAuth) {
+    throw new UploadThingError("Firebase not initialized");
+  }
+
   const authHeader = req.headers.get("authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     throw new UploadThingError("Unauthorized");
