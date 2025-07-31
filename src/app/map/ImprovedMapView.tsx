@@ -57,64 +57,67 @@ function UserLocationAdvancedMarker({
   position: { lat: number; lng: number };
   map: google.maps.Map | null;
 }) {
-  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | google.maps.Marker | null>(
+    null
+  );
 
   useEffect(() => {
-    if (!map || typeof google === 'undefined' || !google.maps.marker) return;
+    if (!map || typeof google === 'undefined') return;
 
-    // Create marker element
-    const markerDiv = document.createElement('div');
-    markerDiv.innerHTML = `
-      <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="10" cy="10" r="8" fill="#3b82f6" stroke="#ffffff" stroke-width="2"/>
-        <circle cx="10" cy="10" r="3" fill="#ffffff"/>
-      </svg>
-    `;
+    // Try to use Advanced Markers if available
+    if (google.maps.marker) {
+      // Create marker element
+      const markerDiv = document.createElement('div');
+      markerDiv.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="10" cy="10" r="8" fill="#3b82f6" stroke="#ffffff" stroke-width="2"/>
+          <circle cx="10" cy="10" r="3" fill="#ffffff"/>
+        </svg>
+      `;
 
-    // Create advanced marker
-    const marker = new google.maps.marker.AdvancedMarkerElement({
-      position,
-      content: markerDiv,
-      title: 'Your Location',
-      map,
-    });
+      // Create advanced marker
+      const marker = new google.maps.marker.AdvancedMarkerElement({
+        position,
+        content: markerDiv,
+        title: 'Your Location',
+        map,
+      });
 
-    markerRef.current = marker;
+      markerRef.current = marker;
+    } else {
+      // Fallback to regular marker
+      const marker = new google.maps.Marker({
+        position,
+        title: 'Your Location',
+        map,
+        icon: {
+          url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+            <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="10" cy="10" r="8" fill="#3b82f6" stroke="#ffffff" stroke-width="2"/>
+              <circle cx="10" cy="10" r="3" fill="#ffffff"/>
+            </svg>
+          `)}`,
+          scaledSize: new google.maps.Size(20, 20),
+          anchor: new google.maps.Point(10, 10),
+        },
+      });
+
+      markerRef.current = marker;
+    }
 
     return () => {
       if (markerRef.current) {
-        markerRef.current.map = null;
+        if ('map' in markerRef.current) {
+          markerRef.current.map = null;
+        } else if ('setMap' in markerRef.current) {
+          markerRef.current.setMap(null);
+        }
       }
     };
   }, [position, map]);
 
   return null;
 }
-
-// Optimized marker icon creation with caching
-const markerIconCache = new Map<string, google.maps.Icon>();
-
-const createMarkerIcon = (color: string): google.maps.Icon | undefined => {
-  if (typeof google === 'undefined') return undefined;
-
-  if (markerIconCache.has(color)) {
-    return markerIconCache.get(color);
-  }
-
-  const icon = {
-    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-            <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="16" cy="16" r="12" fill="${color}" stroke="#ffffff" stroke-width="3"/>
-                <circle cx="16" cy="16" r="6" fill="#ffffff" opacity="0.8"/>
-            </svg>
-        `)}`,
-    scaledSize: new google.maps.Size(32, 32),
-    anchor: new google.maps.Point(16, 16),
-  };
-
-  markerIconCache.set(color, icon);
-  return icon;
-};
 
 // Category color mapping
 const categoryColorMap: { [key: string]: string } = {
@@ -174,6 +177,7 @@ export default function ImprovedMapView() {
 
   // State for viewport-based loading
   const [currentBounds, setCurrentBounds] = useState<google.maps.LatLngBounds | null>(null);
+  const [enableBoundsFiltering, setEnableBoundsFiltering] = useState(false);
 
   // Handle hydration by only running client-side code after mount
   useEffect(() => {
@@ -189,6 +193,8 @@ export default function ImprovedMapView() {
       for (const [, marker] of markersRef.current.entries()) {
         if ('map' in marker) {
           marker.map = null;
+        } else if ('setMap' in marker) {
+          marker.setMap(null);
         }
       }
       markersRef.current.clear();
@@ -272,8 +278,17 @@ export default function ImprovedMapView() {
 
   // Filter events by current viewport with stable reference
   const eventsToShow = useMemo(() => {
-    if (!currentBounds || !allEvents.length || typeof google === 'undefined') return allEvents;
+    // Show all events initially when map is loading or when no bounds are set
+    if (
+      !currentBounds ||
+      !allEvents.length ||
+      typeof google === 'undefined' ||
+      !enableBoundsFiltering
+    ) {
+      return allEvents;
+    }
 
+    // Only filter by bounds if we have valid bounds and events and bounds filtering is enabled
     return allEvents.filter((event) => {
       const eventData = event as Event;
       if (!eventData.location) return false;
@@ -281,11 +296,10 @@ export default function ImprovedMapView() {
       const eventLatLng = new google.maps.LatLng(eventData.location.lat, eventData.location.lng);
       return currentBounds.contains(eventLatLng);
     });
-  }, [allEvents, currentBounds]);
+  }, [allEvents, currentBounds, enableBoundsFiltering]);
 
   // Load Google Maps API with clustering
   const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     version: 'weekly',
     libraries: mapLibraries,
@@ -313,8 +327,7 @@ export default function ImprovedMapView() {
             }
           }
         },
-        (error) => {
-          console.log('Geolocation error:', error);
+        () => {
           // Keep default center if geolocation fails
         },
         {
@@ -365,8 +378,8 @@ export default function ImprovedMapView() {
     setIsMobile(detectMobile());
   }, [isMounted]);
 
-  // Ensure Map ID is available
-  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_ID || '15a6e838f93a0ca12caba8f6';
+  // Ensure Map ID is available - use undefined if not properly configured
+  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_ID;
 
   // Memoize map options for better performance - mobile-aware
   const mapOptions = useMemo(() => getMapOptions(isMobile), [isMobile]);
@@ -439,6 +452,8 @@ export default function ImprovedMapView() {
           if (currentBoundsStr !== newBoundsStr) {
             setMapBounds(bounds);
             setCurrentBounds(bounds);
+            // Enable bounds filtering after user interaction
+            setEnableBoundsFiltering(true);
           }
         }, 500); // Increased debounce time to reduce flashing
       }
@@ -482,6 +497,8 @@ export default function ImprovedMapView() {
         // Remove marker from map and cache
         if ('map' in marker) {
           marker.map = null;
+        } else if ('setMap' in marker) {
+          marker.setMap(null);
         }
         markersRef.current.delete(eventId);
       }
@@ -493,21 +510,9 @@ export default function ImprovedMapView() {
 
       if (!marker) {
         // Create new marker only if it doesn't exist
-        if (!google.maps.marker) {
-          // Fallback to standard markers if Advanced Markers not available
-          marker = new google.maps.Marker({
-            position: {
-              lat: event.location!.lat,
-              lng: event.location!.lng,
-            },
-            icon: createMarkerIcon(getCategoryMarkerColor(event.category || '')),
-            title: event.title,
-          });
+        // Try to use Advanced Markers if available and Map ID is configured
 
-          marker.addListener('click', () => {
-            setSelectedEvent(event);
-          });
-        } else {
+        if (google.maps.marker && mapId) {
           // Create the marker element for Advanced Marker
           const markerDiv = document.createElement('div');
           markerDiv.innerHTML = `
@@ -525,11 +530,30 @@ export default function ImprovedMapView() {
             content: markerDiv,
             title: event.title,
           });
-
-          marker.addListener('click', () => {
-            setSelectedEvent(event);
+        } else {
+          // Fallback to regular markers if Advanced Markers not available
+          marker = new google.maps.Marker({
+            position: {
+              lat: event.location!.lat,
+              lng: event.location!.lng,
+            },
+            icon: {
+              url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+                <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="16" cy="16" r="12" fill="${getCategoryMarkerColor(event.category || '')}" stroke="#ffffff" stroke-width="3"/>
+                  <circle cx="16" cy="16" r="6" fill="#ffffff" opacity="0.8"/>
+                </svg>
+              `)}`,
+              scaledSize: new google.maps.Size(32, 32),
+              anchor: new google.maps.Point(16, 16),
+            },
+            title: event.title,
           });
         }
+
+        marker.addListener('click', () => {
+          setSelectedEvent(event);
+        });
 
         // Cache the marker
         markersRef.current.set(event.id, marker);
@@ -569,15 +593,29 @@ export default function ImprovedMapView() {
               </svg>
             `;
 
-            return new google.maps.marker.AdvancedMarkerElement({
-              position,
-              content: (() => {
-                const div = document.createElement('div');
-                div.innerHTML = svg;
-                return div.firstElementChild as HTMLElement;
-              })(),
-              zIndex: 1000 + count,
-            });
+            // Try to use Advanced Markers for clusters if available
+            if (google.maps.marker) {
+              return new google.maps.marker.AdvancedMarkerElement({
+                position,
+                content: (() => {
+                  const div = document.createElement('div');
+                  div.innerHTML = svg;
+                  return div.firstElementChild as HTMLElement;
+                })(),
+                zIndex: 1000 + count,
+              });
+            } else {
+              // Fallback to regular marker for clusters
+              return new google.maps.Marker({
+                position,
+                icon: {
+                  url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+                  scaledSize: new google.maps.Size(size, size),
+                  anchor: new google.maps.Point(size / 2, size / 2),
+                },
+                zIndex: 1000 + count,
+              });
+            }
           },
         },
       });
@@ -663,7 +701,7 @@ export default function ImprovedMapView() {
         onClick={onMapClick}
         options={{
           ...mapOptions,
-          mapId: mapId,
+          ...(mapId && { mapId }),
         }}
       >
         {/* User location marker using Advanced Marker */}

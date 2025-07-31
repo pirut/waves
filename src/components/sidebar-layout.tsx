@@ -1,10 +1,11 @@
 'use client';
 
 import { AppSidebar } from '@/components/app-sidebar';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarInset, SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { MapBoundsProvider } from '@/contexts/MapBoundsContext';
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -12,19 +13,34 @@ interface SidebarLayoutProps {
 
 // No longer need breadcrumb interfaces
 
+// Component to manage sidebar state based on current path
+function SidebarController({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const { setOpen } = useSidebar();
+
+  useEffect(() => {
+    // Close sidebar when on root page, open for other pages
+    if (pathname === '/') {
+      setOpen(false);
+    } else {
+      setOpen(true);
+    }
+  }, [pathname, setOpen]);
+
+  return <>{children}</>;
+}
+
 export function SidebarLayout({ children }: SidebarLayoutProps) {
   const { user, loading } = useAuth();
   const [isMounted, setIsMounted] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Check if we're on the map page
-  const isMapPage = typeof window !== 'undefined' && window.location.pathname === '/map';
-
-  // Generate breadcrumbs from pathname
-  // We've removed the breadcrumbs as requested
+  // Check if we're on the map page (needs full map layout)
+  const isMapPage = pathname === '/map';
 
   // Show loading state during hydration and auth check
   if (!isMounted || loading) {
@@ -41,20 +57,24 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   }
 
   // If user is authenticated, show sidebar layout
+  const isRootPage = pathname === '/';
+
   return (
     <MapBoundsProvider>
-      <SidebarProvider>
-        <AppSidebar />
-        <SidebarInset>
-          {/* No header for cleaner UI */}
-          {isMapPage ? (
-            // Map page takes full space without padding
-            <div className="flex flex-1 flex-col h-screen">{children}</div>
-          ) : (
-            // Other pages use normal padding
-            <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
-          )}
-        </SidebarInset>
+      <SidebarProvider defaultOpen={!isRootPage}>
+        <SidebarController>
+          <AppSidebar />
+          <SidebarInset>
+            {/* No header for cleaner UI */}
+            {isMapPage ? (
+              // Map page takes full space without padding
+              <div className="flex flex-1 flex-col h-screen">{children}</div>
+            ) : (
+              // Other pages use normal padding
+              <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
+            )}
+          </SidebarInset>
+        </SidebarController>
       </SidebarProvider>
     </MapBoundsProvider>
   );

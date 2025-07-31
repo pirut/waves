@@ -14,8 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tooltip, TooltipContent } from '@/components/ui/tooltip';
-import { Button } from '@/components/ui/button';
+import { SidebarMenuButton, useSidebar } from '@/components/ui/sidebar';
 
 interface NavUserProps {
   user: {
@@ -27,6 +26,7 @@ interface NavUserProps {
 
 export function NavUser({ user }: NavUserProps) {
   const router = useRouter();
+  const { isMobile } = useSidebar();
 
   const handleSignOut = async () => {
     try {
@@ -38,57 +38,46 @@ export function NavUser({ user }: NavUserProps) {
   };
 
   const getInitials = (name: string) => {
-    // Get just the first letter of the first name
     return name.charAt(0).toUpperCase();
   };
 
   return (
-    <Tooltip>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="md:w-10 md:h-10 !w-auto !h-auto !p-1 !justify-start !gap-2 md:!justify-center md:!gap-0"
-          >
-            <Avatar className="h-6 w-6 flex-shrink-0">
-              <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback className="text-xs font-semibold">
-                {getInitials(user.name)}
-              </AvatarFallback>
-            </Avatar>
-            <span className="md:hidden text-sm font-medium truncate max-w-20">{user.name}</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-56">
-          <div className="flex items-center justify-start gap-2 p-2">
-            <div className="flex flex-col space-y-1 leading-none">
-              <p className="font-medium">{user.name}</p>
-              {user.email && <p className="text-xs text-muted-foreground">{user.email}</p>}
-            </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <SidebarMenuButton
+          size="lg"
+          className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+        >
+          <Avatar className="h-8 w-8 rounded-lg">
+            <AvatarImage src={user.avatar} alt={user.name} />
+            <AvatarFallback className="rounded-lg">{getInitials(user.name)}</AvatarFallback>
+          </Avatar>
+          <div className="grid flex-1 text-left text-sm leading-tight">
+            <span className="truncate font-semibold">{user.name}</span>
+            <span className="truncate text-xs">{user.email}</span>
           </div>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => router.push('/profile')}>
-            <User className="mr-2 h-4 w-4" />
-            <span>Profile</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push('/settings')}>
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleSignOut}>
-            <LogOut className="mr-2 h-4 w-4" />
-            <span>Log out</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <TooltipContent side="right">
-        <div className="text-center">
-          <p className="font-medium">{user.name}</p>
-          {user.email && <p className="text-xs text-muted-foreground">{user.email}</p>}
-        </div>
-      </TooltipContent>
-    </Tooltip>
+        </SidebarMenuButton>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+        side={isMobile ? 'bottom' : 'right'}
+        align="end"
+        sideOffset={4}
+      >
+        <DropdownMenuItem onClick={() => router.push('/profile')}>
+          <User className="mr-2 h-4 w-4" />
+          <span>Profile</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push('/settings')}>
+          <Settings className="mr-2 h-4 w-4" />
+          <span>Settings</span>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleSignOut}>
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Log out</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

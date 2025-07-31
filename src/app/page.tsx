@@ -18,14 +18,44 @@ import { Event } from '@/types/event';
 export default function Home() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authInitialized, setAuthInitialized] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Get user's location
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ lat: latitude, lng: longitude });
+        },
+        () => {
+          // Fallback to Florida center if location access is denied
+          setUserLocation({ lat: 26.7511, lng: -80.0989 });
+        }
+      );
+    } else {
+      // Fallback to Florida center if geolocation is not supported
+      setUserLocation({ lat: 26.7511, lng: -80.0989 });
+    }
+  }, []);
 
   // Fetch events using tRPC
-  const { data: events = [] } = trpc.events.getAll.useQuery() as { data: Event[] };
+  const { data: events = [], isLoading: eventsLoading } = trpc.events.getDashboardEvents.useQuery(
+    userLocation ? { userLat: userLocation.lat, userLng: userLocation.lng } : undefined,
+    {
+      enabled: authInitialized && userLocation !== null, // Only run query after auth is initialized and we have location
+    }
+  ) as {
+    data: Event[];
+    isLoading: boolean;
+  };
 
   // Sync user to Firestore on sign-in
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+      setAuthInitialized(true); // Mark auth as initialized
       if (user) {
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
@@ -43,7 +73,7 @@ export default function Home() {
   }, []);
 
   // Filter events for different sections
-  const nearbyEvents = events; // Show all events to test scroll area
+  const nearbyEvents = events;
   const upcomingEvents = events
     .filter((event) => {
       // Mock filter for user's events - in real app, check if user is attending
@@ -123,8 +153,8 @@ export default function Home() {
 
           {/* Dashboard Content */}
           <div className="space-y-8">
-            {/* Nearby Events Section */}
-            <NearbyEventsSection events={nearbyEvents} />
+            {/* Events Near You Section */}
+            <NearbyEventsSection events={nearbyEvents} isLoading={eventsLoading} />
 
             {/* My Upcoming Events Section */}
             <UpcomingEventsSection events={upcomingEvents} />

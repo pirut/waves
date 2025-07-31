@@ -17,11 +17,64 @@ const eventSchema = z.object({
 export const eventsRouter = router({
   getAll: publicProcedure.query(async () => {
     const eventsSnapshot = await adminDb.collection('events').get();
-    return eventsSnapshot.docs.map((doc) => ({
+    const events = eventsSnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     }));
+    return events;
   }),
+
+  getDashboardEvents: publicProcedure
+    .input(
+      z
+        .object({
+          userLat: z.number(),
+          userLng: z.number(),
+        })
+        .optional()
+    )
+    .query(async ({ input }) => {
+      let bounds;
+
+      if (input) {
+        // Create bounds around user's location (roughly 50 mile radius)
+        const radiusInDegrees = 0.7; // Approximately 50 miles
+        bounds = {
+          north: input.userLat + radiusInDegrees,
+          south: input.userLat - radiusInDegrees,
+          east: input.userLng + radiusInDegrees,
+          west: input.userLng - radiusInDegrees,
+        };
+      } else {
+        // Default bounds for Florida area (covers most of Florida)
+        bounds = {
+          north: 31.0, // Northern Florida
+          south: 24.5, // Southern Florida
+          east: -80.0, // Eastern Florida
+          west: -87.5, // Western Florida
+        };
+      }
+
+      const eventsSnapshot = await adminDb
+        .collection('events')
+        .where('location.lat', '>=', bounds.south)
+        .where('location.lat', '<=', bounds.north)
+        .get();
+
+      // Filter by longitude in memory since Firestore doesn't support multiple range queries
+      const events = eventsSnapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .filter((event) => {
+          const eventData = event as { location?: { lng: number } };
+          const lng = eventData.location?.lng;
+          return lng !== undefined && lng >= bounds.west && lng <= bounds.east;
+        });
+
+      return events;
+    }),
 
   getByBounds: publicProcedure
     .input(
