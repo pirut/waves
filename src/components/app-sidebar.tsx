@@ -59,11 +59,7 @@ const navItems = [
     url: '/messages',
     icon: MessageSquare,
   },
-  {
-    title: 'Profile',
-    url: '/profile',
-    icon: User,
-  },
+  // Profile and settings are accessible from avatar menu; keeping Profile entry removed per request
 ];
 
 import { Event } from '@/types/event';

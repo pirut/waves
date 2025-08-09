@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MapView } from '@/components/MapView';
 import type { Event as EventType } from '@/types/event';
+import { MapBoundsProvider } from '@/contexts/MapBoundsContext';
 
 interface Event {
   id: string;
@@ -95,11 +96,11 @@ export default function EventDetailsPage() {
     photoURL?: string;
   }
 
-    const attendeesQuery = trpc.events.getAttendees.useQuery(
+  const attendeesQuery = trpc.events.getAttendees.useQuery(
     { id: params.id as string },
     { enabled: !!params.id }
   );
-    const attendees = (attendeesQuery.data as unknown as AttendeeUser[]) || [];
+  const attendees = (attendeesQuery.data as unknown as AttendeeUser[]) || [];
 
   if (loading) {
     return (
@@ -222,7 +223,8 @@ export default function EventDetailsPage() {
           </CardHeader>
           <CardContent>
             <div className="h-72">
-              <MapView
+              <MapBoundsProvider>
+                <MapView
                 interactive={true}
                 showZoomControls
                 showFullscreenControl
@@ -241,7 +243,8 @@ export default function EventDetailsPage() {
                   };
                   return [mapEvent];
                 })()}
-              />
+                />
+              </MapBoundsProvider>
             </div>
           </CardContent>
         </Card>
