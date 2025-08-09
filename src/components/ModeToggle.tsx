@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { SidebarMenuButton, useSidebar } from '@/components/ui/sidebar';
+import { SidebarMenuButton } from '@/components/ui/sidebar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +13,8 @@ import {
 
 export function ModeToggle() {
   const { setTheme } = useTheme();
-  const { isMobile } = useSidebar();
+  // Avoid requiring SidebarProvider; default dropdown side works in both layouts
+  const isMobile = false;
 
   return (
     <DropdownMenu>
