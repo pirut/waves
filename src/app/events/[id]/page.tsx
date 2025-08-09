@@ -91,10 +91,6 @@ export default function EventDetailsPage() {
     return colors[category] || 'bg-gray-100 text-gray-800';
   };
 
-  const isUserAttending = event && user && (event.attendees || []).includes(user.uid);
-  const canJoin =
-    event && (!event.maxAttendees || (event.attendees || []).length < event.maxAttendees);
-
   const utils = trpc.useUtils();
   const attendMutation = trpc.events.attend.useMutation({
     onSuccess: async () => {
@@ -117,7 +113,7 @@ export default function EventDetailsPage() {
     photoURL?: string;
   }
 
-  // Realtime attendees from Firestore
+  // Realtime attendees from Firestore (per-UID listener; supports either doc-id===uid or 'uid' field)
   const [liveAttendees, setLiveAttendees] = useState<AttendeeUser[]>([]);
   const attendeesUnsubsRef = useRef<Unsubscribe[]>([]);
 
@@ -127,41 +123,34 @@ export default function EventDetailsPage() {
   }, [liveEvent?.attendees, event?.attendees]);
 
   useEffect(() => {
-    // Clean any existing subscriptions
     attendeesUnsubsRef.current.forEach((u) => u());
     attendeesUnsubsRef.current = [];
     setLiveAttendees([]);
 
     if (attendeeUids.length === 0) return;
 
-    // Chunk 'in' queries by 10
-    const chunks: string[][] = [];
-    for (let i = 0; i < attendeeUids.length; i += 10) {
-      chunks.push(attendeeUids.slice(i, i + 10));
-    }
+    const cache: Record<string, AttendeeUser> = {};
 
-    const allResults: Record<string, AttendeeUser> = {};
-
-    chunks.forEach((chunk) => {
-      const q = query(collection(db, 'users'), where('uid', 'in', chunk));
-      const unsub = onSnapshot(q, (snap) => {
-        snap.docChanges().forEach((change) => {
-          const data = change.doc.data() as Partial<AttendeeUser> & { uid?: string };
-          const user: AttendeeUser = {
-            id: change.doc.id,
-            uid: data.uid,
+    attendeeUids.forEach((uid) => {
+      // Fallback listener by 'uid' field to support setups where doc.id !== uid
+      const byField = query(collection(db, 'users'), where('uid', '==', uid));
+      const unsub = onSnapshot(byField, (snap) => {
+        if (snap.empty) {
+          delete cache[uid];
+        } else {
+          // Use first matching doc
+          const docSnap = snap.docs[0];
+          const data = docSnap.data() as Partial<AttendeeUser>;
+          cache[uid] = {
+            id: docSnap.id,
+            uid,
             displayName: data.displayName,
             email: data.email,
             photoURL: data.photoURL,
           };
-          if (change.type === 'removed') {
-            delete allResults[change.doc.id];
-          } else {
-            allResults[change.doc.id] = user;
-          }
-        });
+        }
         setLiveAttendees(
-          Object.values(allResults).sort((a, b) =>
+          Object.values(cache).sort((a, b) =>
             (a.displayName || '').localeCompare(b.displayName || '')
           )
         );
@@ -218,6 +207,11 @@ export default function EventDetailsPage() {
   }
 
   const displayEvent = (liveEvent || event)!;
+  const isUserAttending = displayEvent && user && (displayEvent.attendees || []).includes(user.uid);
+  const canJoin =
+    displayEvent &&
+    (!displayEvent.maxAttendees ||
+      (displayEvent.attendees || []).length < displayEvent.maxAttendees);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -303,11 +297,11 @@ export default function EventDetailsPage() {
             <div className="h-72">
               <MapBoundsProvider>
                 <MapView
-                  interactive={true}
-                  showZoomControls
-                  showFullscreenControl
+                  interactive={false}
+                  showZoomControls={false}
+                  showFullscreenControl={false}
                   center={{ lat: displayEvent.location.lat, lng: displayEvent.location.lng }}
-                  zoom={13}
+                  zoom={14}
                   minZoom={5}
                   maxZoom={19}
                   showEventMarkers

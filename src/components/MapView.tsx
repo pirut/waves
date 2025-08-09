@@ -104,6 +104,7 @@ export function MapView({
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
   const markersRef = useRef<
     Map<string, google.maps.marker.AdvancedMarkerElement | google.maps.Marker>
   >(new Map());
@@ -183,6 +184,7 @@ export function MapView({
   const onLoad = useCallback(
     (map: google.maps.Map) => {
       mapRef.current = map;
+      setMapReady(true);
 
       // Set initial center and zoom
       if (center || userLocation) {
@@ -267,10 +269,11 @@ export function MapView({
     }
   }, [center, zoom]);
 
-  // Create markers for events
-  useMemo(() => {
+  // Create markers for events once map is ready
+  useEffect(() => {
     if (
       !isMounted ||
+      !mapReady ||
       !mapRef.current ||
       !isLoaded ||
       !showEventMarkers ||
@@ -296,9 +299,7 @@ export function MapView({
 
       let marker: google.maps.marker.AdvancedMarkerElement | google.maps.Marker;
 
-      // Try to use Advanced Markers if available and Map ID is configured
       if (google.maps.marker && mapId) {
-        // Create marker element for Advanced Marker
         const markerDiv = document.createElement('div');
         markerDiv.innerHTML = `
           <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -308,21 +309,14 @@ export function MapView({
         `;
 
         marker = new google.maps.marker.AdvancedMarkerElement({
-          position: {
-            lat: event.location.lat,
-            lng: event.location.lng,
-          },
+          position: { lat: event.location.lat, lng: event.location.lng },
           content: markerDiv,
           title: event.title,
           map: mapRef.current,
         });
       } else {
-        // Fallback to regular marker
         marker = new google.maps.Marker({
-          position: {
-            lat: event.location.lat,
-            lng: event.location.lng,
-          },
+          position: { lat: event.location.lat, lng: event.location.lng },
           icon: {
             url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
               <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -338,19 +332,23 @@ export function MapView({
         });
       }
 
-      // Add click listener
       marker.addListener('click', () => {
-        if (showInfoWindows) {
-          setSelectedEvent(event);
-        }
-        if (onEventClick) {
-          onEventClick(event);
-        }
+        if (showInfoWindows) setSelectedEvent(event);
+        if (onEventClick) onEventClick(event);
       });
 
       markersRef.current.set(event.id, marker);
     });
-  }, [events, isLoaded, isMounted, showEventMarkers, showInfoWindows, onEventClick]);
+  }, [
+    events,
+    isLoaded,
+    isMounted,
+    mapReady,
+    showEventMarkers,
+    showInfoWindows,
+    onEventClick,
+    mapId,
+  ]);
 
   // Fit map to show all events (if no custom center provided)
   useEffect(() => {
