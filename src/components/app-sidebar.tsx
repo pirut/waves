@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Map, Calendar, Users, User, Heart, TrendingUp, MessageSquare } from 'lucide-react';
+import { Map, Calendar, Users, Heart, TrendingUp, MessageSquare } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { useMapBounds } from '@/contexts/MapBoundsContext';
 

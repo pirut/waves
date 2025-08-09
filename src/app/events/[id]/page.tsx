@@ -10,6 +10,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MapView } from '@/components/MapView';
 import type { Event as EventType } from '@/types/event';
 import { MapBoundsProvider } from '@/contexts/MapBoundsContext';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { db } from '@/firebase';
+import { onSnapshot, doc, collection, query, where, Unsubscribe } from 'firebase/firestore';
 
 interface Event {
   id: string;
@@ -41,6 +44,24 @@ export default function EventDetailsPage() {
     isLoading: boolean;
     error: Error | null;
   };
+
+  // Realtime event data
+  const [liveEvent, setLiveEvent] = useState<Event | null>(null);
+  const eventId = params.id as string;
+  useEffect(() => {
+    if (!eventId) return;
+    const ref = doc(db, 'events', eventId);
+    const unsub = onSnapshot(ref, (snap) => {
+      const data = snap.data();
+      if (data) {
+        const shaped = { ...(data as Record<string, unknown>) };
+        delete (shaped as Record<string, unknown>).id;
+        const payload = { id: snap.id, ...(shaped as Record<string, unknown>) } as unknown as Event;
+        setLiveEvent(payload);
+      }
+    });
+    return () => unsub();
+  }, [eventId]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -96,11 +117,59 @@ export default function EventDetailsPage() {
     photoURL?: string;
   }
 
-  const attendeesQuery = trpc.events.getAttendees.useQuery(
-    { id: params.id as string },
-    { enabled: !!params.id }
-  );
-  const attendees = (attendeesQuery.data as unknown as AttendeeUser[]) || [];
+  // Realtime attendees from Firestore
+  const [liveAttendees, setLiveAttendees] = useState<AttendeeUser[]>([]);
+  const attendeesUnsubsRef = useRef<Unsubscribe[]>([]);
+
+  const attendeeUids = useMemo(() => {
+    const src = (liveEvent?.attendees || event?.attendees || []) as string[];
+    return Array.isArray(src) ? src : [];
+  }, [liveEvent?.attendees, event?.attendees]);
+
+  useEffect(() => {
+    // Clean any existing subscriptions
+    attendeesUnsubsRef.current.forEach((u) => u());
+    attendeesUnsubsRef.current = [];
+    setLiveAttendees([]);
+
+    if (attendeeUids.length === 0) return;
+
+    // Chunk 'in' queries by 10
+    const chunks: string[][] = [];
+    for (let i = 0; i < attendeeUids.length; i += 10) {
+      chunks.push(attendeeUids.slice(i, i + 10));
+    }
+
+    const allResults: Record<string, AttendeeUser> = {};
+
+    chunks.forEach((chunk) => {
+      const q = query(collection(db, 'users'), where('uid', 'in', chunk));
+      const unsub = onSnapshot(q, (snap) => {
+        snap.docChanges().forEach((change) => {
+          const data = change.doc.data() as Partial<AttendeeUser> & { uid?: string };
+          const user: AttendeeUser = {
+            id: change.doc.id,
+            uid: data.uid,
+            displayName: data.displayName,
+            email: data.email,
+            photoURL: data.photoURL,
+          };
+          if (change.type === 'removed') {
+            delete allResults[change.doc.id];
+          } else {
+            allResults[change.doc.id] = user;
+          }
+        });
+        setLiveAttendees(Object.values(allResults).sort((a, b) => (a.displayName || '').localeCompare(b.displayName || '')));
+      });
+      attendeesUnsubsRef.current.push(unsub);
+    });
+
+    return () => {
+      attendeesUnsubsRef.current.forEach((u) => u());
+      attendeesUnsubsRef.current = [];
+    };
+  }, [attendeeUids]);
 
   if (loading) {
     return (
@@ -144,6 +213,8 @@ export default function EventDetailsPage() {
     );
   }
 
+  const displayEvent = (liveEvent || event)!;
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <Button onClick={() => router.back()} variant="outline" className="mb-6">
@@ -155,36 +226,36 @@ export default function EventDetailsPage() {
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <CardTitle className="text-2xl mb-3">{event.title}</CardTitle>
+              <CardTitle className="text-2xl mb-3">{displayEvent.title}</CardTitle>
               <div className="flex items-center gap-6 text-muted-foreground mb-4">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-5 w-5" />
-                  {formatDate(event.time)}
+                  {formatDate(displayEvent.time)}
                 </div>
                 <div className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  {event.attendees.length} attending
-                  {event.maxAttendees && ` (${event.maxAttendees} max)`}
+                  {(displayEvent.attendees || []).length} attending
+                  {displayEvent.maxAttendees && ` (${displayEvent.maxAttendees} max)`}
                 </div>
               </div>
             </div>
             <div
-              className={`px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(event.category)}`}
+              className={`px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(displayEvent.category)}`}
             >
               <div className="flex items-center gap-1">
                 <Tag className="h-4 w-4" />
-                {event.category}
+                 {displayEvent.category}
               </div>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <CardDescription className="text-base mb-6">{event.description}</CardDescription>
+          <CardDescription className="text-base mb-6">{displayEvent.description}</CardDescription>
 
-          {event.location.address && (
+          {displayEvent.location.address && (
             <div className="flex items-center gap-2 text-muted-foreground mb-6">
               <MapPin className="h-5 w-5" />
-              <span>{event.location.address}</span>
+              <span>{displayEvent.location.address}</span>
             </div>
           )}
 
@@ -196,12 +267,12 @@ export default function EventDetailsPage() {
                     <Button variant="outline" disabled>
                       ✓ You&apos;re attending
                     </Button>
-                    <Button variant="ghost" onClick={() => leaveMutation.mutate({ id: event.id })}>
+                    <Button variant="ghost" onClick={() => leaveMutation.mutate({ id: displayEvent.id })}>
                       Leave
                     </Button>
                   </>
                 ) : canJoin ? (
-                  <Button onClick={() => attendMutation.mutate({ id: event.id })}>
+                  <Button onClick={() => attendMutation.mutate({ id: displayEvent.id })}>
                     Join Event
                   </Button>
                 ) : (
@@ -225,24 +296,24 @@ export default function EventDetailsPage() {
             <div className="h-72">
               <MapBoundsProvider>
                 <MapView
-                interactive={true}
-                showZoomControls
-                showFullscreenControl
-                center={{ lat: event.location.lat, lng: event.location.lng }}
-                zoom={13}
-                minZoom={5}
-                maxZoom={19}
-                showEventMarkers
-                events={((): EventType[] => {
-                  const mapEvent: EventType = {
-                    id: event.id,
-                    title: event.title,
-                    category: event.category,
-                    location: event.location,
-                    attendees: event.attendees,
-                  };
-                  return [mapEvent];
-                })()}
+                  interactive={true}
+                  showZoomControls
+                  showFullscreenControl
+                  center={{ lat: displayEvent.location.lat, lng: displayEvent.location.lng }}
+                  zoom={13}
+                  minZoom={5}
+                  maxZoom={19}
+                  showEventMarkers
+                  events={((): EventType[] => {
+                    const mapEvent: EventType = {
+                      id: displayEvent.id,
+                      title: displayEvent.title,
+                      category: displayEvent.category,
+                      location: displayEvent.location,
+                      attendees: displayEvent.attendees,
+                    };
+                    return [mapEvent];
+                  })()}
                 />
               </MapBoundsProvider>
             </div>
@@ -251,14 +322,14 @@ export default function EventDetailsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Attendees ({(event.attendees || []).length})</CardTitle>
+            <CardTitle className="text-lg">Attendees ({(displayEvent.attendees || []).length})</CardTitle>
           </CardHeader>
           <CardContent>
-            {attendees.length === 0 ? (
+            {(liveAttendees || []).length === 0 ? (
               <p className="text-sm text-muted-foreground">No attendees yet.</p>
             ) : (
               <div className="flex flex-col gap-3">
-                {attendees.map((u: AttendeeUser) => (
+                {liveAttendees.map((u: AttendeeUser) => (
                   <div key={u.id} className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={u.photoURL || ''} alt={u.displayName || 'User'} />
