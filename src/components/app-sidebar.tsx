@@ -157,8 +157,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              onClick={() => router.push('/')}
-              isActive={pathname === '/'}
+              onClick={() => router.push('/dashboard')}
+              isActive={pathname === '/dashboard'}
               tooltip="Make Waves"
             >
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
@@ -168,7 +168,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">Make Waves</span>
-                <span className="truncate text-xs">Social Impact</span>
+                <span className="truncate text-xs">Dashboard</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>

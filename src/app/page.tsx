@@ -16,7 +16,9 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import AuthWidget from '@/components/AuthWidget';
-import { Calendar, Map, Users, Heart, Sparkles } from 'lucide-react';
+import { Calendar, Map as MapIcon, Users, Heart, Sparkles } from 'lucide-react';
+import { MapView } from '@/components/MapView';
+import { Event } from '@/types/event';
 import { trpc } from '@/lib/trpc';
 
 export default function Home() {
@@ -28,12 +30,26 @@ export default function Home() {
     const unsub = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       setAuthReady(true);
-      if (user) router.replace('/map');
+      if (user) router.replace('/dashboard');
     });
     return () => unsub();
   }, [router]);
 
   const { data: stats } = trpc.stats.useQuery(undefined, { staleTime: 60_000 });
+  const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [consented, setConsented] = useState(false);
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setConsented(true);
+      },
+      () => {},
+      { timeout: 5000 }
+    );
+  }, []);
+  const nearbyEvents: Event[] = [];
 
   if (!authReady) {
     return (
@@ -98,9 +114,28 @@ export default function Home() {
             <CardContent>
               <div className="aspect-video w-full rounded-lg bg-muted grid place-items-center">
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <Map className="h-5 w-5" />
-                  <span>Interactive map preview</span>
+                  <MapIcon className="h-5 w-5" />
+                  <span>Nearby events preview</span>
                 </div>
+              </div>
+              <div className="mt-4 h-[280px] rounded-lg overflow-hidden">
+                {consented && center ? (
+                  <MapView
+                    interactive={false}
+                    showZoomControls={false}
+                    showFullscreenControl={false}
+                    center={center}
+                    zoom={12}
+                    minZoom={3}
+                    maxZoom={18}
+                    showEventMarkers={false}
+                    events={nearbyEvents}
+                  />
+                ) : (
+                  <div className="w-full h-full grid place-items-center text-muted-foreground text-sm">
+                    Enable location to preview events
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -112,25 +147,25 @@ export default function Home() {
           {[
             {
               title: 'Map-first discovery',
-              icon: Map,
+              Icon: MapIcon,
               desc: 'Browse real events on a beautiful map and filter by what matters.',
             },
             {
               title: 'Go with friends',
-              icon: Users,
+              Icon: Users,
               desc: 'RSVP together and see who’s attending before you head out.',
             },
             {
               title: 'Stay organized',
-              icon: Calendar,
+              Icon: Calendar,
               desc: 'Track upcoming plans and get gentle reminders when it’s time.',
             },
             {
               title: 'Celebrate impact',
-              icon: Heart,
+              Icon: Heart,
               desc: 'Share photos and stories tied to real-world actions.',
             },
-          ].map(({ title, icon: Icon, desc }) => (
+          ].map(({ title, Icon, desc }) => (
             <Card key={title} className="h-full">
               <CardContent className="p-6 flex flex-col gap-3">
                 <div className="w-10 h-10 rounded-lg bg-secondary grid place-items-center">

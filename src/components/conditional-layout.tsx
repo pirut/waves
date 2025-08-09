@@ -6,6 +6,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Separator } from '@/components/ui/separator';
 import { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 
 interface ConditionalLayoutProps {
   children: React.ReactNode;
@@ -14,10 +15,22 @@ interface ConditionalLayoutProps {
 export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const { user, loading } = useAuth();
   const [isMounted, setIsMounted] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Redirect unauthenticated users to landing page for protected routes
+  useEffect(() => {
+    if (!isMounted || loading) return;
+    if (user) return;
+    const publicPaths = new Set<string>(['/', '/login']);
+    if (!publicPaths.has(pathname || '/')) {
+      router.replace('/');
+    }
+  }, [isMounted, loading, user, pathname, router]);
 
   // Show loading state during hydration and auth check
   if (!isMounted || loading) {
