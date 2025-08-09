@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { SidebarMenuButton } from '@/components/ui/sidebar';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,14 +19,12 @@ export function ModeToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <SidebarMenuButton tooltip="Toggle theme">
-          {/* Wrapper ensures icon remains the first child so collapsed state always shows one icon */}
+        <Button variant="ghost" size="icon" aria-label="Toggle theme">
           <span className="relative inline-flex h-4 w-4 items-center justify-center">
             <Sun className="h-4 w-4 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
             <Moon className="absolute h-4 w-4 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
           </span>
-          <span>Theme</span>
-        </SidebarMenuButton>
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent side={isMobile ? 'bottom' : 'right'} align="end" sideOffset={4}>
         <DropdownMenuItem onClick={() => setTheme('light')}>Light</DropdownMenuItem>
