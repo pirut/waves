@@ -118,6 +118,61 @@ export const eventsRouter = router({
     };
   }),
 
+  getAttendees: publicProcedure.input(z.object({ id: z.string() })).query(async ({ input }) => {
+    const eventDoc = await adminDb.collection('events').doc(input.id).get();
+    if (!eventDoc.exists) {
+      throw new Error('Event not found');
+    }
+    const data = eventDoc.data() as { attendees?: string[] } | undefined;
+    const attendeeUids = data?.attendees || [];
+    if (attendeeUids.length === 0) return [];
+
+    // Fetch user profiles for attendees (chunk to avoid Firestore 'in' limit)
+    const chunkSize = 10;
+    const chunks: string[][] = [];
+    for (let i = 0; i < attendeeUids.length; i += chunkSize) {
+      chunks.push(attendeeUids.slice(i, i + chunkSize));
+    }
+
+    const results: Array<Record<string, unknown>> = [];
+    for (const chunk of chunks) {
+      const snap = await adminDb.collection('users').where('uid', 'in', chunk).get();
+      results.push(...snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as object) })));
+    }
+    return results;
+  }),
+
+  attend: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const ref = adminDb.collection('events').doc(input.id);
+      const snap = await ref.get();
+      if (!snap.exists) throw new Error('Event not found');
+      const data = snap.data() as { attendees?: string[]; maxAttendees?: number };
+      const attendees = Array.isArray(data.attendees) ? [...data.attendees] : [];
+      if (attendees.includes(ctx.user.uid)) {
+        return { success: true, alreadyJoined: true };
+      }
+      if (typeof data.maxAttendees === 'number' && attendees.length >= data.maxAttendees) {
+        throw new Error('Event is full');
+      }
+      attendees.push(ctx.user.uid);
+      await ref.update({ attendees, updatedAt: new Date().toISOString() });
+      return { success: true };
+    }),
+
+  leave: protectedProcedure.input(z.object({ id: z.string() })).mutation(async ({ input, ctx }) => {
+    const ref = adminDb.collection('events').doc(input.id);
+    const snap = await ref.get();
+    if (!snap.exists) throw new Error('Event not found');
+    const data = snap.data() as { attendees?: string[] };
+    const attendees = (Array.isArray(data.attendees) ? data.attendees : []).filter(
+      (uid) => uid !== ctx.user.uid
+    );
+    await ref.update({ attendees, updatedAt: new Date().toISOString() });
+    return { success: true };
+  }),
+
   create: protectedProcedure.input(eventSchema).mutation(async ({ input, ctx }) => {
     // Filter out undefined values to avoid Firestore errors
     const cleanInput = Object.fromEntries(
