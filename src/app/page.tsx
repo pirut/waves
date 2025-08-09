@@ -8,9 +8,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import AuthWidget from '@/components/AuthWidget';
 import { Calendar, Map, Users, Heart, Sparkles } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
 
 export default function Home() {
   const router = useRouter();
@@ -25,6 +32,8 @@ export default function Home() {
     });
     return () => unsub();
   }, [router]);
+
+  const { data: stats } = trpc.stats.useQuery(undefined, { staleTime: 60_000 });
 
   if (!authReady) {
     return (
@@ -41,7 +50,9 @@ export default function Home() {
         <div className="container mx-auto px-4 py-16 grid lg:grid-cols-2 gap-10 items-center">
           <div className="flex flex-col gap-6">
             <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="text-sm">Do good IRL</Badge>
+              <Badge variant="secondary" className="text-sm">
+                Do good IRL
+              </Badge>
               <span className="text-sm text-muted-foreground">Make Waves in your community</span>
             </div>
             <h1 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight">
@@ -52,7 +63,6 @@ export default function Home() {
               RSVP with friends, and share the moments that matter.
             </p>
             <div className="flex flex-wrap gap-3">
-              <Button size="lg" onClick={() => router.push('/map')}>Explore the Map</Button>
               <Dialog>
                 <DialogTrigger asChild>
                   <Button size="lg" variant="secondary" className="gap-2">
@@ -68,9 +78,15 @@ export default function Home() {
               </Dialog>
             </div>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2"><Users className="h-4 w-4" /> Growing community</div>
-              <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Weekly new events</div>
-              <div className="flex items-center gap-2"><Heart className="h-4 w-4" /> Built for impact</div>
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4" /> {stats?.usersCount ?? '—'} users
+              </div>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" /> {stats?.eventsCount ?? '—'} events
+              </div>
+              <div className="flex items-center gap-2">
+                <Heart className="h-4 w-4" /> Built for impact
+              </div>
             </div>
           </div>
 
@@ -93,12 +109,28 @@ export default function Home() {
 
       <section className="container mx-auto px-4 pb-16">
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[{
-            title: 'Map-first discovery', icon: Map, desc: 'Browse real events on a beautiful map and filter by what matters.'
-          }, { title: 'Go with friends', icon: Users, desc: 'RSVP together and see who’s attending before you head out.'
-          }, { title: 'Stay organized', icon: Calendar, desc: 'Track upcoming plans and get gentle reminders when it’s time.'
-          }, { title: 'Celebrate impact', icon: Heart, desc: 'Share photos and stories tied to real-world actions.'
-          }].map(({ title, icon: Icon, desc }) => (
+          {[
+            {
+              title: 'Map-first discovery',
+              icon: Map,
+              desc: 'Browse real events on a beautiful map and filter by what matters.',
+            },
+            {
+              title: 'Go with friends',
+              icon: Users,
+              desc: 'RSVP together and see who’s attending before you head out.',
+            },
+            {
+              title: 'Stay organized',
+              icon: Calendar,
+              desc: 'Track upcoming plans and get gentle reminders when it’s time.',
+            },
+            {
+              title: 'Celebrate impact',
+              icon: Heart,
+              desc: 'Share photos and stories tied to real-world actions.',
+            },
+          ].map(({ title, icon: Icon, desc }) => (
             <Card key={title} className="h-full">
               <CardContent className="p-6 flex flex-col gap-3">
                 <div className="w-10 h-10 rounded-lg bg-secondary grid place-items-center">
@@ -119,13 +151,16 @@ export default function Home() {
           <CardContent className="p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="max-w-prose">
               <h3 className="text-2xl font-bold mb-1">Ready to make a wave?</h3>
-              <p className="text-muted-foreground">Jump in now—discover events near you and meet people making a difference.</p>
+              <p className="text-muted-foreground">
+                Jump in now—discover events near you and meet people making a difference.
+              </p>
             </div>
             <div className="flex gap-3">
-              <Button size="lg" onClick={() => router.push('/map')}>Explore the Map</Button>
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button size="lg" variant="secondary">Create Account</Button>
+                  <Button size="lg" variant="secondary">
+                    Create Account
+                  </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-md">
                   <DialogHeader>
