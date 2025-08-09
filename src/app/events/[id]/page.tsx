@@ -132,30 +132,58 @@ export default function EventDetailsPage() {
     const cache: Record<string, AttendeeUser> = {};
 
     attendeeUids.forEach((uid) => {
-      // Fallback listener by 'uid' field to support setups where doc.id !== uid
+      // 1) Listen to user document by id (uid)
+      const userDocRef = doc(db, 'users', uid);
+      const unsubDoc = onSnapshot(
+        userDocRef,
+        (snap) => {
+          if (snap.exists()) {
+            const data = snap.data() as Partial<AttendeeUser>;
+            cache[uid] = {
+              id: snap.id,
+              uid,
+              displayName: data.displayName,
+              email: data.email,
+              photoURL: data.photoURL,
+            };
+          } else {
+            if (!cache[uid]) cache[uid] = { id: uid, uid } as AttendeeUser;
+          }
+          setLiveAttendees(
+            Object.values(cache).sort((a, b) =>
+              (a.displayName || '').localeCompare(b.displayName || '')
+            )
+          );
+        },
+        (err) => console.warn('User doc listener error for', uid, err)
+      );
+      attendeesUnsubsRef.current.push(unsubDoc);
+
+      // 2) Also listen by 'uid' field (covers case where doc.id !== uid)
       const byField = query(collection(db, 'users'), where('uid', '==', uid));
-      const unsub = onSnapshot(byField, (snap) => {
-        if (snap.empty) {
-          delete cache[uid];
-        } else {
-          // Use first matching doc
-          const docSnap = snap.docs[0];
-          const data = docSnap.data() as Partial<AttendeeUser>;
-          cache[uid] = {
-            id: docSnap.id,
-            uid,
-            displayName: data.displayName,
-            email: data.email,
-            photoURL: data.photoURL,
-          };
-        }
-        setLiveAttendees(
-          Object.values(cache).sort((a, b) =>
-            (a.displayName || '').localeCompare(b.displayName || '')
-          )
-        );
-      });
-      attendeesUnsubsRef.current.push(unsub);
+      const unsubQuery = onSnapshot(
+        byField,
+        (snap) => {
+          if (!snap.empty) {
+            const docSnap = snap.docs[0];
+            const data = docSnap.data() as Partial<AttendeeUser>;
+            cache[uid] = {
+              id: docSnap.id,
+              uid,
+              displayName: data.displayName,
+              email: data.email,
+              photoURL: data.photoURL,
+            };
+          }
+          setLiveAttendees(
+            Object.values(cache).sort((a, b) =>
+              (a.displayName || '').localeCompare(b.displayName || '')
+            )
+          );
+        },
+        (err) => console.warn('User uid field listener error for', uid, err)
+      );
+      attendeesUnsubsRef.current.push(unsubQuery);
     });
 
     return () => {
@@ -328,22 +356,34 @@ export default function EventDetailsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {(liveAttendees || []).length === 0 ? (
+            {attendeeUids.length === 0 && (liveAttendees || []).length === 0 ? (
               <p className="text-sm text-muted-foreground">No attendees yet.</p>
             ) : (
               <div className="flex flex-col gap-3">
-                {liveAttendees.map((u: AttendeeUser) => (
-                  <div key={u.id} className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={u.photoURL || ''} alt={u.displayName || 'User'} />
-                      <AvatarFallback>{(u.displayName || 'U').charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col leading-tight">
-                      <span className="text-sm font-medium">{u.displayName || 'User'}</span>
-                      {u.email && <span className="text-xs text-muted-foreground">{u.email}</span>}
+                {attendeeUids.map((uid) => {
+                  const u =
+                    liveAttendees.find((x) => x.uid === uid || x.id === uid) ||
+                    ({ id: uid, uid } as AttendeeUser);
+                  return (
+                    <div key={u.id} className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage
+                          src={u.photoURL || ''}
+                          alt={u.displayName || u.uid || 'User'}
+                        />
+                        <AvatarFallback>{(u.displayName || u.uid || 'U').charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col leading-tight">
+                        <span className="text-sm font-medium">
+                          {u.displayName || u.uid || 'User'}
+                        </span>
+                        {u.email && (
+                          <span className="text-xs text-muted-foreground">{u.email}</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
