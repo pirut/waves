@@ -160,7 +160,11 @@ export default function EventDetailsPage() {
             allResults[change.doc.id] = user;
           }
         });
-        setLiveAttendees(Object.values(allResults).sort((a, b) => (a.displayName || '').localeCompare(b.displayName || '')));
+        setLiveAttendees(
+          Object.values(allResults).sort((a, b) =>
+            (a.displayName || '').localeCompare(b.displayName || '')
+          )
+        );
       });
       attendeesUnsubsRef.current.push(unsub);
     });
@@ -244,7 +248,7 @@ export default function EventDetailsPage() {
             >
               <div className="flex items-center gap-1">
                 <Tag className="h-4 w-4" />
-                 {displayEvent.category}
+                {displayEvent.category}
               </div>
             </div>
           </div>
@@ -267,7 +271,10 @@ export default function EventDetailsPage() {
                     <Button variant="outline" disabled>
                       ✓ You&apos;re attending
                     </Button>
-                    <Button variant="ghost" onClick={() => leaveMutation.mutate({ id: displayEvent.id })}>
+                    <Button
+                      variant="ghost"
+                      onClick={() => leaveMutation.mutate({ id: displayEvent.id })}
+                    >
                       Leave
                     </Button>
                   </>
@@ -322,7 +329,9 @@ export default function EventDetailsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Attendees ({(displayEvent.attendees || []).length})</CardTitle>
+            <CardTitle className="text-lg">
+              Attendees ({(displayEvent.attendees || []).length})
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {(liveAttendees || []).length === 0 ? (

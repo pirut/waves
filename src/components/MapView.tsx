@@ -485,7 +485,7 @@ export function MapView({
   }
 
   return (
-    <div className={`relative overflow-hidden rounded-lg ${className}`}>
+    <div className={`relative h-full overflow-hidden rounded-lg ${className}`}>
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
         center={mapCenter}
