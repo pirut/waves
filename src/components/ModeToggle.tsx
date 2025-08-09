@@ -19,8 +19,11 @@ export function ModeToggle() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <SidebarMenuButton tooltip="Toggle theme">
-          <Sun className="h-4 w-4 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
-          <Moon className="absolute h-4 w-4 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
+          {/* Wrapper ensures icon remains the first child so collapsed state always shows one icon */}
+          <span className="relative inline-flex h-4 w-4 items-center justify-center">
+            <Sun className="h-4 w-4 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
+            <Moon className="absolute h-4 w-4 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
+          </span>
           <span>Theme</span>
         </SidebarMenuButton>
       </DropdownMenuTrigger>
