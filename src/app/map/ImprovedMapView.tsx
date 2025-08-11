@@ -5,8 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
 import CreateEventModal from '@/components/CreateEventModal';
-import { Locate, PanelLeftIcon } from 'lucide-react';
-import { useSidebar } from '@/components/ui/sidebar';
+import { Locate } from 'lucide-react';
+// import { useSidebar } from '@/components/ui/sidebar';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import { useMapBounds } from '@/contexts/MapBoundsContext';
 
@@ -172,7 +172,7 @@ export default function ImprovedMapView() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const { setMapBounds } = useMapBounds();
-  const { toggleSidebar } = useSidebar();
+  // Removed minimize button; keep hook import if needed elsewhere
   const clustererRef = useRef<MarkerClusterer | null>(null);
 
   // State for viewport-based loading
@@ -662,15 +662,8 @@ export default function ImprovedMapView() {
           {/* Top Controls */}
           <div className="absolute top-4 left-4 right-4 z-30 pointer-events-none">
             <div className="flex justify-between items-center">
-              {/* Sidebar Toggle Button - Left side */}
-              <Button
-                variant="outline"
-                onClick={toggleSidebar}
-                size="sm"
-                className="h-10 w-10 p-0 bg-background/95 backdrop-blur-sm shadow-lg pointer-events-auto"
-              >
-                <PanelLeftIcon className="h-4 w-4" />
-              </Button>
+              {/* Left spacing preserved; floating toggle exists in layout */}
+              <div className="w-10 h-10" />
 
               {/* Location Button - Right side */}
               {userLocation && (

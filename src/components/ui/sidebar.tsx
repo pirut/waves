@@ -79,6 +79,7 @@ function SidebarProvider({
 
       // This sets the cookie to keep the sidebar state.
       document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+      // Clean: no debug side-effects
     },
     [setOpenProp, open]
   );
@@ -96,9 +97,8 @@ function SidebarProvider({
         toggleSidebar();
       }
     };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [toggleSidebar]);
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
@@ -209,28 +209,38 @@ function Sidebar({
       {/* This is what handles the sidebar gap on desktop */}
       <div
         data-slot="sidebar-gap"
-        className={cn(
-          'relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear',
-          'group-data-[collapsible=offcanvas]:w-0',
-          'group-data-[side=right]:rotate-180',
-          variant === 'floating' || variant === 'inset'
-            ? 'group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]'
-            : 'group-data-[collapsible=icon]:w-(--sidebar-width-icon)'
-        )}
+        className={cn('relative bg-transparent transition-[width] duration-200 ease-linear')}
+        style={
+          {
+            width:
+              state === 'collapsed'
+                ? variant === 'floating' || variant === 'inset'
+                  ? 'calc(var(--sidebar-width-icon) + 1rem)'
+                  : 'var(--sidebar-width-icon)'
+                : 'var(--sidebar-width)',
+          } as React.CSSProperties
+        }
       />
       <div
         data-slot="sidebar-container"
         className={cn(
-          'fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex',
-          side === 'left'
-            ? 'left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]'
-            : 'right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]',
-          // Adjust the padding for floating and inset variants.
+          'fixed inset-y-0 z-10 hidden h-svh transition-[left,right,width] duration-200 ease-linear md:flex',
+          side === 'left' ? 'left-0' : 'right-0',
           variant === 'floating' || variant === 'inset'
-            ? 'p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]'
-            : 'group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l',
+            ? 'p-2'
+            : 'group-data-[side=left]:border-r group-data-[side=right]:border-l',
           className
         )}
+        style={
+          {
+            width:
+              state === 'collapsed'
+                ? variant === 'floating' || variant === 'inset'
+                  ? 'calc(var(--sidebar-width-icon) + 1rem + 2px)'
+                  : 'var(--sidebar-width-icon)'
+                : 'var(--sidebar-width)',
+          } as React.CSSProperties
+        }
         {...props}
       >
         <div
