@@ -1,176 +1,213 @@
-"use client";
+'use client';
 
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useEffect, useState } from "react";
-import { trpc } from "@/lib/trpc";
-import AuthWidget from "@/components/AuthWidget";
-import EventList from "@/components/EventList";
-import { auth, db } from "../firebase";
-import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import Image from "next/image";
-
-// Post interface to match the data structure
-interface Post {
-    id: string;
-    content?: string;
-    caption?: string;
-    mediaUrl?: string;
-    eventId?: string;
-    authorId?: string;
-    createdAt?: string;
-}
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '../firebase';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import AuthWidget from '@/components/AuthWidget';
+import { Calendar, Map as MapIcon, Users, Heart, Sparkles } from 'lucide-react';
+import { MapView } from '@/components/MapView';
+import { Event } from '@/types/event';
+import { trpc } from '@/lib/trpc';
 
 export default function Home() {
-    const router = useRouter();
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const router = useRouter();
+  const [, setCurrentUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
-    // Use tRPC to fetch posts
-    const { data: posts = [], isLoading: loadingPosts } = trpc.posts.getAll.useQuery() as {
-        data: Post[];
-        isLoading: boolean;
-    };
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      setAuthReady(true);
+      if (user) router.replace('/dashboard');
+    });
+    return () => unsub();
+  }, [router]);
 
-    // Sync user to Firestore on sign-in
-    useEffect(() => {
-        const unsub = onAuthStateChanged(auth, async (user) => {
-            setCurrentUser(user);
-            if (user) {
-                const userRef = doc(db, "users", user.uid);
-                const userSnap = await getDoc(userRef);
-                if (!userSnap.exists()) {
-                    await setDoc(userRef, {
-                        name: user.displayName || user.email,
-                        profilePhotoUrl: user.photoURL || "",
-                        email: user.email,
-                        createdAt: new Date().toISOString(),
-                    });
-                }
-            }
-        });
-        return () => unsub();
-    }, []);
-
-    return (
-        <div className="flex flex-col min-h-screen px-2 sm:px-4">
-            {!currentUser ? (
-                <div className="flex flex-1 flex-col md:flex-row items-center justify-center gap-4 md:gap-8 w-full py-4">
-                    <Card className="max-w-md w-full backdrop-blur-md shadow-xl border-none mb-4 md:mb-0">
-                        <CardHeader className="flex flex-col items-center gap-2">
-                            <CardTitle className="text-center">Make Waves</CardTitle>
-                            <CardDescription className="subtitle max-w-md text-center">
-                                Discover, attend, and share real-world events focused on doing good. Every post is rooted in real-life impact.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex flex-col items-center gap-6 p-0">
-                            <Button className="w-full max-w-xs py-4 md:py-6" onClick={() => router.push("/map")} variant="default" size="lg">
-                                Find Events Near You
-                            </Button>
-                            <Button className="w-full max-w-xs flex items-center gap-2 text-lg py-4 md:py-6" variant="secondary" size="lg">
-                                <svg width="20" height="20" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <g clipPath="url(#clip0_17_40)">
-                                        <path
-                                            d="M47.5 24.5C47.5 22.8333 47.3333 21.1667 47 19.5833H24V28.9167H37.3333C36.6667 32.0833 34.6667 34.75 31.8333 36.5833V41.0833H39.5C44 37.0833 47.5 31.3333 47.5 24.5Z"
-                                            fill="currentColor"
-                                        />
-                                        <path
-                                            d="M24 48C30.5 48 36.0833 45.9167 39.5 41.0833L31.8333 36.5833C29.9167 37.9167 27.5 38.75 24 38.75C17.8333 38.75 12.5 34.5833 10.6667 29.0833H2.83334V33.75C6.25 41.0833 14.5 48 24 48Z"
-                                            fill="currentColor"
-                                        />
-                                        <path
-                                            d="M10.6667 29.0833C10.1667 27.75 10 26.3333 10 24.9167C10 23.5 10.1667 22.0833 10.6667 20.75V16.0833H2.83334C1.5 18.75 0.75 21.75 0.75 24.9167C0.75 28.0833 1.5 31.0833 2.83334 33.75L10.6667 29.0833Z"
-                                            fill="currentColor"
-                                        />
-                                        <path
-                                            d="M24 9.25C27.9167 9.25 31.0833 10.5833 33.25 12.5833L39.6667 6.16667C36.0833 2.91667 30.5 0.75 24 0.75C14.5 0.75 6.25 7.66667 2.83334 16.0833L10.6667 20.75C12.5 15.25 17.8333 9.25 24 9.25Z"
-                                            fill="currentColor"
-                                        />
-                                    </g>
-                                    <defs>
-                                        <clipPath id="clip0_17_40">
-                                            <rect width="48" height="48" fill="white" />
-                                        </clipPath>
-                                    </defs>
-                                </svg>
-                                Sign in with Google
-                            </Button>
-                        </CardContent>
-                    </Card>
-                    <AuthWidget />
-                </div>
-            ) : (
-                <div className="flex flex-1 flex-col gap-8 w-full px-2 sm:px-4 py-4 sm:py-8 mx-auto max-w-4xl">
-                    {/* Welcome Section */}
-                    <div className="text-center py-8">
-                        <h1 className="text-3xl font-bold mb-4">Welcome back, {currentUser.displayName || currentUser.email}!</h1>
-                        <p className="subtitle text-lg mb-6">Ready to make some waves? Discover events near you or create your own.</p>
-                        <div className="flex gap-4 justify-center">
-                            <Button onClick={() => router.push("/map")} size="lg">
-                                Explore Map
-                            </Button>
-                            <Button onClick={() => router.push("/profile")} variant="outline" size="lg">
-                                My Profile
-                            </Button>
-                        </div>
-                    </div>
-
-                    {/* Upcoming Events */}
-                    <div className="w-full">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="section-title">Upcoming Events</h2>
-                            <Button onClick={() => router.push("/map")} variant="outline" size="sm">
-                                View All
-                            </Button>
-                        </div>
-                        <EventList limit={6} showCreateButton={true} />
-                    </div>
-
-                    {/* Recent Posts Section (keeping for later when posts are implemented) */}
-                    <div className="w-full">
-                        <h2 className="section-title mb-4">Recent Community Posts</h2>
-                        {loadingPosts ? (
-                            <div className="text-center py-8 subtitle">Loading posts...</div>
-                        ) : posts.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-12 opacity-80">
-                                <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="60" cy="60" r="56" fill="#D4E9FF" stroke="#B6D0E2" strokeWidth="4" />
-                                    <ellipse cx="60" cy="80" rx="28" ry="8" fill="#B6D0E2" />
-                                    <path d="M45 65 Q60 90 75 65" stroke="currentColor" strokeWidth="3" fill="none" />
-                                    <rect x="48" y="48" width="24" height="16" rx="3" fill="currentColor" />
-                                    <rect x="54" y="54" width="12" height="4" rx="2" fill="#B6D0E2" />
-                                </svg>
-                                <div className="mt-6 subtitle text-center">
-                                    No posts yet.
-                                    <br />
-                                    Attend an event to share your first wave!
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {posts.slice(0, 6).map((post) => (
-                                    <Card key={post.id} className="p-4">
-                                        <CardHeader className="p-0">
-                                            {post.mediaUrl && (
-                                                <Image
-                                                    src={post.mediaUrl || ""}
-                                                    alt={post.caption || ""}
-                                                    width={400}
-                                                    height={160}
-                                                    className="w-full h-32 object-cover rounded mb-2"
-                                                />
-                                            )}
-                                            <CardTitle className="font-semibold mb-1 text-sm">{post.caption}</CardTitle>
-                                            <CardDescription className="text-xs subtitle">Event: {post.eventId}</CardDescription>
-                                        </CardHeader>
-                                    </Card>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
+  const { data: stats } = trpc.stats.useQuery(undefined, { staleTime: 60_000 });
+  const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [consented, setConsented] = useState(false);
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setConsented(true);
+      },
+      () => {},
+      { timeout: 5000 }
     );
+  }, []);
+  const nearbyEvents: Event[] = [];
+
+  if (!authReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <main className="min-h-screen flex flex-col">
+      <section className="relative flex-1 flex items-center">
+        <div className="absolute inset-0 -z-10" />
+        <div className="container mx-auto px-4 py-16 grid lg:grid-cols-2 gap-10 items-center">
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center gap-3">
+              <Badge variant="secondary" className="text-sm">
+                Do good IRL
+              </Badge>
+              <span className="text-sm text-muted-foreground">Make Waves in your community</span>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight">
+              Discover impact events around you and turn intention into action
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-prose">
+              Make Waves is a map-centric social app for real-world good. Find nearby opportunities,
+              RSVP with friends, and share the moments that matter.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button size="lg" variant="secondary" className="gap-2">
+                    <Sparkles className="h-4 w-4" /> Get Started
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Sign in</DialogTitle>
+                  </DialogHeader>
+                  <AuthWidget />
+                </DialogContent>
+              </Dialog>
+            </div>
+            <div className="flex items-center gap-6 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4" /> {stats?.usersCount ?? '—'} users
+              </div>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" /> {stats?.eventsCount ?? '—'} events
+              </div>
+              <div className="flex items-center gap-2">
+                <Heart className="h-4 w-4" /> Built for impact
+              </div>
+            </div>
+          </div>
+
+          <Card className="w-full overflow-hidden">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">See what’s happening near you</CardTitle>
+              <CardDescription>Map-first discovery with rich event details</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="aspect-video w-full rounded-lg bg-muted grid place-items-center">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <MapIcon className="h-5 w-5" />
+                  <span>Nearby events preview</span>
+                </div>
+              </div>
+              <div className="mt-4 h-[280px] rounded-lg overflow-hidden">
+                {consented && center ? (
+                  <MapView
+                    interactive={false}
+                    showZoomControls={false}
+                    showFullscreenControl={false}
+                    center={center}
+                    zoom={12}
+                    minZoom={3}
+                    maxZoom={18}
+                    showEventMarkers={false}
+                    events={nearbyEvents}
+                  />
+                ) : (
+                  <div className="w-full h-full grid place-items-center text-muted-foreground text-sm">
+                    Enable location to preview events
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      <section className="container mx-auto px-4 pb-16">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            {
+              title: 'Map-first discovery',
+              Icon: MapIcon,
+              desc: 'Browse real events on a beautiful map and filter by what matters.',
+            },
+            {
+              title: 'Go with friends',
+              Icon: Users,
+              desc: 'RSVP together and see who’s attending before you head out.',
+            },
+            {
+              title: 'Stay organized',
+              Icon: Calendar,
+              desc: 'Track upcoming plans and get gentle reminders when it’s time.',
+            },
+            {
+              title: 'Celebrate impact',
+              Icon: Heart,
+              desc: 'Share photos and stories tied to real-world actions.',
+            },
+          ].map(({ title, Icon, desc }) => (
+            <Card key={title} className="h-full">
+              <CardContent className="p-6 flex flex-col gap-3">
+                <div className="w-10 h-10 rounded-lg bg-secondary grid place-items-center">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <h3 className="text-lg font-semibold">{title}</h3>
+                <p className="text-sm text-muted-foreground">{desc}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <Separator className="my-4 container mx-auto" />
+
+      <section className="container mx-auto px-4 pb-20">
+        <Card className="w-full overflow-hidden">
+          <CardContent className="p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="max-w-prose">
+              <h3 className="text-2xl font-bold mb-1">Ready to make a wave?</h3>
+              <p className="text-muted-foreground">
+                Jump in now—discover events near you and meet people making a difference.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button size="lg" variant="secondary">
+                    Create Account
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Welcome to Make Waves</DialogTitle>
+                  </DialogHeader>
+                  <AuthWidget />
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+    </main>
+  );
 }

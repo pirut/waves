@@ -1,0 +1,286 @@
+'use client';
+
+import * as React from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
+import { Map, Calendar, Users, Heart, TrendingUp, MessageSquare } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
+import { useMapBounds } from '@/contexts/MapBoundsContext';
+
+import { NavUser } from '@/components/nav-user';
+import { Label } from '@/components/ui/label';
+import { ModeToggle } from '@/components/ModeToggle';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInput,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
+} from '@/components/ui/sidebar';
+import { Switch } from '@/components/ui/switch';
+import { useAuth } from '@/hooks/useAuth';
+
+// Navigation data for Make Waves
+const navItems = [
+  {
+    title: 'Map View',
+    url: '/map',
+    icon: Map,
+  },
+  {
+    title: 'Events',
+    url: '/events',
+    icon: Calendar,
+  },
+  {
+    title: 'My Events',
+    url: '/my-events',
+    icon: Heart,
+  },
+  {
+    title: 'Friends',
+    url: '/friends',
+    icon: Users,
+  },
+  {
+    title: 'Activity',
+    url: '/activity',
+    icon: TrendingUp,
+  },
+  {
+    title: 'Messages',
+    url: '/messages',
+    icon: MessageSquare,
+  },
+  // Profile and settings are accessible from avatar menu; keeping Profile entry removed per request
+];
+
+import { Event } from '@/types/event';
+
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { user } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [showUpcoming, setShowUpcoming] = React.useState(true);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [enableBoundsFiltering, setEnableBoundsFiltering] = React.useState(false);
+
+  // Fetch events from Firebase using tRPC
+  const {
+    data: events = [],
+    isLoading: eventsLoading,
+    error: eventsError,
+  } = trpc.events.getAll.useQuery();
+
+  // Get map bounds from context
+  const { mapBounds } = useMapBounds();
+
+  // Enable bounds filtering when map bounds change (indicating user interaction)
+  React.useEffect(() => {
+    if (pathname === '/map' && mapBounds) {
+      setEnableBoundsFiltering(true);
+    }
+  }, [pathname, mapBounds]);
+
+  // Filter and sort events based on search query and map bounds
+  const filteredEvents = React.useMemo(() => {
+    if (!events.length) return [];
+
+    // First filter by search query
+    let filtered = events.filter((event: Event) => {
+      if (!searchQuery.trim()) return true;
+
+      const query = searchQuery.toLowerCase();
+      return (
+        event.title?.toLowerCase().includes(query) ||
+        event.description?.toLowerCase().includes(query) ||
+        event.location?.address?.toLowerCase().includes(query) ||
+        event.category?.toLowerCase().includes(query)
+      );
+    });
+
+    // If on map view and we have map bounds, filter events by map bounds
+    if (
+      pathname === '/map' &&
+      mapBounds &&
+      typeof google !== 'undefined' &&
+      enableBoundsFiltering
+    ) {
+      filtered = filtered.filter((event: Event) => {
+        if (
+          !event.location ||
+          typeof event.location.lat !== 'number' ||
+          typeof event.location.lng !== 'number'
+        ) {
+          return false;
+        }
+
+        const eventLatLng = new google.maps.LatLng(event.location.lat, event.location.lng);
+        return mapBounds.contains(eventLatLng);
+      });
+    }
+
+    // Then sort by date (most recent first)
+    return filtered.sort((a: Event, b: Event) => {
+      // Try to parse dates if available
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+
+      return dateB - dateA;
+    });
+  }, [events, searchQuery, pathname, mapBounds, enableBoundsFiltering]);
+
+  // Get user data for sidebar
+  const userData = user
+    ? {
+        name: user.displayName || 'User',
+        email: user.email || '',
+        avatar: user.photoURL || '',
+      }
+    : {
+        name: 'Guest',
+        email: '',
+        avatar: '',
+      };
+
+  return (
+    <Sidebar collapsible="icon" {...props}>
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              size="lg"
+              onClick={() => router.push('/dashboard')}
+              isActive={pathname === '/dashboard'}
+              tooltip="Make Waves"
+            >
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                <div className="w-6 h-6 bg-[#FFE5D4] rounded-full flex items-center justify-center">
+                  <span className="text-gray-900 text-xs font-bold">W</span>
+                </div>
+              </div>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-semibold">Make Waves</span>
+                <span className="truncate text-xs">Dashboard</span>
+              </div>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarMenu>
+            {navItems.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton asChild isActive={pathname === item.url} tooltip={item.title}>
+                  <Link href={item.url}>
+                    <item.icon />
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {/* Events Section - Show on map page */}
+        {pathname === '/map' && (
+          <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+            <SidebarGroupLabel>
+              <div className="flex w-full items-center justify-between">
+                <span>Events in View</span>
+                <Label className="flex items-center gap-2 text-xs">
+                  <span>Upcoming</span>
+                  <Switch
+                    className="shadow-none"
+                    checked={showUpcoming}
+                    onCheckedChange={setShowUpcoming}
+                  />
+                </Label>
+              </div>
+            </SidebarGroupLabel>
+            <SidebarInput
+              placeholder="Search events..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <SidebarGroupContent>
+              {mapBounds && (
+                <div className="p-2 bg-muted/30 text-xs text-muted-foreground rounded-md mb-2">
+                  Showing events in the current map view
+                </div>
+              )}
+              {eventsLoading ? (
+                <div className="flex flex-col gap-2 p-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex flex-col gap-1 animate-pulse">
+                      <div className="h-3 bg-muted rounded w-3/4"></div>
+                      <div className="h-2 bg-muted rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : eventsError ? (
+                <div className="p-2 text-center text-xs text-muted-foreground">
+                  Failed to load events
+                </div>
+              ) : filteredEvents.length === 0 ? (
+                <div className="p-2 text-center text-xs text-muted-foreground">
+                  {searchQuery.trim() ? 'No events match your search' : 'No events in view'}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2 p-2 max-h-[300px] overflow-y-auto">
+                  {filteredEvents
+                    .filter((event: Event) => {
+                      if (showUpcoming) return true;
+                      const eventDate = event.date || '';
+                      return eventDate.toLowerCase().includes('today');
+                    })
+                    .slice(0, 10)
+                    .map((event: Event) => (
+                      <Link
+                        key={event.id}
+                        href={`/events/${event.id}`}
+                        className="flex flex-col gap-1 p-2 rounded-md hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                      >
+                        <span className="font-medium text-xs truncate">{event.title}</span>
+                        <span className="text-xs text-muted-foreground truncate">
+                          {event.location?.address}
+                        </span>
+                        {event.category && (
+                          <span className="text-xs bg-secondary px-1 py-0.5 rounded w-fit">
+                            {event.category}
+                          </span>
+                        )}
+                      </Link>
+                    ))}
+                </div>
+              )}
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+      </SidebarContent>
+
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <NavUser user={userData} />
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <ModeToggle />
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+
+      <SidebarRail />
+    </Sidebar>
+  );
+}
