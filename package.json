@@ -64,7 +64,7 @@
     "typescript": "^5"
   },
   "overrides": {
-    "form-data": "2.5.4",
+    "form-data": "2.5.5",
     "@eslint/plugin-kit": "0.3.4"
   }
 }
