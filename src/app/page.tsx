@@ -18,6 +18,7 @@ import {
 import AuthWidget from '@/components/AuthWidget';
 import { Calendar, Map as MapIcon, Users, Heart, Sparkles } from 'lucide-react';
 import { MapView } from '@/components/MapView';
+import { MapBoundsProvider } from '@/contexts/MapBoundsContext';
 import { Event } from '@/types/event';
 import { trpc } from '@/lib/trpc';
 
@@ -49,7 +50,10 @@ export default function Home() {
       { timeout: 5000 }
     );
   }, []);
-  const nearbyEvents: Event[] = [];
+  const { data: nearbyEvents = [] } = trpc.events.getDashboardEvents.useQuery(
+    center ? { userLat: center.lat, userLng: center.lng } : undefined,
+    { staleTime: 60_000 }
+  );
 
   if (!authReady) {
     return (
@@ -112,25 +116,21 @@ export default function Home() {
               <CardDescription>Map-first discovery with rich event details</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="aspect-video w-full rounded-lg bg-muted grid place-items-center">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <MapIcon className="h-5 w-5" />
-                  <span>Nearby events preview</span>
-                </div>
-              </div>
-              <div className="mt-4 h-[280px] rounded-lg overflow-hidden">
+              <div className="mt-4 aspect-square sm:aspect-[5/4] rounded-lg overflow-hidden">
                 {consented && center ? (
-                  <MapView
-                    interactive={false}
-                    showZoomControls={false}
-                    showFullscreenControl={false}
-                    center={center}
-                    zoom={12}
-                    minZoom={3}
-                    maxZoom={18}
-                    showEventMarkers={false}
-                    events={nearbyEvents}
-                  />
+                  <MapBoundsProvider>
+                    <MapView
+                      interactive={false}
+                      showZoomControls={false}
+                      showFullscreenControl={false}
+                      center={center}
+                      zoom={12}
+                      minZoom={3}
+                      maxZoom={18}
+                      showEventMarkers={true}
+                      events={nearbyEvents as Event[]}
+                    />
+                  </MapBoundsProvider>
                 ) : (
                   <div className="w-full h-full grid place-items-center text-muted-foreground text-sm">
                     Enable location to preview events

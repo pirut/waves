@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { router, publicProcedure, protectedProcedure } from '../trpc';
-import { adminDb } from '@/firebaseAdmin';
+import { adminDb, adminAuth } from '@/firebaseAdmin';
 
 const eventSchema = z.object({
   title: z.string().min(1),
@@ -135,10 +135,51 @@ export const eventsRouter = router({
     }
 
     const results: Array<Record<string, unknown>> = [];
+    const foundUids = new Set<string>();
     for (const chunk of chunks) {
       const snap = await adminDb.collection('users').where('uid', 'in', chunk).get();
-      results.push(...snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as object) })));
+      snap.docs.forEach((doc) => {
+        const data = doc.data() as Record<string, unknown>;
+        const uid = (data.uid as string) || doc.id;
+        foundUids.add(uid);
+        results.push({
+          id: doc.id,
+          uid,
+          // normalize to common fields used by client
+          displayName: (data.displayName as string) || (data.name as string) || undefined,
+          email: (data.email as string) || undefined,
+          photoURL: (data.photoURL as string) || (data.profilePhotoUrl as string) || undefined,
+        });
+      });
     }
+
+    // Fallback: for any remaining UIDs without a user doc, use Firebase Auth profile
+    const missing = attendeeUids.filter((uid) => !foundUids.has(uid));
+    if (missing.length > 0) {
+      // Limit parallelism to avoid throttling
+      const concurrency = 5;
+      for (let i = 0; i < missing.length; i += concurrency) {
+        const slice = missing.slice(i, i + concurrency);
+        const authUsers = await Promise.all(
+          slice.map(async (uid) => {
+            try {
+              const user = await adminAuth.getUser(uid);
+              return {
+                id: uid,
+                uid,
+                displayName: user.displayName ?? undefined,
+                email: user.email ?? undefined,
+                photoURL: user.photoURL ?? undefined,
+              } as Record<string, unknown>;
+            } catch {
+              return { id: uid, uid } as Record<string, unknown>;
+            }
+          })
+        );
+        results.push(...authUsers);
+      }
+    }
+
     return results;
   }),
 

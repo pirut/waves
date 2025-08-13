@@ -11,6 +11,7 @@ import { MapView } from '@/components/MapView';
 import type { Event as EventType } from '@/types/event';
 import { MapBoundsProvider } from '@/contexts/MapBoundsContext';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { db } from '@/firebase';
 import { onSnapshot, doc, collection, query, where, Unsubscribe } from 'firebase/firestore';
 
@@ -45,9 +46,14 @@ export default function EventDetailsPage() {
     error: Error | null;
   };
 
+  const eventId = params.id as string;
+  const { data: attendeeProfiles } = trpc.events.getAttendees.useQuery(
+    { id: eventId },
+    { enabled: !!eventId }
+  );
+
   // Realtime event data
   const [liveEvent, setLiveEvent] = useState<Event | null>(null);
-  const eventId = params.id as string;
   useEffect(() => {
     if (!eventId) return;
     const ref = doc(db, 'events', eventId);
@@ -116,6 +122,7 @@ export default function EventDetailsPage() {
   // Realtime attendees from Firestore (per-UID listener; supports either doc-id===uid or 'uid' field)
   const [liveAttendees, setLiveAttendees] = useState<AttendeeUser[]>([]);
   const attendeesUnsubsRef = useRef<Unsubscribe[]>([]);
+  const [attendeesParent] = useAutoAnimate({ duration: 250, easing: 'ease-out' });
 
   const attendeeUids = useMemo(() => {
     const src = (liveEvent?.attendees || event?.attendees || []) as string[];
@@ -138,7 +145,12 @@ export default function EventDetailsPage() {
         userDocRef,
         (snap) => {
           if (snap.exists()) {
-            const data = snap.data() as Partial<AttendeeUser>;
+            const raw = snap.data() as Record<string, unknown>;
+            const data: Partial<AttendeeUser> = {
+              displayName: (raw.displayName as string) || (raw.name as string) || undefined,
+              email: (raw.email as string) || undefined,
+              photoURL: (raw.photoURL as string) || (raw.profilePhotoUrl as string) || undefined,
+            };
             cache[uid] = {
               id: snap.id,
               uid,
@@ -166,7 +178,12 @@ export default function EventDetailsPage() {
         (snap) => {
           if (!snap.empty) {
             const docSnap = snap.docs[0];
-            const data = docSnap.data() as Partial<AttendeeUser>;
+            const raw = docSnap.data() as Record<string, unknown>;
+            const data: Partial<AttendeeUser> = {
+              displayName: (raw.displayName as string) || (raw.name as string) || undefined,
+              email: (raw.email as string) || undefined,
+              photoURL: (raw.photoURL as string) || (raw.profilePhotoUrl as string) || undefined,
+            };
             cache[uid] = {
               id: docSnap.id,
               uid,
@@ -191,6 +208,29 @@ export default function EventDetailsPage() {
       attendeesUnsubsRef.current = [];
     };
   }, [attendeeUids]);
+
+  const attendeesList = useMemo(() => {
+    const liveMap = new Map<string, AttendeeUser>(
+      (liveAttendees || []).map((a) => [a.uid || a.id, a])
+    );
+    const profileMap = new Map<string, AttendeeUser>(
+      ((attendeeProfiles as Array<Record<string, unknown>>) || []).map((p) => {
+        const id = (p.id as string) || '';
+        const uid = (p.uid as string) || id;
+        const displayName = (p.displayName as string) || (p.name as string) || undefined;
+        const photoURL = (p.photoURL as string) || (p.profilePhotoUrl as string) || undefined;
+        return [uid, { id, uid, displayName, email: (p.email as string) || undefined, photoURL }];
+      })
+    );
+
+    const ordered: AttendeeUser[] = [];
+    attendeeUids.forEach((uid) => {
+      const userFromLive = liveMap.get(uid);
+      const userFromProfiles = profileMap.get(uid);
+      ordered.push(userFromLive || userFromProfiles || ({ id: uid, uid } as AttendeeUser));
+    });
+    return ordered.sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+  }, [attendeeUids, liveAttendees, attendeeProfiles]);
 
   if (loading) {
     return (
@@ -242,7 +282,7 @@ export default function EventDetailsPage() {
       (displayEvent.attendees || []).length < displayEvent.maxAttendees);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-8">
       <Button onClick={() => router.back()} variant="outline" className="mb-6">
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back
@@ -307,7 +347,23 @@ export default function EventDetailsPage() {
                 ) : (
                   <Button disabled>Event Full</Button>
                 )}
-                <Button variant="outline">Share Event</Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const shareData = {
+                      title: displayEvent.title,
+                      text: displayEvent.description || 'Check out this event',
+                      url: typeof window !== 'undefined' ? window.location.href : '',
+                    };
+                    if (navigator.share) {
+                      navigator.share(shareData).catch(() => {});
+                    } else if (navigator.clipboard && typeof window !== 'undefined') {
+                      navigator.clipboard.writeText(window.location.href).catch(() => {});
+                    }
+                  }}
+                >
+                  Share Event
+                </Button>
               </>
             ) : (
               <Button onClick={() => router.push('/login')}>Sign in to Join</Button>
@@ -356,29 +412,39 @@ export default function EventDetailsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {attendeeUids.length === 0 && (liveAttendees || []).length === 0 ? (
+            {attendeeUids.length === 0 && attendeesList.length === 0 ? (
               <p className="text-sm text-muted-foreground">No attendees yet.</p>
             ) : (
-              <div className="flex flex-col gap-3">
-                {attendeeUids.map((uid) => {
-                  const u =
-                    liveAttendees.find((x) => x.uid === uid || x.id === uid) ||
-                    ({ id: uid, uid } as AttendeeUser);
+              <div ref={attendeesParent} className="flex flex-col gap-3">
+                {attendeesList.map((u) => {
+                  const primaryName =
+                    u.displayName ||
+                    (u.email ? u.email.split('@')[0] : undefined) ||
+                    u.uid ||
+                    'User';
+                  const initial = (
+                    u.displayName ||
+                    (u.email ? u.email[0] : undefined) ||
+                    u.uid ||
+                    'U'
+                  ).charAt(0);
                   return (
-                    <div key={u.id} className="flex items-center gap-3">
+                    <div
+                      key={u.id}
+                      className="flex items-center gap-3 min-w-0 transition-all duration-300 ease-out motion-safe:animate-fadeInUp"
+                    >
                       <Avatar className="h-8 w-8">
-                        <AvatarImage
-                          src={u.photoURL || ''}
-                          alt={u.displayName || u.uid || 'User'}
-                        />
-                        <AvatarFallback>{(u.displayName || u.uid || 'U').charAt(0)}</AvatarFallback>
+                        {u.photoURL ? <AvatarImage src={u.photoURL} alt={primaryName} /> : null}
+                        <AvatarFallback>{initial}</AvatarFallback>
                       </Avatar>
-                      <div className="flex flex-col leading-tight">
-                        <span className="text-sm font-medium">
-                          {u.displayName || u.uid || 'User'}
+                      <div className="flex flex-col leading-tight min-w-0">
+                        <span className="text-sm font-medium whitespace-normal break-words">
+                          {primaryName}
                         </span>
                         {u.email && (
-                          <span className="text-xs text-muted-foreground">{u.email}</span>
+                          <span className="text-xs text-muted-foreground whitespace-normal break-words">
+                            {u.email}
+                          </span>
                         )}
                       </div>
                     </div>
