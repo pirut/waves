@@ -54,7 +54,7 @@ export function NearbyEventsSection({ events, isLoading = false }: NearbyEventsS
               className="h-7 px-2 text-xs bg-primary hover:bg-primary/90"
               onClick={() => router.push(`/events/${event.id}`)}
             >
-              Join
+              View Event
             </Button>
           </div>
         </div>

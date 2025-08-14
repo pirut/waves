@@ -4,8 +4,9 @@ import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
+import { useMapEvents } from '@/contexts/MapEventsContext';
 import CreateEventModal from '@/components/CreateEventModal';
-import { Locate } from 'lucide-react';
+import { Locate, Plus, Minus } from 'lucide-react';
 // import { useSidebar } from '@/components/ui/sidebar';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import { useMapBounds } from '@/contexts/MapBoundsContext';
@@ -168,6 +169,7 @@ export default function ImprovedMapView() {
   const [center, setCenter] = useState(defaultCenter);
   const [zoom, setZoom] = useState(12);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const { setEvents, setLoading: setGlobalLoading } = useMapEvents();
 
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isMounted, setIsMounted] = useState(false);
@@ -177,6 +179,11 @@ export default function ImprovedMapView() {
 
   // State for viewport-based loading
   const [currentBounds, setCurrentBounds] = useState<google.maps.LatLngBounds | null>(null);
+  const currentBoundsKeyRef = useRef<string>('');
+  const userInteractedRef = useRef<boolean>(false);
+  const [committedBounds, setCommittedBounds] = useState<google.maps.LatLngBounds | null>(null);
+  const [hasPendingBoundsChange, setHasPendingBoundsChange] = useState(false);
+  const [isZoomAcceptable, setIsZoomAcceptable] = useState(true);
   const [enableBoundsFiltering, setEnableBoundsFiltering] = useState(false);
 
   // Handle hydration by only running client-side code after mount
@@ -208,73 +215,34 @@ export default function ImprovedMapView() {
     };
   }, []);
 
-  // Load all events initially
+  // Load events for current map bounds from server
+  const boundsInput = useMemo(() => {
+    if (!committedBounds) return undefined;
+    const ne = committedBounds.getNorthEast();
+    const sw = committedBounds.getSouthWest();
+    return {
+      north: ne.lat(),
+      south: sw.lat(),
+      east: ne.lng(),
+      west: sw.lng(),
+    };
+  }, [committedBounds]);
+
   const {
     data: allEvents = [],
     isLoading: loading,
     refetch: loadEvents,
-  } = trpc.events.getAll.useQuery();
+  } = trpc.events.getByBounds.useQuery(
+    boundsInput as unknown as {
+      north: number;
+      south: number;
+      east: number;
+      west: number;
+    },
+    { enabled: !!boundsInput }
+  );
 
-  // Firebase real-time updates
-  useEffect(() => {
-    if (!isMounted) return;
-
-    let unsubscribe: (() => void) | undefined;
-
-    const setupRealtimeListener = async () => {
-      try {
-        const { db, auth } = await import('@/firebase');
-        const { collection, onSnapshot } = await import('firebase/firestore');
-
-        // Wait for auth state to be determined
-        const waitForAuth = () => {
-          return new Promise<void>((resolve) => {
-            const unsubscribeAuth = auth.onAuthStateChanged(() => {
-              unsubscribeAuth();
-              resolve();
-            });
-          });
-        };
-
-        await waitForAuth();
-
-        unsubscribe = onSnapshot(
-          collection(db, 'events'),
-          () => {
-            // Trigger a refetch when data changes
-            loadEvents();
-          },
-          (error) => {
-            console.error('Realtime events error:', error);
-            // Fallback to periodic refresh if real-time fails
-            const interval = setInterval(() => {
-              if (!document.hidden) {
-                loadEvents();
-              }
-            }, 30000);
-            return () => clearInterval(interval);
-          }
-        );
-      } catch (error) {
-        console.error('Failed to set up realtime listener:', error);
-        // Fallback to periodic refresh
-        const interval = setInterval(() => {
-          if (!document.hidden) {
-            loadEvents();
-          }
-        }, 30000);
-        return () => clearInterval(interval);
-      }
-    };
-
-    setupRealtimeListener();
-
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, [isMounted, loadEvents]);
+  // No auto-refetch on move; rely on explicit user action
 
   // Filter events by current viewport with stable reference
   const eventsToShow = useMemo(() => {
@@ -350,6 +318,27 @@ export default function ImprovedMapView() {
     });
   }, [eventsToShow]);
 
+  // Keep shared context in sync for sidebar consumption (avoid redundant updates)
+  const lastLoadingRef = useRef<boolean>(false);
+  useEffect(() => {
+    if (lastLoadingRef.current !== loading) {
+      lastLoadingRef.current = loading;
+      setGlobalLoading(loading);
+    }
+  }, [loading, setGlobalLoading]);
+
+  const lastEmittedKeyRef = useRef<string>('');
+  useEffect(() => {
+    // Only push when the array meaningfully changes (length or ids) to avoid render loops
+    if (!Array.isArray(allEvents)) return;
+    const ids = (allEvents as Array<{ id: string }>).map((e) => e.id).join('|');
+    const key = `${allEvents.length}:${ids}`;
+    if (key !== lastEmittedKeyRef.current) {
+      lastEmittedKeyRef.current = key;
+      setEvents(allEvents as unknown as Event[]);
+    }
+  }, [allEvents, setEvents]);
+
   // Detect mobile for map options (only after mount to avoid hydration issues)
   const [isMobile, setIsMobile] = useState(false);
 
@@ -404,8 +393,15 @@ export default function ImprovedMapView() {
       // Set initial bounds for viewport-based loading
       const bounds = map.getBounds();
       if (bounds) {
-        setMapBounds(bounds);
         setCurrentBounds(bounds);
+        currentBoundsKeyRef.current = bounds.toString();
+        // Set initial committed bounds to trigger first load
+        setCommittedBounds((prev) => prev || bounds);
+        // Publish committed bounds to context once on initial load
+        if (!committedBounds) setMapBounds(bounds);
+        setHasPendingBoundsChange(false);
+        userInteractedRef.current = false;
+        // Initial query runs via boundsInput enabling; no manual refetch needed
       }
 
       // Force a resize to ensure proper rendering
@@ -426,11 +422,10 @@ export default function ImprovedMapView() {
 
   const onZoomChanged = useCallback(() => {
     if (mapRef.current) {
-      // Debounce zoom updates to prevent interference with interactions
       const currentZoom = mapRef.current.getZoom() || 10;
-      // Use requestAnimationFrame for smoother updates
       requestAnimationFrame(() => {
         setZoom((prevZoom) => (Math.abs(prevZoom - currentZoom) > 0.1 ? currentZoom : prevZoom));
+        setIsZoomAcceptable(currentZoom >= 10); // Disallow search when zoomed out too far
       });
     }
   }, []);
@@ -445,20 +440,39 @@ export default function ImprovedMapView() {
           clearTimeout(boundsUpdateTimeout.current);
         }
         boundsUpdateTimeout.current = setTimeout(() => {
-          // Only update if bounds actually changed significantly
-          const currentBoundsStr = currentBounds?.toString();
-          const newBoundsStr = bounds.toString();
-
-          if (currentBoundsStr !== newBoundsStr) {
-            setMapBounds(bounds);
+          // If this is the first bounds notification, commit them and fetch once (no button)
+          if (!committedBounds) {
+            const firstStr = bounds.toString();
             setCurrentBounds(bounds);
-            // Enable bounds filtering after user interaction
+            currentBoundsKeyRef.current = firstStr;
+            setCommittedBounds(bounds);
+            setMapBounds(bounds);
+            setHasPendingBoundsChange(false);
+            setEnableBoundsFiltering(false);
+            userInteractedRef.current = false;
+            return;
+          }
+
+          const newBoundsStr = bounds.toString();
+          const committedStr = committedBounds?.toString();
+          const prevStr = currentBoundsKeyRef.current;
+
+          if (newBoundsStr !== prevStr) {
+            setCurrentBounds(bounds);
+            currentBoundsKeyRef.current = newBoundsStr;
+            // Mark that the user has interacted with the map after initial load
+            userInteractedRef.current = true;
+            // Only show after initial commit exists and differs from current
+            setHasPendingBoundsChange(
+              Boolean(userInteractedRef.current && committedStr && committedStr !== newBoundsStr)
+            );
+            // Enable viewport filtering after user interaction
             setEnableBoundsFiltering(true);
           }
-        }, 500); // Increased debounce time to reduce flashing
+        }, 500);
       }
     }
-  }, [setMapBounds, currentBounds]);
+  }, [committedBounds]);
 
   // Add custom zoom controls with better increments
   const zoomIn = useCallback(() => {
@@ -659,24 +673,45 @@ export default function ImprovedMapView() {
       {/* Map Controls */}
       {isMounted && (
         <>
-          {/* Top Controls */}
-          <div className="absolute top-4 left-4 right-4 z-30 pointer-events-none">
-            <div className="flex justify-between items-center">
-              {/* Left spacing preserved; floating toggle exists in layout */}
-              <div className="w-10 h-10" />
-
-              {/* Location Button - Right side */}
+          {/* Compact control stack top-right */}
+          <div className="absolute top-4 right-4 z-30 pointer-events-auto">
+            <div className="flex flex-col gap-2">
+              {/* Locate */}
               {userLocation && (
                 <Button
                   variant="outline"
                   onClick={goToUserLocation}
-                  size="sm"
-                  className="h-10 w-10 p-0 bg-background/95 backdrop-blur-sm shadow-lg pointer-events-auto"
+                  size="icon"
+                  className="h-10 w-10 p-0 bg-background/90 backdrop-blur-sm shadow-lg"
                   title="Go to my location"
                 >
                   <Locate className="h-4 w-4" />
                 </Button>
               )}
+              {/* Zoom group */}
+              <div className="bg-background/90 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden">
+                <div className="flex flex-col">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={zoomIn}
+                    className="h-10 w-10"
+                    title="Zoom in"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                  <div className="h-px bg-border" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={zoomOut}
+                    className="h-10 w-10"
+                    title="Zoom out"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </>
@@ -772,27 +807,30 @@ export default function ImprovedMapView() {
       {/* Create Event FAB */}
       <CreateEventModal />
 
-      {/* Custom Fast Zoom Controls */}
-      <div className="absolute bottom-24 right-4 z-30 pointer-events-auto flex flex-col gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={zoomIn}
-          className="w-10 h-10 p-0 bg-background/95 backdrop-blur-sm shadow-lg"
-          title="Zoom in (fast)"
-        >
-          <span className="text-lg font-bold">+</span>
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={zoomOut}
-          className="w-10 h-10 p-0 bg-background/95 backdrop-blur-sm shadow-lg"
-          title="Zoom out (fast)"
-        >
-          <span className="text-lg font-bold">−</span>
-        </Button>
-      </div>
+      {/* Search this area button - restyled */}
+      {hasPendingBoundsChange && (
+        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
+          <div className="bg-background/90 backdrop-blur-sm rounded-full shadow-lg border border-border overflow-hidden">
+            <Button
+              onClick={() => {
+                if (currentBounds) {
+                  setCommittedBounds(currentBounds);
+                  setMapBounds(currentBounds);
+                  setHasPendingBoundsChange(false);
+                  loadEvents();
+                }
+              }}
+              variant="ghost"
+              disabled={!isZoomAcceptable}
+              className="px-5 py-2"
+            >
+              {isZoomAcceptable ? 'Search this area' : 'Zoom in to search'}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Category legend removed per request */}
     </div>
   );
 }

@@ -4,7 +4,8 @@ import { AppSidebar } from '@/components/app-sidebar';
 import { SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { MapBoundsProvider } from '@/contexts/MapBoundsContext';
-import { useEffect, useState } from 'react';
+import { MapEventsProvider } from '@/contexts/MapEventsContext';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
 interface SidebarLayoutProps {
@@ -16,14 +17,21 @@ interface SidebarLayoutProps {
 // Component to manage sidebar state based on current path
 function SidebarController({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { setOpen } = useSidebar();
+  const { setOpen, setOpenMobile, isMobile } = useSidebar();
+  const didInitRef = useRef(false);
 
   useEffect(() => {
-    // Only enforce closed state on dashboard; let user control elsewhere
-    if (pathname === '/dashboard') {
-      setOpen(false);
-    }
+    if (didInitRef.current) return;
+    didInitRef.current = true;
+    // Only enforce closed state on first load of dashboard; let user control thereafter
+    if (pathname === '/dashboard') setOpen(false);
   }, [pathname, setOpen]);
+
+  // Close the mobile sheet after route changes so destination content is visible
+  useEffect(() => {
+    if (!isMobile) return;
+    setOpenMobile(false);
+  }, [pathname, isMobile, setOpenMobile]);
 
   return <>{children}</>;
 }
@@ -68,23 +76,25 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
   return (
     <MapBoundsProvider>
-      <SidebarProvider defaultOpen={!isDashboardPage}>
-        <SidebarController>
-          <AppSidebar />
-          <SidebarInset>
-            {/* No header for cleaner UI */}
-            {/* Floating sidebar toggle button - visible on all pages except dashboard */}
-            {!isDashboardPage && <PositionedFloatingToggle />}
-            {isMapPage ? (
-              // Map page takes full space without padding
-              <div className="flex flex-1 flex-col h-screen">{children}</div>
-            ) : (
-              // Other pages use normal padding
-              <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
-            )}
-          </SidebarInset>
-        </SidebarController>
-      </SidebarProvider>
+      <MapEventsProvider>
+        <SidebarProvider defaultOpen={!isDashboardPage}>
+          <SidebarController>
+            <AppSidebar />
+            <SidebarInset>
+              {/* No header for cleaner UI */}
+              {/* Floating sidebar toggle button */}
+              <PositionedFloatingToggle />
+              {isMapPage ? (
+                // Map page takes full space without padding
+                <div className="flex flex-1 flex-col h-screen">{children}</div>
+              ) : (
+                // Other pages use normal padding
+                <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
+              )}
+            </SidebarInset>
+          </SidebarController>
+        </SidebarProvider>
+      </MapEventsProvider>
     </MapBoundsProvider>
   );
 }
@@ -93,15 +103,20 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 // matching shadcn's example pattern for reliability.
 
 function PositionedFloatingToggle() {
-  const { state } = useSidebar();
-  const leftValue =
-    state === 'collapsed'
+  const { state, isMobile, openMobile } = useSidebar();
+  // Align with the mobile sheet close (X). Sheet width is 22rem; X sits at right-4.
+  // Button is ~1.75rem wide, so left = 22rem - 1rem - 1.75rem = 22rem - 2.75rem
+  const leftValue = isMobile
+    ? openMobile
+      ? 'calc(22rem - 2.75rem)'
+      : '0.75rem'
+    : state === 'collapsed'
       ? 'calc(var(--sidebar-width-icon) + 0.75rem)'
       : 'calc(var(--sidebar-width) + 0.75rem)';
 
   return (
     <div
-      className="fixed top-3 z-[200] pointer-events-auto transition-[left] duration-200 ease-linear"
+      className="fixed top-3 z-[200] pointer-events-auto transition-[left,transform,opacity] duration-300 ease-out"
       style={{ left: leftValue } as React.CSSProperties}
     >
       <FloatingSidebarToggle />

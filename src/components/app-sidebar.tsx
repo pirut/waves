@@ -4,8 +4,9 @@ import * as React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Map, Calendar, Users, Heart, TrendingUp, MessageSquare } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
+// import { trpc } from '@/lib/trpc';
 import { useMapBounds } from '@/contexts/MapBoundsContext';
+import { useMapEvents } from '@/contexts/MapEventsContext';
 
 import { NavUser } from '@/components/nav-user';
 import { Label } from '@/components/ui/label';
@@ -23,6 +24,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/hooks/useAuth';
@@ -72,14 +74,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [enableBoundsFiltering, setEnableBoundsFiltering] = React.useState(false);
 
-  // Fetch events from Firebase using tRPC
-  const {
-    data: events = [],
-    isLoading: eventsLoading,
-    error: eventsError,
-  } = trpc.events.getAll.useQuery();
+  // Consume events from map context to avoid duplicate reads
+  const { events, loading: eventsLoading } = useMapEvents();
+  const eventsError = undefined as unknown as Error | undefined;
 
-  // Get map bounds from context
+  // Get map bounds from context (committed by the map when searching)
   const { mapBounds } = useMapBounds();
 
   // Enable bounds filtering when map bounds change (indicating user interaction)
@@ -177,7 +176,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel className="bg-sidebar-accent/50 rounded-md px-2">
+            Navigation
+          </SidebarGroupLabel>
           <SidebarMenu>
             {navItems.map((item) => (
               <SidebarMenuItem key={item.title}>
@@ -191,11 +192,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             ))}
           </SidebarMenu>
         </SidebarGroup>
+        <SidebarSeparator />
 
         {/* Events Section - Show on map page */}
         {pathname === '/map' && (
-          <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-            <SidebarGroupLabel>
+          <SidebarGroup className="group-data-[collapsible=icon]:hidden flex-1 min-h-0 flex flex-col">
+            <SidebarGroupLabel className="bg-sidebar-accent/50 rounded-md px-2">
               <div className="flex w-full items-center justify-between">
                 <span>Events in View</span>
                 <Label className="flex items-center gap-2 text-xs">
@@ -213,8 +215,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <SidebarGroupContent>
-              {mapBounds && (
+            <SidebarGroupContent className="flex-1 min-h-0 flex flex-col">
+              {mapBounds && pathname === '/map' && (
                 <div className="p-2 bg-muted/30 text-xs text-muted-foreground rounded-md mb-2">
                   Showing events in the current map view
                 </div>
@@ -237,14 +239,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   {searchQuery.trim() ? 'No events match your search' : 'No events in view'}
                 </div>
               ) : (
-                <div className="flex flex-col gap-2 p-2 max-h-[300px] overflow-y-auto">
+                <div className="flex-1 min-h-0 flex flex-col gap-2 p-2 overflow-y-auto rounded-md bg-sidebar-accent/30">
                   {filteredEvents
                     .filter((event: Event) => {
                       if (showUpcoming) return true;
                       const eventDate = event.date || '';
                       return eventDate.toLowerCase().includes('today');
                     })
-                    .slice(0, 10)
                     .map((event: Event) => (
                       <Link
                         key={event.id}
@@ -270,14 +271,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
 
       <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
             <NavUser user={userData} />
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <ModeToggle />
-          </SidebarMenuItem>
-        </SidebarMenu>
+          </div>
+          <ModeToggle />
+        </div>
       </SidebarFooter>
 
       <SidebarRail />

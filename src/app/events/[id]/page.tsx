@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { trpc } from '@/lib/trpc';
 import { MapPin, Calendar, Users, Tag, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,10 +11,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MapView } from '@/components/MapView';
 import type { Event as EventType } from '@/types/event';
 import { MapBoundsProvider } from '@/contexts/MapBoundsContext';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
-import { db } from '@/firebase';
-import { onSnapshot, doc, collection, query, where, Unsubscribe } from 'firebase/firestore';
 
 interface Event {
   id: string;
@@ -48,26 +47,9 @@ export default function EventDetailsPage() {
 
   const eventId = params.id as string;
   const { data: attendeeProfiles } = trpc.events.getAttendees.useQuery(
-    { id: eventId },
+    { id: eventId, uids: (event?.attendees as string[]) || [] },
     { enabled: !!eventId }
   );
-
-  // Realtime event data
-  const [liveEvent, setLiveEvent] = useState<Event | null>(null);
-  useEffect(() => {
-    if (!eventId) return;
-    const ref = doc(db, 'events', eventId);
-    const unsub = onSnapshot(ref, (snap) => {
-      const data = snap.data();
-      if (data) {
-        const shaped = { ...(data as Record<string, unknown>) };
-        delete (shaped as Record<string, unknown>).id;
-        const payload = { id: snap.id, ...(shaped as Record<string, unknown>) } as unknown as Event;
-        setLiveEvent(payload);
-      }
-    });
-    return () => unsub();
-  }, [eventId]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -81,21 +63,7 @@ export default function EventDetailsPage() {
     });
   };
 
-  const getCategoryColor = (category: string) => {
-    const colors: { [key: string]: string } = {
-      Environmental: 'bg-green-100 text-green-800',
-      'Community Service': 'bg-blue-100 text-blue-800',
-      Education: 'bg-purple-100 text-purple-800',
-      'Health & Wellness': 'bg-pink-100 text-pink-800',
-      'Arts & Culture': 'bg-yellow-100 text-yellow-800',
-      'Social Justice': 'bg-orange-100 text-orange-800',
-      'Animal Welfare': 'bg-emerald-100 text-emerald-800',
-      'Disaster Relief': 'bg-red-100 text-red-800',
-      'Youth Development': 'bg-indigo-100 text-indigo-800',
-      'Senior Support': 'bg-violet-100 text-violet-800',
-    };
-    return colors[category] || 'bg-gray-100 text-gray-800';
-  };
+  // Category color badge not used after redesign
 
   const utils = trpc.useUtils();
   const attendMutation = trpc.events.attend.useMutation({
@@ -119,100 +87,14 @@ export default function EventDetailsPage() {
     photoURL?: string;
   }
 
-  // Realtime attendees from Firestore (per-UID listener; supports either doc-id===uid or 'uid' field)
-  const [liveAttendees, setLiveAttendees] = useState<AttendeeUser[]>([]);
-  const attendeesUnsubsRef = useRef<Unsubscribe[]>([]);
   const [attendeesParent] = useAutoAnimate({ duration: 250, easing: 'ease-out' });
 
   const attendeeUids = useMemo(() => {
-    const src = (liveEvent?.attendees || event?.attendees || []) as string[];
+    const src = (event?.attendees || []) as string[];
     return Array.isArray(src) ? src : [];
-  }, [liveEvent?.attendees, event?.attendees]);
-
-  useEffect(() => {
-    attendeesUnsubsRef.current.forEach((u) => u());
-    attendeesUnsubsRef.current = [];
-    setLiveAttendees([]);
-
-    if (attendeeUids.length === 0) return;
-
-    const cache: Record<string, AttendeeUser> = {};
-
-    attendeeUids.forEach((uid) => {
-      // 1) Listen to user document by id (uid)
-      const userDocRef = doc(db, 'users', uid);
-      const unsubDoc = onSnapshot(
-        userDocRef,
-        (snap) => {
-          if (snap.exists()) {
-            const raw = snap.data() as Record<string, unknown>;
-            const data: Partial<AttendeeUser> = {
-              displayName: (raw.displayName as string) || (raw.name as string) || undefined,
-              email: (raw.email as string) || undefined,
-              photoURL: (raw.photoURL as string) || (raw.profilePhotoUrl as string) || undefined,
-            };
-            cache[uid] = {
-              id: snap.id,
-              uid,
-              displayName: data.displayName,
-              email: data.email,
-              photoURL: data.photoURL,
-            };
-          } else {
-            if (!cache[uid]) cache[uid] = { id: uid, uid } as AttendeeUser;
-          }
-          setLiveAttendees(
-            Object.values(cache).sort((a, b) =>
-              (a.displayName || '').localeCompare(b.displayName || '')
-            )
-          );
-        },
-        (err) => console.warn('User doc listener error for', uid, err)
-      );
-      attendeesUnsubsRef.current.push(unsubDoc);
-
-      // 2) Also listen by 'uid' field (covers case where doc.id !== uid)
-      const byField = query(collection(db, 'users'), where('uid', '==', uid));
-      const unsubQuery = onSnapshot(
-        byField,
-        (snap) => {
-          if (!snap.empty) {
-            const docSnap = snap.docs[0];
-            const raw = docSnap.data() as Record<string, unknown>;
-            const data: Partial<AttendeeUser> = {
-              displayName: (raw.displayName as string) || (raw.name as string) || undefined,
-              email: (raw.email as string) || undefined,
-              photoURL: (raw.photoURL as string) || (raw.profilePhotoUrl as string) || undefined,
-            };
-            cache[uid] = {
-              id: docSnap.id,
-              uid,
-              displayName: data.displayName,
-              email: data.email,
-              photoURL: data.photoURL,
-            };
-          }
-          setLiveAttendees(
-            Object.values(cache).sort((a, b) =>
-              (a.displayName || '').localeCompare(b.displayName || '')
-            )
-          );
-        },
-        (err) => console.warn('User uid field listener error for', uid, err)
-      );
-      attendeesUnsubsRef.current.push(unsubQuery);
-    });
-
-    return () => {
-      attendeesUnsubsRef.current.forEach((u) => u());
-      attendeesUnsubsRef.current = [];
-    };
-  }, [attendeeUids]);
+  }, [event?.attendees]);
 
   const attendeesList = useMemo(() => {
-    const liveMap = new Map<string, AttendeeUser>(
-      (liveAttendees || []).map((a) => [a.uid || a.id, a])
-    );
     const profileMap = new Map<string, AttendeeUser>(
       ((attendeeProfiles as Array<Record<string, unknown>>) || []).map((p) => {
         const id = (p.id as string) || '';
@@ -225,12 +107,11 @@ export default function EventDetailsPage() {
 
     const ordered: AttendeeUser[] = [];
     attendeeUids.forEach((uid) => {
-      const userFromLive = liveMap.get(uid);
       const userFromProfiles = profileMap.get(uid);
-      ordered.push(userFromLive || userFromProfiles || ({ id: uid, uid } as AttendeeUser));
+      ordered.push(userFromProfiles || ({ id: uid, uid } as AttendeeUser));
     });
     return ordered.sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
-  }, [attendeeUids, liveAttendees, attendeeProfiles]);
+  }, [attendeeUids, attendeeProfiles]);
 
   if (loading) {
     return (
@@ -274,52 +155,70 @@ export default function EventDetailsPage() {
     );
   }
 
-  const displayEvent = (liveEvent || event)!;
+  const displayEvent = event!;
   const isUserAttending = displayEvent && user && (displayEvent.attendees || []).includes(user.uid);
   const canJoin =
     displayEvent &&
     (!displayEvent.maxAttendees ||
       (displayEvent.attendees || []).length < displayEvent.maxAttendees);
 
+  const handleShare = () => {
+    const shareData = {
+      title: displayEvent.title,
+      text: displayEvent.description || 'Check out this event',
+      url: typeof window !== 'undefined' ? window.location.href : '',
+    };
+    if (navigator.share) {
+      navigator.share(shareData).catch(() => {});
+    } else if (navigator.clipboard && typeof window !== 'undefined') {
+      navigator.clipboard.writeText(window.location.href).catch(() => {});
+    }
+  };
+
+  const handleAttend = () => attendMutation.mutate({ id: displayEvent.id });
+  const handleLeave = () => leaveMutation.mutate({ id: displayEvent.id });
+
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-6 pb-28 md:pb-8">
       <Button onClick={() => router.back()} variant="outline" className="mb-6">
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back
       </Button>
 
       <Card className="mb-6">
-        <CardHeader>
+        <CardHeader className="space-y-2">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <CardTitle className="text-2xl mb-3">{displayEvent.title}</CardTitle>
-              <div className="flex items-center gap-6 text-muted-foreground mb-4">
-                <div className="flex items-center gap-2">
+              <CardTitle className="text-xl md:text-2xl mb-2 md:mb-3 leading-snug">
+                {displayEvent.title}
+              </CardTitle>
+              <div className="flex flex-col gap-2 text-muted-foreground md:flex-row md:items-center md:gap-6 mb-2 md:mb-4">
+                <div className="flex items-center gap-2 text-sm md:text-base">
                   <Calendar className="h-5 w-5" />
                   {formatDate(displayEvent.time)}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 text-sm md:text-base">
                   <Users className="h-5 w-5" />
                   {(displayEvent.attendees || []).length} attending
                   {displayEvent.maxAttendees && ` (${displayEvent.maxAttendees} max)`}
                 </div>
               </div>
             </div>
-            <div
-              className={`px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(displayEvent.category)}`}
-            >
+            <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs md:text-sm">
               <div className="flex items-center gap-1">
                 <Tag className="h-4 w-4" />
                 {displayEvent.category}
               </div>
-            </div>
+            </Badge>
           </div>
         </CardHeader>
         <CardContent>
-          <CardDescription className="text-base mb-6">{displayEvent.description}</CardDescription>
+          <CardDescription className="text-sm md:text-base mb-4 md:mb-6">
+            {displayEvent.description}
+          </CardDescription>
 
           {displayEvent.location.address && (
-            <div className="flex items-center gap-2 text-muted-foreground mb-6">
+            <div className="flex items-center gap-2 text-muted-foreground mb-4 md:mb-6">
               <MapPin className="h-5 w-5" />
               <span>{displayEvent.location.address}</span>
             </div>
@@ -330,43 +229,30 @@ export default function EventDetailsPage() {
               <>
                 {isUserAttending ? (
                   <>
-                    <Button variant="outline" disabled>
+                    <Button variant="outline" disabled className="w-full md:w-auto">
                       ✓ You&apos;re attending
                     </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => leaveMutation.mutate({ id: displayEvent.id })}
-                    >
+                    <Button variant="ghost" onClick={handleLeave} className="w-full md:w-auto">
                       Leave
                     </Button>
                   </>
                 ) : canJoin ? (
-                  <Button onClick={() => attendMutation.mutate({ id: displayEvent.id })}>
+                  <Button onClick={handleAttend} className="w-full md:w-auto">
                     Join Event
                   </Button>
                 ) : (
-                  <Button disabled>Event Full</Button>
+                  <Button disabled className="w-full md:w-auto">
+                    Event Full
+                  </Button>
                 )}
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    const shareData = {
-                      title: displayEvent.title,
-                      text: displayEvent.description || 'Check out this event',
-                      url: typeof window !== 'undefined' ? window.location.href : '',
-                    };
-                    if (navigator.share) {
-                      navigator.share(shareData).catch(() => {});
-                    } else if (navigator.clipboard && typeof window !== 'undefined') {
-                      navigator.clipboard.writeText(window.location.href).catch(() => {});
-                    }
-                  }}
-                >
+                <Button variant="outline" onClick={handleShare} className="w-full md:w-auto">
                   Share Event
                 </Button>
               </>
             ) : (
-              <Button onClick={() => router.push('/login')}>Sign in to Join</Button>
+              <Button onClick={() => router.push('/login')} className="w-full md:w-auto">
+                Sign in to Join
+              </Button>
             )}
           </div>
         </CardContent>
@@ -378,7 +264,7 @@ export default function EventDetailsPage() {
             <CardTitle className="text-lg">Location</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-72">
+            <div className="h-64 md:h-80">
               <MapBoundsProvider>
                 <MapView
                   interactive={false}
@@ -454,6 +340,39 @@ export default function EventDetailsPage() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* Sticky mobile action bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur border-t p-3 md:hidden">
+        <div className="max-w-5xl mx-auto flex items-center gap-3">
+          {user ? (
+            isUserAttending ? (
+              <>
+                <Button variant="outline" disabled className="flex-1">
+                  ✓ You&apos;re attending
+                </Button>
+                <Button variant="ghost" onClick={handleLeave} className="flex-1">
+                  Leave
+                </Button>
+              </>
+            ) : canJoin ? (
+              <Button onClick={handleAttend} className="flex-1">
+                Join Event
+              </Button>
+            ) : (
+              <Button disabled className="flex-1">
+                Event Full
+              </Button>
+            )
+          ) : (
+            <Button onClick={() => router.push('/login')} className="flex-1">
+              Sign in to Join
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleShare} className="flex-1">
+            Share
+          </Button>
+        </div>
       </div>
     </div>
   );

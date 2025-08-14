@@ -73,6 +73,8 @@ export interface MapViewProps {
   // Loading state
   loadingComponent?: React.ReactNode;
   emptyStateComponent?: React.ReactNode;
+  // When false, do not use vector maps (mapId) or advanced markers. Helps prevent WebGL context usage
+  useVectorMap?: boolean;
 }
 
 export function MapView({
@@ -97,6 +99,7 @@ export function MapView({
   overlayTitle = 'Click to open full map',
   loadingComponent,
   emptyStateComponent,
+  useVectorMap = true,
 }: MapViewProps) {
   const mapRef = useRef<google.maps.Map | null>(null);
   const boundsUpdateTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -122,8 +125,9 @@ export function MapView({
     libraries: mapLibraries,
   });
 
-  // Map ID for Advanced Markers
-  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_ID;
+  // Determine whether to use vector mapId (uses WebGL). For thumbnails, pass useVectorMap={false}
+  const envMapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_ID;
+  const resolvedMapId = useVectorMap ? envMapId : undefined;
 
   // Get user location on mount if enabled
   useEffect(() => {
@@ -176,9 +180,17 @@ export function MapView({
       scrollwheel: interactive,
       draggable: interactive,
       disableDoubleClickZoom: !interactive,
-      ...(mapId && { mapId }),
+      ...(resolvedMapId && { mapId: resolvedMapId }),
     }),
-    [interactive, showZoomControls, showFullscreenControl, gestureHandling, minZoom, maxZoom, mapId]
+    [
+      interactive,
+      showZoomControls,
+      showFullscreenControl,
+      gestureHandling,
+      minZoom,
+      maxZoom,
+      resolvedMapId,
+    ]
   );
 
   const onLoad = useCallback(
@@ -299,7 +311,7 @@ export function MapView({
 
       let marker: google.maps.marker.AdvancedMarkerElement | google.maps.Marker;
 
-      if (google.maps.marker && mapId) {
+      if (google.maps.marker && resolvedMapId) {
         const markerDiv = document.createElement('div');
         markerDiv.innerHTML = `
           <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -347,7 +359,7 @@ export function MapView({
     showEventMarkers,
     showInfoWindows,
     onEventClick,
-    mapId,
+    resolvedMapId,
   ]);
 
   // Fit map to show all events (if no custom center provided)

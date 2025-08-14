@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from '@/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { trpc } from '@/lib/trpc';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { NearbyEventsSection } from '@/components/dashboard/NearbyEventsSection';
@@ -39,16 +39,18 @@ export default function DashboardPage() {
       setAuthInitialized(true);
       if (user) {
         const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) {
-          await setDoc(userRef, {
+        // Avoid an extra read: write-or-merge the user profile
+        await setDoc(
+          userRef,
+          {
             uid: user.uid,
             displayName: user.displayName || user.email,
             photoURL: user.photoURL || '',
             email: user.email,
             createdAt: new Date().toISOString(),
-          });
-        }
+          },
+          { merge: true }
+        );
       }
     });
     return () => unsub();
