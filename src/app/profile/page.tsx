@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, MapPin, Users, Edit, Settings } from 'lucide-react';
+import Link from 'next/link';
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();
@@ -35,7 +36,7 @@ export default function ProfilePage() {
           </CardHeader>
           <CardFooter>
             <Button asChild>
-              <a href="/login">Go to Login</a>
+              <Link href="/">Go to Homepage</Link>
             </Button>
           </CardFooter>
         </Card>

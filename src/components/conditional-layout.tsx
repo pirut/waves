@@ -15,6 +15,7 @@ interface ConditionalLayoutProps {
 export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const { user, loading } = useAuth();
   const [isMounted, setIsMounted] = useState(false);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -22,18 +23,57 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
     setIsMounted(true);
   }, []);
 
-  // Redirect unauthenticated users to landing page for protected routes
+  // Client-side fallback: redirect unauthenticated users from protected routes
   useEffect(() => {
     if (!isMounted || loading) return;
-    if (user) return;
-    const publicPaths = new Set<string>(['/', '/login']);
-    if (!publicPaths.has(pathname || '/')) {
-      router.replace('/');
-    }
+
+    // Add a small delay to ensure auth state is stable
+    const timer = setTimeout(() => {
+      const protectedRoutes = [
+        '/dashboard',
+        '/map',
+        '/events',
+        '/friends',
+        '/messages',
+        '/profile',
+        '/settings',
+        '/account',
+        '/activity',
+        '/my-events',
+      ];
+
+      const isProtectedRoute = protectedRoutes.some((route) => pathname?.startsWith(route));
+
+      // Debug logging (only in development)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 ConditionalLayout Debug:', {
+          pathname,
+          user: !!user,
+          loading,
+          isProtectedRoute,
+          isMounted,
+          hasCheckedAuth,
+        });
+      }
+
+      // Only redirect if we're certain the user is not authenticated and we're on a protected route
+      if (!user && isProtectedRoute && !loading) {
+        console.log(
+          '🔄 ConditionalLayout: Redirecting unauthenticated user from',
+          pathname,
+          'to homepage'
+        );
+        router.replace('/');
+      }
+
+      setHasCheckedAuth(true);
+    }, 200); // Small delay to ensure auth state is stable
+
+    return () => clearTimeout(timer);
   }, [isMounted, loading, user, pathname, router]);
 
   // Show loading state during hydration and auth check
-  if (!isMounted || loading) {
+  if (!isMounted || loading || !hasCheckedAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

@@ -120,22 +120,22 @@ function UserLocationAdvancedMarker({
   return null;
 }
 
-// Category color mapping
+// Category color mapping with improved colors
 const categoryColorMap: { [key: string]: string } = {
-  Environmental: '#4ade80',
-  'Community Service': '#60a5fa',
-  Education: '#a78bfa',
-  'Health & Wellness': '#fb7185',
-  'Arts & Culture': '#fbbf24',
+  Environmental: '#10b981',
+  'Community Service': '#3b82f6',
+  Education: '#8b5cf6',
+  'Health & Wellness': '#ef4444',
+  'Arts & Culture': '#f59e0b',
   'Social Justice': '#f97316',
-  'Animal Welfare': '#10b981',
-  'Disaster Relief': '#ef4444',
+  'Animal Welfare': '#06b6d4',
+  'Disaster Relief': '#dc2626',
   'Youth Development': '#6366f1',
-  'Senior Support': '#8b5cf6',
+  'Senior Support': '#ec4899',
 };
 
 const getCategoryMarkerColor = (category: string) => {
-  return categoryColorMap[category] || '#FFE5D4';
+  return categoryColorMap[category] || '#6b7280';
 };
 
 // Improved map options for better UX - mobile-aware
@@ -527,13 +527,29 @@ export default function ImprovedMapView() {
         // Try to use Advanced Markers if available and Map ID is configured
 
         if (google.maps.marker && mapId) {
-          // Create the marker element for Advanced Marker
+          // Create the marker element for Advanced Marker with improved design
           const markerDiv = document.createElement('div');
+          const color = getCategoryMarkerColor(event.category || '');
           markerDiv.innerHTML = `
-            <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="16" cy="16" r="12" fill="${getCategoryMarkerColor(event.category || '')}" stroke="#ffffff" stroke-width="3"/>
-              <circle cx="16" cy="16" r="6" fill="#ffffff" opacity="0.8"/>
-            </svg>
+            <div style="
+              width: 40px; 
+              height: 40px; 
+              position: relative;
+              filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+            ">
+              <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                <!-- Outer glow -->
+                <circle cx="20" cy="20" r="18" fill="${color}" opacity="0.2"/>
+                <!-- Main pin body -->
+                <circle cx="20" cy="20" r="14" fill="${color}" stroke="#ffffff" stroke-width="2"/>
+                <!-- Inner highlight -->
+                <circle cx="20" cy="20" r="8" fill="#ffffff" opacity="0.9"/>
+                <!-- Center dot -->
+                <circle cx="20" cy="20" r="4" fill="${color}"/>
+                <!-- Pin point -->
+                <path d="M20 34 L16 40 L24 40 Z" fill="${color}" stroke="#ffffff" stroke-width="1"/>
+              </svg>
+            </div>
           `;
 
           marker = new google.maps.marker.AdvancedMarkerElement({
@@ -546,6 +562,7 @@ export default function ImprovedMapView() {
           });
         } else {
           // Fallback to regular markers if Advanced Markers not available
+          const color = getCategoryMarkerColor(event.category || '');
           marker = new google.maps.Marker({
             position: {
               lat: event.location!.lat,
@@ -553,13 +570,21 @@ export default function ImprovedMapView() {
             },
             icon: {
               url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-                <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="16" cy="16" r="12" fill="${getCategoryMarkerColor(event.category || '')}" stroke="#ffffff" stroke-width="3"/>
-                  <circle cx="16" cy="16" r="6" fill="#ffffff" opacity="0.8"/>
+                <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                  <!-- Outer glow -->
+                  <circle cx="20" cy="20" r="18" fill="${color}" opacity="0.2"/>
+                  <!-- Main pin body -->
+                  <circle cx="20" cy="20" r="14" fill="${color}" stroke="#ffffff" stroke-width="2"/>
+                  <!-- Inner highlight -->
+                  <circle cx="20" cy="20" r="8" fill="#ffffff" opacity="0.9"/>
+                  <!-- Center dot -->
+                  <circle cx="20" cy="20" r="4" fill="${color}"/>
+                  <!-- Pin point -->
+                  <path d="M20 34 L16 40 L24 40 Z" fill="${color}" stroke="#ffffff" stroke-width="1"/>
                 </svg>
               `)}`,
-              scaledSize: new google.maps.Size(32, 32),
-              anchor: new google.maps.Point(16, 16),
+              scaledSize: new google.maps.Size(40, 40),
+              anchor: new google.maps.Point(20, 40),
             },
             title: event.title,
           });
@@ -596,14 +621,27 @@ export default function ImprovedMapView() {
         markers: [],
         renderer: {
           render: ({ count, position }) => {
-            // Custom cluster marker styling
-            const color = count < 10 ? '#FFE5D4' : count < 50 ? '#F6E8D6' : '#B3DFF2';
-            const size = count < 10 ? 40 : count < 50 ? 50 : 60;
+            // Enhanced cluster marker styling
+            const getClusterColor = (count: number) => {
+              if (count < 5) return '#3b82f6';
+              if (count < 10) return '#f59e0b';
+              if (count < 20) return '#ef4444';
+              return '#8b5cf6';
+            };
+
+            const color = getClusterColor(count);
+            const size = count < 10 ? 44 : count < 20 ? 52 : 60;
 
             const svg = `
               <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 2}" fill="${color}" stroke="#ffffff" stroke-width="3"/>
-                <text x="${size / 2}" y="${size / 2}" text-anchor="middle" dy="0.3em" font-family="Arial, sans-serif" font-size="${size / 3}" font-weight="bold" fill="#333">${count}</text>
+                <!-- Outer glow -->
+                <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="${color}" opacity="0.2"/>
+                <!-- Main circle -->
+                <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 3}" fill="${color}" stroke="#ffffff" stroke-width="2"/>
+                <!-- Inner highlight -->
+                <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 8}" fill="#ffffff" opacity="0.3"/>
+                <!-- Count text -->
+                <text x="${size / 2}" y="${size / 2}" text-anchor="middle" dy="0.35em" font-family="Arial, sans-serif" font-size="${Math.max(12, size / 4)}" font-weight="bold" fill="#ffffff">${count}</text>
               </svg>
             `;
 
@@ -739,7 +777,7 @@ export default function ImprovedMapView() {
 
         {/* Event markers are now handled by MarkerClusterer */}
 
-        {/* Improved InfoWindow */}
+        {/* Enhanced InfoWindow */}
         {selectedEvent && selectedEvent.location && (
           <InfoWindow
             position={{
@@ -747,34 +785,114 @@ export default function ImprovedMapView() {
               lng: selectedEvent.location.lng,
             }}
             onCloseClick={() => setSelectedEvent(null)}
+            options={{
+              pixelOffset: new google.maps.Size(0, -50),
+              maxWidth: isMobile ? 280 : 320,
+            }}
           >
-            <div className={isMobile ? 'p-2 max-w-xs' : 'p-3 max-w-sm'}>
-              <h3 className={`font-semibold mb-2 ${isMobile ? 'text-sm' : 'text-base'}`}>
-                {selectedEvent.title}
-              </h3>
-              {selectedEvent.category && (
-                <div className={`flex items-center gap-2 mb-2`}>
-                  <span
-                    className={`inline-block rounded-full ${isMobile ? 'w-2 h-2' : 'w-3 h-3'}`}
-                    style={{ backgroundColor: getCategoryMarkerColor(selectedEvent.category) }}
-                  />
-                  <span className={`text-gray-600 ${isMobile ? 'text-xs' : 'text-sm'}`}>
-                    {selectedEvent.category}
-                  </span>
+            <div className={`${isMobile ? 'p-3' : 'p-4'} max-w-sm bg-white rounded-lg shadow-lg`}>
+              {/* Header with category badge */}
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <h3
+                    className={`font-bold text-gray-900 mb-1 ${isMobile ? 'text-sm' : 'text-base'}`}
+                  >
+                    {selectedEvent.title}
+                  </h3>
+                  {selectedEvent.category && (
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="inline-block w-3 h-3 rounded-full"
+                        style={{ backgroundColor: getCategoryMarkerColor(selectedEvent.category) }}
+                      />
+                      <span
+                        className={`text-gray-600 font-medium ${isMobile ? 'text-xs' : 'text-sm'}`}
+                      >
+                        {selectedEvent.category}
+                      </span>
+                    </div>
+                  )}
                 </div>
-              )}
+                <button
+                  onClick={() => setSelectedEvent(null)}
+                  className="ml-2 p-1 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+
+              {/* Description */}
               {selectedEvent.description && (
                 <p
-                  className={`text-gray-700 mb-3 ${isMobile ? 'text-xs line-clamp-2' : 'text-sm line-clamp-3'}`}
+                  className={`text-gray-700 mb-4 leading-relaxed ${isMobile ? 'text-xs line-clamp-3' : 'text-sm line-clamp-3'}`}
                 >
                   {selectedEvent.description}
                 </p>
               )}
-              <div className={`flex gap-2`}>
+
+              {/* Location info */}
+              {selectedEvent.location?.address && (
+                <div className="flex items-center gap-2 mb-4 text-gray-600">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                  <span className={`${isMobile ? 'text-xs' : 'text-sm'} truncate`}>
+                    {selectedEvent.location.address}
+                  </span>
+                </div>
+              )}
+
+              {/* Date info */}
+              {selectedEvent.date && (
+                <div className="flex items-center gap-2 mb-4 text-gray-600">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  <span className={`${isMobile ? 'text-xs' : 'text-sm'}`}>
+                    {new Date(selectedEvent.date).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </span>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex gap-2 pt-2 border-t border-gray-100">
                 <Button
                   size="sm"
                   onClick={() => (window.location.href = `/events/${selectedEvent.id}`)}
-                  className={`flex-1 ${isMobile ? 'text-xs h-8' : 'text-sm h-9'}`}
+                  className={`flex-1 ${isMobile ? 'text-xs h-8' : 'text-sm h-9'} bg-blue-600 hover:bg-blue-700`}
                 >
                   View Details
                 </Button>
@@ -782,7 +900,7 @@ export default function ImprovedMapView() {
                   variant="outline"
                   size="sm"
                   onClick={() => setSelectedEvent(null)}
-                  className={isMobile ? 'text-xs h-8' : 'text-sm h-9'}
+                  className={`${isMobile ? 'text-xs h-8' : 'text-sm h-9'} border-gray-300 hover:bg-gray-50`}
                 >
                   Close
                 </Button>

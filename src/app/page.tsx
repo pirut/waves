@@ -1,9 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '../firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,22 +20,10 @@ import { Event } from '@/types/event';
 import { trpc } from '@/lib/trpc';
 
 export default function Home() {
-  const router = useRouter();
-  const [, setCurrentUser] = useState<User | null>(null);
-  const [authReady, setAuthReady] = useState(false);
-
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      setAuthReady(true);
-      if (user) router.replace('/dashboard');
-    });
-    return () => unsub();
-  }, [router]);
-
   const { data: stats } = trpc.stats.useQuery(undefined, { staleTime: 60_000 });
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [consented, setConsented] = useState(false);
+
   useEffect(() => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
@@ -50,18 +35,11 @@ export default function Home() {
       { timeout: 5000 }
     );
   }, []);
+
   const { data: nearbyEvents = [] } = trpc.events.getDashboardEvents.useQuery(
     center ? { userLat: center.lat, userLng: center.lng } : undefined,
     { staleTime: 60_000 }
   );
-
-  if (!authReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
 
   return (
     <main className="min-h-screen flex flex-col">
@@ -112,7 +90,7 @@ export default function Home() {
 
           <Card className="w-full overflow-hidden">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">See what’s happening near you</CardTitle>
+              <CardTitle className="text-base">See what&apos;s happening near you</CardTitle>
               <CardDescription>Map-first discovery with rich event details</CardDescription>
             </CardHeader>
             <CardContent>
@@ -153,12 +131,12 @@ export default function Home() {
             {
               title: 'Go with friends',
               Icon: Users,
-              desc: 'RSVP together and see who’s attending before you head out.',
+              desc: 'RSVP together and see who&apos;s attending before you head out.',
             },
             {
               title: 'Stay organized',
               Icon: Calendar,
-              desc: 'Track upcoming plans and get gentle reminders when it’s time.',
+              desc: 'Track upcoming plans and get gentle reminders when it&apos;s time.',
             },
             {
               title: 'Celebrate impact',

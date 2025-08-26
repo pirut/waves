@@ -9,7 +9,6 @@ import { useMapBounds } from '@/contexts/MapBoundsContext';
 import { useMapEvents } from '@/contexts/MapEventsContext';
 
 import { NavUser } from '@/components/nav-user';
-import { Label } from '@/components/ui/label';
 import { ModeToggle } from '@/components/ModeToggle';
 import {
   Sidebar,
@@ -26,7 +25,7 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Switch } from '@/components/ui/switch';
+
 import { useAuth } from '@/hooks/useAuth';
 
 // Navigation data for Make Waves
@@ -70,7 +69,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [showUpcoming, setShowUpcoming] = React.useState(true);
+
   const [searchQuery, setSearchQuery] = React.useState('');
   const [enableBoundsFiltering, setEnableBoundsFiltering] = React.useState(false);
 
@@ -198,17 +197,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {pathname === '/map' && (
           <SidebarGroup className="group-data-[collapsible=icon]:hidden flex-1 min-h-0 flex flex-col">
             <SidebarGroupLabel className="bg-sidebar-accent/50 rounded-md px-2">
-              <div className="flex w-full items-center justify-between">
-                <span>Events in View</span>
-                <Label className="flex items-center gap-2 text-xs">
-                  <span>Upcoming</span>
-                  <Switch
-                    className="shadow-none"
-                    checked={showUpcoming}
-                    onCheckedChange={setShowUpcoming}
-                  />
-                </Label>
-              </div>
+              <span>Events in View</span>
             </SidebarGroupLabel>
             <SidebarInput
               placeholder="Search events..."
@@ -240,29 +229,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
               ) : (
                 <div className="flex-1 min-h-0 flex flex-col gap-2 p-2 overflow-y-auto rounded-md bg-sidebar-accent/30">
-                  {filteredEvents
-                    .filter((event: Event) => {
-                      if (showUpcoming) return true;
-                      const eventDate = event.date || '';
-                      return eventDate.toLowerCase().includes('today');
-                    })
-                    .map((event: Event) => (
-                      <Link
-                        key={event.id}
-                        href={`/events/${event.id}`}
-                        className="flex flex-col gap-1 p-2 rounded-md hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-                      >
-                        <span className="font-medium text-xs truncate">{event.title}</span>
-                        <span className="text-xs text-muted-foreground truncate">
-                          {event.location?.address}
+                  {filteredEvents.map((event: Event) => (
+                    <Link
+                      key={event.id}
+                      href={`/events/${event.id}`}
+                      className="flex flex-col gap-1 p-2 rounded-md hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                    >
+                      <span className="font-medium text-xs truncate">{event.title}</span>
+                      <span className="text-xs text-muted-foreground truncate">
+                        {event.location?.address}
+                      </span>
+                      {event.category && (
+                        <span className="text-xs bg-secondary px-1 py-0.5 rounded w-fit">
+                          {event.category}
                         </span>
-                        {event.category && (
-                          <span className="text-xs bg-secondary px-1 py-0.5 rounded w-fit">
-                            {event.category}
-                          </span>
-                        )}
-                      </Link>
-                    ))}
+                      )}
+                    </Link>
+                  ))}
                 </div>
               )}
             </SidebarGroupContent>

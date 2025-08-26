@@ -43,19 +43,63 @@ function invalidateCache(prefix?: string): void {
   }
 }
 
+// Utilities to handle event time parsing and filtering
+function getEventTimestampMs(event: Record<string, unknown>): number | null {
+  const date = typeof event.date === 'string' ? event.date.trim() : undefined;
+  const time = typeof event.time === 'string' ? event.time.trim() : undefined;
+  if (!date || date.length === 0) return null;
+
+  // Prefer ISO-like YYYY-MM-DD and optional HH:mm
+  // Construct a local time Date. If only date provided, assume midnight local.
+  const isoLike = /^\d{4}-\d{2}-\d{2}$/;
+  let d: Date;
+  if (isoLike.test(date)) {
+    const hhmm = time && /^(\d{2}):(\d{2})$/.test(time) ? `${time}:00` : '00:00:00';
+    d = new Date(`${date}T${hhmm}`);
+  } else {
+    // Fallback: let Date parse the concatenation
+    d = new Date(`${date}${time ? ` ${time}` : ''}`);
+  }
+  const ms = d.getTime();
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function isEventUpcoming(event: Record<string, unknown>): boolean {
+  const ts = getEventTimestampMs(event);
+  if (ts === null) return true; // No date => not past; keep by default
+  return ts >= Date.now();
+}
+
+function compareEventsByTimeAsc(a: Record<string, unknown>, b: Record<string, unknown>): number {
+  const ta = getEventTimestampMs(a);
+  const tb = getEventTimestampMs(b);
+  if (ta === null && tb === null) return 0;
+  if (ta === null) return 1; // unknown dates go last
+  if (tb === null) return -1;
+  return ta - tb;
+}
+
 export const eventsRouter = router({
-  getAll: publicProcedure.query(async () => {
-    const key = 'events:getAll';
-    const cached = cacheGet<typeof events>(key);
-    if (cached) return cached;
-    const eventsSnapshot = await adminDb.collection('events').get();
-    const events = eventsSnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-    cacheSet(key, events);
-    return events;
-  }),
+  getAll: publicProcedure
+    .input(z.object({ includePast: z.boolean().optional() }).optional())
+    .query(async ({ input }) => {
+      const includePast = Boolean(input?.includePast);
+      const key = `events:getAll:${includePast ? 'all' : 'upcoming'}`;
+      const cached = cacheGet<typeof events>(key);
+      if (cached) return cached;
+      const eventsSnapshot = await adminDb.collection('events').get();
+      const events = eventsSnapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .filter((event) => (includePast ? true : isEventUpcoming(event as Record<string, unknown>)))
+        .sort((a, b) =>
+          compareEventsByTimeAsc(a as Record<string, unknown>, b as Record<string, unknown>)
+        );
+      cacheSet(key, events);
+      return events;
+    }),
 
   getDashboardEvents: publicProcedure
     .input(
@@ -63,6 +107,7 @@ export const eventsRouter = router({
         .object({
           userLat: z.number(),
           userLng: z.number(),
+          includePast: z.boolean().optional(),
         })
         .optional()
     )
@@ -88,7 +133,8 @@ export const eventsRouter = router({
         };
       }
 
-      const key = `events:getDashboard:${JSON.stringify(bounds)}`;
+      const includePast = Boolean(input?.includePast);
+      const key = `events:getDashboard:${JSON.stringify(bounds)}:${includePast ? 'all' : 'upcoming'}`;
       const cached = cacheGet<typeof events>(key);
       if (cached) return cached;
       const eventsSnapshot = await adminDb
@@ -107,7 +153,11 @@ export const eventsRouter = router({
           const eventData = event as { location?: { lng: number } };
           const lng = eventData.location?.lng;
           return lng !== undefined && lng >= bounds.west && lng <= bounds.east;
-        });
+        })
+        .filter((event) => (includePast ? true : isEventUpcoming(event as Record<string, unknown>)))
+        .sort((a, b) =>
+          compareEventsByTimeAsc(a as Record<string, unknown>, b as Record<string, unknown>)
+        );
 
       cacheSet(key, events);
       return events;
@@ -120,10 +170,11 @@ export const eventsRouter = router({
         south: z.number(),
         east: z.number(),
         west: z.number(),
+        includePast: z.boolean().optional(),
       })
     )
     .query(async ({ input }) => {
-      const key = `events:getByBounds:${input.north}:${input.south}:${input.east}:${input.west}`;
+      const key = `events:getByBounds:${input.north}:${input.south}:${input.east}:${input.west}:${input.includePast ? 'all' : 'upcoming'}`;
       const cached = cacheGet<typeof events>(key);
       if (cached) return cached;
       const eventsSnapshot = await adminDb
@@ -142,7 +193,13 @@ export const eventsRouter = router({
           const eventData = event as { location?: { lng: number } };
           const lng = eventData.location?.lng;
           return lng !== undefined && lng >= input.west && lng <= input.east;
-        });
+        })
+        .filter((event) =>
+          input.includePast ? true : isEventUpcoming(event as Record<string, unknown>)
+        )
+        .sort((a, b) =>
+          compareEventsByTimeAsc(a as Record<string, unknown>, b as Record<string, unknown>)
+        );
 
       cacheSet(key, events);
       return events;
