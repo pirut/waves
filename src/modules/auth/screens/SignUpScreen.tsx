@@ -1,6 +1,6 @@
 import { useAuth, useSignUp } from "@clerk/clerk-expo";
-import { Redirect, useRouter } from "expo-router";
-import { useState } from "react";
+import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { theme } from "@/src/core/theme/tokens";
@@ -9,27 +9,28 @@ import { Button } from "@/src/core/ui/Button";
 import { Card } from "@/src/core/ui/Card";
 import { Screen } from "@/src/core/ui/Screen";
 import { TextField } from "@/src/core/ui/TextField";
+import {
+  extractClerkErrorDetails,
+  isIdentifierAlreadyInUseError,
+} from "@/src/modules/auth/utils/clerkErrors";
 
-function extractErrorMessage(error: unknown) {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "errors" in error &&
-    Array.isArray((error as { errors?: unknown[] }).errors) &&
-    typeof (error as { errors?: Array<{ message?: string }> }).errors?.[0]?.message ===
-      "string"
-  ) {
-    return (error as { errors: Array<{ message: string }> }).errors[0].message;
+function getAuthRouteParams(nextEmail: string, reset?: string) {
+  const params: { email?: string; reset?: string } = {};
+  const normalizedEmail = nextEmail.trim();
+
+  if (normalizedEmail.length > 0) {
+    params.email = normalizedEmail;
   }
 
-  if (error instanceof Error) {
-    return error.message;
+  if (reset) {
+    params.reset = reset;
   }
 
-  return "Sign-up failed.";
+  return params;
 }
 
 export function SignUpScreen() {
+  const params = useLocalSearchParams<{ email?: string }>();
   const router = useRouter();
   const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const { isLoaded: signUpLoaded, signUp, setActive } = useSignUp();
@@ -39,16 +40,66 @@ export function SignUpScreen() {
   const [verificationCode, setVerificationCode] = useState("");
   const [pendingVerification, setPendingVerification] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showExistingAccountRecovery, setShowExistingAccountRecovery] = useState(false);
 
-  const isReady = authLoaded && signUpLoaded;
+  const isReady = authLoaded && signUpLoaded && !!signUp;
 
-  const onCreateAccount = async () => {
-    if (!signUpLoaded) {
+  useEffect(() => {
+    if (typeof params.email !== "string") {
       return;
     }
 
+    const normalizedEmail = params.email.trim();
+    if (!normalizedEmail) {
+      return;
+    }
+
+    setEmail((currentEmail) => (currentEmail.length > 0 ? currentEmail : normalizedEmail));
+  }, [params.email]);
+
+  useEffect(() => {
+    if (!signUpLoaded || !signUp) {
+      return;
+    }
+
+    const hasUnverifiedEmail =
+      signUp.status === "missing_requirements" &&
+      signUp.unverifiedFields.includes("email_address");
+
+    if (hasUnverifiedEmail && !pendingVerification) {
+      setPendingVerification(true);
+    }
+
+    const pendingEmail = signUp.emailAddress;
+    if (hasUnverifiedEmail && pendingEmail) {
+      setEmail((currentEmail) => (currentEmail.length > 0 ? currentEmail : pendingEmail));
+    }
+  }, [
+    pendingVerification,
+    signUp?.emailAddress,
+    signUp?.status,
+    signUp?.unverifiedFields,
+    signUpLoaded,
+  ]);
+
+  const clearMessages = () => {
     setErrorMessage(null);
+    setInfoMessage(null);
+  };
+
+  const hasPendingEmailVerification =
+    signUp?.status === "missing_requirements" &&
+    signUp.unverifiedFields.includes("email_address");
+
+  const onCreateAccount = async () => {
+    if (!signUpLoaded || !signUp) {
+      return;
+    }
+
+    clearMessages();
+    setShowExistingAccountRecovery(false);
     setIsSubmitting(true);
 
     try {
@@ -62,19 +113,47 @@ export function SignUpScreen() {
       });
 
       setPendingVerification(true);
+      setInfoMessage("Verification code sent. Check your email.");
     } catch (error) {
-      setErrorMessage(extractErrorMessage(error));
+      const details = extractClerkErrorDetails(error, "Sign-up failed.");
+
+      if (isIdentifierAlreadyInUseError(details.code)) {
+        if (hasPendingEmailVerification) {
+          try {
+            await signUp.prepareEmailAddressVerification({
+              strategy: "email_code",
+            });
+            setPendingVerification(true);
+            setInfoMessage("A new verification code was sent to your email.");
+            return;
+          } catch (resendError) {
+            const resendDetails = extractClerkErrorDetails(
+              resendError,
+              "This email already has an account.",
+            );
+            setErrorMessage(resendDetails.message);
+          }
+        } else {
+          setErrorMessage(
+            "This email already has an account. Sign in instead, or reset your password.",
+          );
+        }
+
+        setShowExistingAccountRecovery(true);
+      } else {
+        setErrorMessage(details.message);
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const onVerifyEmail = async () => {
-    if (!signUpLoaded) {
+    if (!signUpLoaded || !signUp) {
       return;
     }
 
-    setErrorMessage(null);
+    clearMessages();
     setIsSubmitting(true);
 
     try {
@@ -89,7 +168,29 @@ export function SignUpScreen() {
         setErrorMessage(`Additional sign-up steps are required (${result.status}).`);
       }
     } catch (error) {
-      setErrorMessage(extractErrorMessage(error));
+      const details = extractClerkErrorDetails(error, "Verification failed.");
+      setErrorMessage(details.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const onResendVerification = async () => {
+    if (!signUpLoaded || !signUp) {
+      return;
+    }
+
+    clearMessages();
+    setIsSubmitting(true);
+
+    try {
+      await signUp.prepareEmailAddressVerification({
+        strategy: "email_code",
+      });
+      setInfoMessage("New verification code sent.");
+    } catch (error) {
+      const details = extractClerkErrorDetails(error, "Could not resend verification code.");
+      setErrorMessage(details.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -125,18 +226,17 @@ export function SignUpScreen() {
       <Card>
         {pendingVerification ? (
           <>
+            <AppText>Enter the verification code from your email.</AppText>
             <TextField
               label="Verification code"
               onChangeText={setVerificationCode}
               placeholder="Enter email code"
               value={verificationCode}
             />
+            {infoMessage ? <AppText color={theme.colors.primary}>{infoMessage}</AppText> : null}
             {errorMessage ? <AppText color={theme.colors.danger}>{errorMessage}</AppText> : null}
-            <Button
-              label="Verify Email"
-              loading={isSubmitting}
-              onPress={onVerifyEmail}
-            />
+            <Button label="Verify Email" loading={isSubmitting} onPress={onVerifyEmail} />
+            <Button label="Resend Code" onPress={onResendVerification} variant="ghost" />
           </>
         ) : (
           <>
@@ -154,18 +254,32 @@ export function SignUpScreen() {
               secureTextEntry
               value={password}
             />
+            {infoMessage ? <AppText color={theme.colors.primary}>{infoMessage}</AppText> : null}
             {errorMessage ? <AppText color={theme.colors.danger}>{errorMessage}</AppText> : null}
-            <Button
-              label="Create Account"
-              loading={isSubmitting}
-              onPress={onCreateAccount}
-            />
+            <Button label="Create Account" loading={isSubmitting} onPress={onCreateAccount} />
+            {showExistingAccountRecovery ? (
+              <Button
+                label="Reset Password Instead"
+                onPress={() =>
+                  router.push({
+                    pathname: "/(auth)/sign-in",
+                    params: getAuthRouteParams(email, "1"),
+                  })
+                }
+                variant="ghost"
+              />
+            ) : null}
           </>
         )}
 
         <Button
           label="Back to Sign In"
-          onPress={() => router.push("/(auth)/sign-in")}
+          onPress={() =>
+            router.push({
+              pathname: "/(auth)/sign-in",
+              params: getAuthRouteParams(email),
+            })
+          }
           variant="secondary"
         />
       </Card>
