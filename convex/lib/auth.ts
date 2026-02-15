@@ -2,9 +2,10 @@ import { ConvexError } from "convex/values";
 import type { UserIdentity } from "convex/server";
 
 import type { Doc } from "../_generated/dataModel";
-import type { MutationCtx, QueryCtx } from "../_generated/server";
+import type { ActionCtx, MutationCtx, QueryCtx } from "../_generated/server";
 
-type ConvexFunctionCtx = QueryCtx | MutationCtx;
+type AuthContext = QueryCtx | MutationCtx | ActionCtx;
+type DbContext = QueryCtx | MutationCtx;
 const LOCAL_AUTH_BYPASS_ENABLED = process.env.LOCAL_AUTH_BYPASS === "true";
 const LOCAL_AUTH_BYPASS_EXTERNAL_ID =
   process.env.LOCAL_AUTH_BYPASS_EXTERNAL_ID?.trim() || "local-design-viewer";
@@ -29,7 +30,7 @@ function shouldUseBypassIdentity() {
   return LOCAL_AUTH_BYPASS_ENABLED && !RUNNING_IN_PROD_DEPLOYMENT;
 }
 
-export async function requireAuthenticatedIdentity(ctx: ConvexFunctionCtx) {
+export async function requireAuthenticatedIdentity(ctx: AuthContext) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
     if (shouldUseBypassIdentity()) {
@@ -48,7 +49,7 @@ export function resolveIdentityExternalId(identity: { subject?: string; tokenIde
   return identity.subject ?? identity.tokenIdentifier;
 }
 
-export async function requireAuthProfile(ctx: ConvexFunctionCtx): Promise<Doc<"profiles">> {
+export async function requireAuthProfile(ctx: DbContext): Promise<Doc<"profiles">> {
   const identity = await requireAuthenticatedIdentity(ctx);
   const externalId = resolveIdentityExternalId(identity);
 

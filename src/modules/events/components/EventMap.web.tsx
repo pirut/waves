@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Map, Marker, ZoomControl } from "pigeon-maps";
 
@@ -6,6 +7,9 @@ import { AppText } from "@/src/core/ui/AppText";
 import type { EventMapProps } from "@/src/modules/events/components/EventMap.types";
 
 function toWebZoom(span: number) {
+  if (span > 90) {
+    return 2;
+  }
   if (span > 45) {
     return 3;
   }
@@ -33,16 +37,36 @@ function toWebZoom(span: number) {
   return 12;
 }
 
-export function EventMap({ events, onSelectEvent, selectedEventId }: EventMapProps) {
-  if (events.length === 0) {
-    return (
-      <View style={styles.emptyState}>
-        <AppText variant="h3" color={theme.colors.heading}>
-          No map points yet
-        </AppText>
-        <AppText>Try changing your filters or create a new event.</AppText>
-      </View>
-    );
+type MapViewState = {
+  center: [number, number];
+  zoom: number;
+};
+
+function getTargetView({
+  events,
+  selectedEventId,
+  focusLocation,
+}: Pick<EventMapProps, "events" | "selectedEventId" | "focusLocation">): MapViewState {
+  if (events.length === 0 && !focusLocation) {
+    return {
+      center: [20, 0],
+      zoom: 2,
+    };
+  }
+
+  const selectedEvent = events.find((eventItem) => eventItem.id === selectedEventId);
+  if (selectedEvent) {
+    return {
+      center: [selectedEvent.latitude, selectedEvent.longitude],
+      zoom: 12,
+    };
+  }
+
+  if (focusLocation) {
+    return {
+      center: [focusLocation.latitude, focusLocation.longitude],
+      zoom: 12,
+    };
   }
 
   const lats = events.map((eventItem) => eventItem.latitude);
@@ -56,36 +80,81 @@ export function EventMap({ events, onSelectEvent, selectedEventId }: EventMapPro
   const latSpan = maxLat - minLat;
   const lngSpan = maxLng - minLng;
   const span = Math.max(latSpan, lngSpan);
-
-  const selectedEvent = events.find((eventItem) => eventItem.id === selectedEventId);
   const centerLat = latSpan === 0 ? minLat : minLat + latSpan / 2;
   const centerLng = lngSpan === 0 ? minLng : minLng + lngSpan / 2;
-  const center: [number, number] = selectedEvent
-    ? [selectedEvent.latitude, selectedEvent.longitude]
-    : [centerLat, centerLng];
-  const zoom = toWebZoom(span || 0.2);
-  const mapKey = `${selectedEventId ?? "all"}-${events.length}`;
+
+  return {
+    center: [centerLat, centerLng],
+    zoom: toWebZoom(span || 0.2),
+  };
+}
+
+export function EventMap({ events, onSelectEvent, selectedEventId, focusLocation }: EventMapProps) {
+  const targetView = useMemo(
+    () => getTargetView({ events, selectedEventId, focusLocation }),
+    [events, focusLocation, selectedEventId],
+  );
+
+  const [viewState, setViewState] = useState<MapViewState>(targetView);
+
+  useEffect(() => {
+    setViewState(targetView);
+  }, [targetView]);
+
+  if (events.length === 0 && !focusLocation) {
+    return (
+      <View style={styles.emptyState}>
+        <AppText variant="h3" color={theme.colors.heading}>
+          No map points yet
+        </AppText>
+        <AppText>Try changing your filters or create a new event.</AppText>
+      </View>
+    );
+  }
+
+  const isGlobeMode = viewState.zoom <= 2.5;
+  const mapHeight = isGlobeMode ? 292 : 300;
 
   return (
-    <View style={styles.mapShell}>
-      <Map defaultCenter={center} defaultZoom={zoom} height={300} key={mapKey}>
-        {events.map((eventItem) => (
-          <Marker
-            anchor={[eventItem.latitude, eventItem.longitude]}
-            color={selectedEventId === eventItem.id ? theme.colors.danger : theme.colors.primaryDeep}
-            key={eventItem.id}
-            onClick={() => onSelectEvent(eventItem.id)}
-            width={48}
-          />
-        ))}
-        <ZoomControl />
-      </Map>
+    <View style={[styles.mapShell, isGlobeMode ? styles.mapShellGlobe : undefined]}>
+      <View style={[styles.mapViewport, isGlobeMode ? styles.mapViewportGlobe : undefined]}>
+        <Map
+          center={viewState.center}
+          height={mapHeight}
+          onBoundsChanged={({ center, zoom }) => {
+            setViewState({
+              center,
+              zoom,
+            });
+          }}
+          zoom={viewState.zoom}>
+          {events.map((eventItem) => (
+            <Marker
+              anchor={[eventItem.latitude, eventItem.longitude]}
+              color={selectedEventId === eventItem.id ? theme.colors.danger : theme.colors.primaryDeep}
+              key={eventItem.id}
+              onClick={() => onSelectEvent(eventItem.id)}
+              width={48}
+            />
+          ))}
+          {focusLocation ? (
+            <Marker
+              anchor={[focusLocation.latitude, focusLocation.longitude]}
+              color={theme.colors.accent}
+              width={42}
+            />
+          ) : null}
+          <ZoomControl />
+        </Map>
+      </View>
 
       <View style={styles.legend}>
         <AppText variant="caption" color={theme.colors.primary} style={styles.legendTitle}>
-          Interactive map
+          {isGlobeMode ? "Globe view" : "Interactive map"}
         </AppText>
-        <AppText variant="caption" color={theme.colors.body}>Click any pin to focus an event.</AppText>
+        <AppText variant="caption" color={theme.colors.body}>
+          {isGlobeMode ? "Zoom in to switch from globe to street-level map." : "Click any pin to focus an event."}
+        </AppText>
       </View>
     </View>
   );
@@ -93,14 +162,32 @@ export function EventMap({ events, onSelectEvent, selectedEventId }: EventMapPro
 
 const styles = StyleSheet.create({
   mapShell: {
+    alignItems: "stretch",
     backgroundColor: "rgba(255,255,255,0.66)",
     borderColor: theme.colors.border,
     borderRadius: theme.radius.xl,
     borderWidth: 1,
-    height: 304,
+    minHeight: 304,
     overflow: "hidden",
+    paddingVertical: 2,
     position: "relative",
     ...theme.elevation.soft,
+  },
+  mapShellGlobe: {
+    alignItems: "center",
+    minHeight: 340,
+    paddingTop: theme.spacing.sm,
+  },
+  mapViewport: {
+    overflow: "hidden",
+  },
+  mapViewportGlobe: {
+    borderColor: theme.colors.borderStrong,
+    borderRadius: 146,
+    borderWidth: 2,
+    height: 292,
+    overflow: "hidden",
+    width: 292,
   },
   legend: {
     backgroundColor: "rgba(255,255,255,0.78)",

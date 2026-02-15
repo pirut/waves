@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
-import { useMutation } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
@@ -15,6 +15,8 @@ import { Button } from "@/src/core/ui/Button";
 import { Card } from "@/src/core/ui/Card";
 import { Screen } from "@/src/core/ui/Screen";
 import { TextField } from "@/src/core/ui/TextField";
+import { EventMap } from "@/src/modules/events/components/EventMap";
+import type { FocusLocation } from "@/src/modules/events/components/EventMap.types";
 import { EVENT_CATEGORIES } from "@/src/modules/events/domain/types";
 import { createEventInputSchema } from "@/src/modules/events/domain/validation";
 import { useFileUpload } from "@/src/modules/events/hooks/useFileUpload";
@@ -24,33 +26,41 @@ import {
   toDateTimeInputValue,
 } from "@/src/modules/events/utils/formatters";
 
+type GeocodeResult = {
+  displayName: string;
+  latitude: number;
+  longitude: number;
+  addressLine1: string;
+  city?: string;
+  region?: string;
+  country: string;
+  postalCode?: string;
+};
+
 export function CreateEventScreen() {
   const router = useRouter();
   const { viewerProfileId, viewerLoading } = useViewerProfile();
 
   const createEvent = useMutation(api.events.create);
+  const lookupAddress = useAction(api.geocoding.search);
   const { uploadAsset } = useFileUpload();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<string>(EVENT_CATEGORIES[0]);
   const [impactSummary, setImpactSummary] = useState("");
-  const [coverImageUrl, setCoverImageUrl] = useState("");
-  const [galleryCsv, setGalleryCsv] = useState("");
+  const [capacity, setCapacity] = useState("");
+
   const [coverStorageId, setCoverStorageId] = useState<Id<"_storage"> | null>(null);
   const [coverPreviewUri, setCoverPreviewUri] = useState<string | null>(null);
   const [galleryUploads, setGalleryUploads] = useState<
     Array<{ storageId: Id<"_storage">; previewUri: string }>
   >([]);
 
-  const [addressLine1, setAddressLine1] = useState("");
-  const [city, setCity] = useState("San Francisco");
-  const [region, setRegion] = useState("CA");
-  const [country, setCountry] = useState("USA");
-  const [postalCode, setPostalCode] = useState("");
-  const [latitude, setLatitude] = useState("37.7749");
-  const [longitude, setLongitude] = useState("-122.4194");
-  const [capacity, setCapacity] = useState("");
+  const [locationQuery, setLocationQuery] = useState("");
+  const [locationBusy, setLocationBusy] = useState(false);
+  const [locationResults, setLocationResults] = useState<GeocodeResult[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<GeocodeResult | null>(null);
 
   const [startAtInput, setStartAtInput] = useState(
     toDateTimeInputValue(Date.now() + 1000 * 60 * 60 * 48),
@@ -67,6 +77,14 @@ export function CreateEventScreen() {
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Los_Angeles",
     [],
   );
+
+  const mapFocus: FocusLocation | undefined = selectedLocation
+    ? {
+        latitude: selectedLocation.latitude,
+        longitude: selectedLocation.longitude,
+        label: selectedLocation.displayName,
+      }
+    : undefined;
 
   const pickImages = async (allowsMultipleSelection: boolean) => {
     if (Platform.OS !== "web") {
@@ -103,7 +121,6 @@ export function CreateEventScreen() {
       const uploadedStorageId = await uploadAsset(asset);
       setCoverStorageId(uploadedStorageId);
       setCoverPreviewUri(asset.uri);
-      setCoverImageUrl("");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Failed to upload cover image");
     } finally {
@@ -129,7 +146,6 @@ export function CreateEventScreen() {
       );
 
       setGalleryUploads((previous) => [...previous, ...uploaded]);
-      setGalleryCsv("");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Failed to upload gallery images");
     } finally {
@@ -137,8 +153,54 @@ export function CreateEventScreen() {
     }
   };
 
+  const onLookupAddress = async () => {
+    const normalizedQuery = locationQuery.trim();
+    if (normalizedQuery.length < 3) {
+      setErrorMessage("Enter at least 3 characters to look up an address.");
+      return;
+    }
+
+    setErrorMessage(null);
+    setLocationBusy(true);
+
+    try {
+      const results = (await lookupAddress({
+        query: normalizedQuery,
+        limit: 5,
+      })) as GeocodeResult[];
+
+      setLocationResults(results);
+
+      if (results.length === 0) {
+        setSelectedLocation(null);
+        setErrorMessage("No matching addresses were found.");
+        return;
+      }
+
+      setSelectedLocation(results[0]);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Could not look up this address");
+      setLocationResults([]);
+      setSelectedLocation(null);
+    } finally {
+      setLocationBusy(false);
+    }
+  };
+
+  const onSelectLocation = (result: GeocodeResult) => {
+    setSelectedLocation(result);
+    setLocationQuery(result.displayName);
+    setLocationResults([]);
+    setErrorMessage(null);
+  };
+
   const onCreate = async () => {
     if (!viewerProfileId) {
+      return;
+    }
+
+    if (!selectedLocation) {
+      setErrorMessage("Look up and select an address before publishing.");
       return;
     }
 
@@ -146,11 +208,10 @@ export function CreateEventScreen() {
 
     const parsedStartAt = parseDateTimeInput(startAtInput);
     const parsedEndAt = parseDateTimeInput(endAtInput);
-
-    const galleryImageUrls = galleryCsv
-      .split(",")
-      .map((value) => value.trim())
-      .filter(Boolean);
+    const resolvedCity =
+      selectedLocation.city?.trim() ||
+      selectedLocation.region?.trim() ||
+      selectedLocation.country.trim();
 
     const validationResult = createEventInputSchema.safeParse({
       title,
@@ -159,17 +220,15 @@ export function CreateEventScreen() {
       startAt: parsedStartAt,
       endAt: parsedEndAt,
       timezone,
-      latitude: Number(latitude),
-      longitude: Number(longitude),
-      addressLine1,
-      city,
-      region: region || undefined,
-      country,
-      postalCode: postalCode || undefined,
-      coverImageUrl: coverImageUrl || undefined,
+      latitude: selectedLocation.latitude,
+      longitude: selectedLocation.longitude,
+      addressLine1: selectedLocation.addressLine1,
+      city: resolvedCity,
+      region: selectedLocation.region || undefined,
+      country: selectedLocation.country,
+      postalCode: selectedLocation.postalCode || undefined,
       impactSummary: impactSummary || undefined,
       capacity: capacity ? Number(capacity) : undefined,
-      galleryImageUrls: galleryImageUrls.length > 0 ? galleryImageUrls : undefined,
     });
 
     if (!validationResult.success) {
@@ -194,13 +253,13 @@ export function CreateEventScreen() {
         region: validationResult.data.region,
         country: validationResult.data.country,
         postalCode: validationResult.data.postalCode,
-        coverImageUrl: coverStorageId ? undefined : validationResult.data.coverImageUrl,
         coverStorageId: coverStorageId ?? undefined,
         impactSummary: validationResult.data.impactSummary,
         capacity: validationResult.data.capacity,
         galleryStorageIds:
-          galleryUploads.length > 0 ? galleryUploads.map((uploadItem) => uploadItem.storageId) : undefined,
-        galleryImageUrls: validationResult.data.galleryImageUrls,
+          galleryUploads.length > 0
+            ? galleryUploads.map((uploadItem) => uploadItem.storageId)
+            : undefined,
       });
 
       router.push(`/events/${eventId}`);
@@ -234,10 +293,10 @@ export function CreateEventScreen() {
             Host an Event
           </AppText>
           <AppText variant="h1" color={theme.colors.primaryText}>
-            Create something people want to show up for
+            Create an event in a few steps
           </AppText>
           <AppText color="#d3ebff">
-            Use clear details, impact goals, and visuals. The better your event page, the higher your RSVP conversion.
+            Share what it is, when it happens, where it is, then upload photos.
           </AppText>
         </LinearGradient>
       </Card>
@@ -274,58 +333,6 @@ export function CreateEventScreen() {
           placeholder="What will happen, what to bring, and who should join?"
           value={description}
         />
-        <TextField
-          label="Impact summary"
-          onChangeText={setImpactSummary}
-          placeholder="Target: package 5,000 meals"
-          value={impactSummary}
-        />
-      </Card>
-
-      <Card>
-        <AppText variant="h3" color={theme.colors.heading}>
-          Visuals
-        </AppText>
-        <TextField
-          label="Cover image URL"
-          onChangeText={setCoverImageUrl}
-          placeholder="https://..."
-          value={coverImageUrl}
-        />
-        <Button
-          label={coverStorageId ? "Replace Uploaded Cover Photo" : "Upload Cover Photo"}
-          loading={isUploadingMedia}
-          onPress={onUploadCoverPhoto}
-          variant="secondary"
-        />
-        {coverPreviewUri ? (
-          <Image contentFit="cover" source={coverPreviewUri} style={styles.previewImage} />
-        ) : null}
-
-        <TextField
-          label="Gallery image URLs (comma-separated)"
-          onChangeText={setGalleryCsv}
-          placeholder="https://img1, https://img2"
-          value={galleryCsv}
-        />
-        <Button
-          label="Upload Gallery Photos"
-          loading={isUploadingMedia}
-          onPress={onUploadGalleryPhotos}
-          variant="secondary"
-        />
-        {galleryUploads.length > 0 ? (
-          <View style={styles.galleryPreviewRow}>
-            {galleryUploads.map((uploadItem) => (
-              <Image
-                contentFit="cover"
-                key={`${uploadItem.storageId}-${uploadItem.previewUri}`}
-                source={uploadItem.previewUri}
-                style={styles.galleryPreviewImage}
-              />
-            ))}
-          </View>
-        ) : null}
       </Card>
 
       <Card>
@@ -351,39 +358,102 @@ export function CreateEventScreen() {
           Location
         </AppText>
         <TextField
-          label="Address"
-          onChangeText={setAddressLine1}
-          placeholder="123 Beach St"
-          value={addressLine1}
+          label="Address or landmark"
+          onChangeText={(nextValue) => {
+            setLocationQuery(nextValue);
+            if (selectedLocation && nextValue.trim() !== selectedLocation.displayName) {
+              setSelectedLocation(null);
+            }
+          }}
+          placeholder="1 Ferry Building, San Francisco"
+          value={locationQuery}
         />
-        <TextField label="City" onChangeText={setCity} placeholder="San Francisco" value={city} />
-        <TextField label="Region/State" onChangeText={setRegion} placeholder="CA" value={region} />
-        <TextField label="Country" onChangeText={setCountry} placeholder="USA" value={country} />
-        <TextField
-          label="Postal code"
-          onChangeText={setPostalCode}
-          placeholder="94121"
-          value={postalCode}
+        <Button
+          label="Look Up Address"
+          loading={locationBusy}
+          onPress={onLookupAddress}
+          variant="secondary"
         />
+        {selectedLocation ? (
+          <Badge label={`Selected: ${selectedLocation.displayName}`} tone="success" />
+        ) : null}
+
+        {locationResults.length > 0 ? (
+          <View style={styles.lookupResultList}>
+            {locationResults.map((resultItem) => (
+              <Pressable
+                key={`${resultItem.latitude}-${resultItem.longitude}`}
+                onPress={() => onSelectLocation(resultItem)}
+                style={styles.lookupResultItem}>
+                <AppText color={theme.colors.heading} variant="caption" style={{ fontWeight: "700" }}>
+                  {resultItem.addressLine1}
+                </AppText>
+                <AppText variant="caption" color={theme.colors.body}>
+                  {resultItem.displayName}
+                </AppText>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+
+        {mapFocus ? (
+          <EventMap
+            events={[]}
+            focusLocation={mapFocus}
+            onSelectEvent={() => undefined}
+          />
+        ) : (
+          <View style={styles.mapHint}>
+            <AppText variant="caption" color={theme.colors.muted}>
+              Look up an address to preview it on the map.
+            </AppText>
+          </View>
+        )}
       </Card>
 
       <Card>
         <AppText variant="h3" color={theme.colors.heading}>
-          Capacity and coordinates
+          Photos
+        </AppText>
+        <Button
+          label={coverStorageId ? "Replace Cover Photo" : "Upload Cover Photo"}
+          loading={isUploadingMedia}
+          onPress={onUploadCoverPhoto}
+          variant="secondary"
+        />
+        {coverPreviewUri ? (
+          <Image contentFit="cover" source={coverPreviewUri} style={styles.previewImage} />
+        ) : null}
+
+        <Button
+          label="Upload Gallery Photos"
+          loading={isUploadingMedia}
+          onPress={onUploadGalleryPhotos}
+          variant="secondary"
+        />
+        {galleryUploads.length > 0 ? (
+          <View style={styles.galleryPreviewRow}>
+            {galleryUploads.map((uploadItem) => (
+              <Image
+                contentFit="cover"
+                key={`${uploadItem.storageId}-${uploadItem.previewUri}`}
+                source={uploadItem.previewUri}
+                style={styles.galleryPreviewImage}
+              />
+            ))}
+          </View>
+        ) : null}
+      </Card>
+
+      <Card>
+        <AppText variant="h3" color={theme.colors.heading}>
+          Optional details
         </AppText>
         <TextField
-          keyboardType="decimal-pad"
-          label="Latitude"
-          onChangeText={setLatitude}
-          placeholder="37.7749"
-          value={latitude}
-        />
-        <TextField
-          keyboardType="decimal-pad"
-          label="Longitude"
-          onChangeText={setLongitude}
-          placeholder="-122.4194"
-          value={longitude}
+          label="Impact summary"
+          onChangeText={setImpactSummary}
+          placeholder="Target: package 5,000 meals"
+          value={impactSummary}
         />
         <TextField
           keyboardType="number-pad"
@@ -438,5 +508,25 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.md,
     height: 76,
     width: 76,
+  },
+  lookupResultList: {
+    gap: theme.spacing.xs,
+  },
+  lookupResultItem: {
+    backgroundColor: "rgba(255,255,255,0.72)",
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    gap: 4,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+  },
+  mapHint: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.64)",
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    padding: theme.spacing.md,
   },
 });

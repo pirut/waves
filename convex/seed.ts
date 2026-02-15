@@ -39,7 +39,6 @@ export const seedDemoData = internalMutation({
       "make-waves-viewer",
       "You",
       "San Francisco",
-      "https://images.unsplash.com/photo-1542206395-9feb3edaa68d",
     );
 
     const existingEvent = await ctx.db
@@ -59,14 +58,12 @@ export const seedDemoData = internalMutation({
       "coastline-care",
       "Coastline Care Team",
       "San Francisco",
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1",
     );
     const organizerB = await ensureProfile(
       ctx,
       "sunrise-pantry",
       "Sunrise Pantry",
       "Oakland",
-      "https://images.unsplash.com/photo-1546961329-78bef0414d7c",
     );
 
     const now = Date.now();
@@ -88,8 +85,6 @@ export const seedDemoData = internalMutation({
       region: "CA",
       country: "USA",
       postalCode: "94121",
-      coverImageUrl:
-        "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=1400&q=80",
       impactSummary: "Target: remove 1,200 lbs of coastal waste.",
       capacity: 250,
       status: "published",
@@ -114,27 +109,11 @@ export const seedDemoData = internalMutation({
       region: "CA",
       country: "USA",
       postalCode: "94607",
-      coverImageUrl:
-        "https://images.unsplash.com/photo-1469571486292-b53601020f90?auto=format&fit=crop&w=1400&q=80",
       impactSummary: "Target: package 6,000 meals.",
       capacity: 140,
       status: "published",
       organizerProfileId: organizerB,
       attendeeCount: 1,
-      createdAt: now,
-    });
-
-    await ctx.db.insert("eventMedia", {
-      eventId: beachEventId,
-      url: "https://images.unsplash.com/photo-1527489377706-5bf97e608852?auto=format&fit=crop&w=1200&q=80",
-      sortOrder: 0,
-      createdAt: now,
-    });
-
-    await ctx.db.insert("eventMedia", {
-      eventId: pantryEventId,
-      url: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=1200&q=80",
-      sortOrder: 0,
       createdAt: now,
     });
 

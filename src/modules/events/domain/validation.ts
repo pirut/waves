@@ -14,10 +14,8 @@ export const createEventInputSchema = z.object({
   region: z.string().trim().optional(),
   country: z.string().trim().min(2),
   postalCode: z.string().trim().optional(),
-  coverImageUrl: z.string().trim().url().optional().or(z.literal("")),
   impactSummary: z.string().trim().optional(),
   capacity: z.number().int().positive().optional(),
-  galleryImageUrls: z.array(z.string().trim().url()).optional(),
 });
 
 export type CreateEventInput = z.infer<typeof createEventInputSchema>;

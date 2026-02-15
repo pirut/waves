@@ -15,9 +15,17 @@ type Props = {
   onOpen: () => void;
   onRsvp?: () => void;
   rsvpBusy?: boolean;
+  distanceMiles?: number;
 };
 
-export function EventCard({ item, onOpen, onRsvp, rsvpBusy }: Props) {
+function formatDistance(distanceMiles: number) {
+  if (distanceMiles < 10) {
+    return `${distanceMiles.toFixed(1)} mi away`;
+  }
+  return `${Math.round(distanceMiles)} mi away`;
+}
+
+export function EventCard({ item, onOpen, onRsvp, rsvpBusy, distanceMiles }: Props) {
   return (
     <Card style={styles.card}>
       {item.coverImageUrl ? (
@@ -46,6 +54,11 @@ export function EventCard({ item, onOpen, onRsvp, rsvpBusy }: Props) {
       <AppText variant="caption" color={theme.colors.body}>
         {item.city}, {item.country}
       </AppText>
+      {distanceMiles !== undefined ? (
+        <AppText variant="caption" color={theme.colors.muted}>
+          {formatDistance(distanceMiles)}
+        </AppText>
+      ) : null}
 
       {item.impactSummary ? <AppText numberOfLines={3}>{item.impactSummary}</AppText> : null}
 

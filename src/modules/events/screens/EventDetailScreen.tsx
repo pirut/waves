@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Linking, Platform, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
@@ -54,6 +54,26 @@ export function EventDetailScreen({ eventId }: Props) {
   const [messageBody, setMessageBody] = useState("");
   const [messageBusy, setMessageBusy] = useState(false);
   const [messageFeedback, setMessageFeedback] = useState<string | null>(null);
+
+  const onOpenInMaps = async () => {
+    if (!eventResult) {
+      return;
+    }
+
+    const addressLabel = encodeURIComponent(
+      `${eventResult.event.addressLine1}, ${eventResult.event.city}, ${eventResult.event.country}`,
+    );
+    const { latitude, longitude } = eventResult.event;
+
+    const mapsUrl =
+      Platform.OS === "ios"
+        ? `http://maps.apple.com/?ll=${latitude},${longitude}&q=${addressLabel}`
+        : Platform.OS === "android"
+          ? `geo:${latitude},${longitude}?q=${latitude},${longitude}(${addressLabel})`
+          : `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+
+    await Linking.openURL(mapsUrl);
+  };
 
   const mapItem = useMemo(() => {
     if (!eventResult) {
@@ -210,6 +230,7 @@ export function EventDetailScreen({ eventId }: Props) {
           {eventResult.event.addressLine1}, {eventResult.event.city}, {eventResult.event.country}
         </AppText>
         <AppText>Timezone: {eventResult.event.timezone}</AppText>
+        <Button label="Open in Maps" onPress={onOpenInMaps} variant="secondary" />
       </Card>
 
       <AppText variant="overline" color={theme.colors.muted}>

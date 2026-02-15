@@ -11,6 +11,7 @@
 import type * as crons from "../crons.js";
 import type * as events from "../events.js";
 import type * as files from "../files.js";
+import type * as geocoding from "../geocoding.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as notifications from "../notifications.js";
 import type * as notificationsActions from "../notificationsActions.js";
@@ -27,6 +28,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   events: typeof events;
   files: typeof files;
+  geocoding: typeof geocoding;
   "lib/auth": typeof lib_auth;
   notifications: typeof notifications;
   notificationsActions: typeof notificationsActions;

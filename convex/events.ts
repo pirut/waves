@@ -126,12 +126,7 @@ function createSlug(title: string) {
 async function resolveStorageUrl(
   ctx: QueryCtx | MutationCtx,
   storageId?: Id<"_storage">,
-  fallbackUrl?: string,
 ) {
-  if (fallbackUrl) {
-    return fallbackUrl;
-  }
-
   if (!storageId) {
     return undefined;
   }
@@ -168,11 +163,7 @@ async function toEventListItem(
 
   const viewerRsvp =
     explicitViewerRsvp ?? (await getViewerRsvpStatus(ctx, eventDoc._id, viewerProfileId));
-  const coverImageUrl = await resolveStorageUrl(
-    ctx,
-    eventDoc.coverStorageId,
-    eventDoc.coverImageUrl,
-  );
+  const coverImageUrl = await resolveStorageUrl(ctx, eventDoc.coverStorageId);
 
   return {
     id: eventDoc._id,
@@ -257,11 +248,7 @@ export const getById = query({
       .withIndex("by_eventId_and_sortOrder", (q) => q.eq("eventId", eventDoc._id))
       .order("asc")
       .collect();
-    const coverImageUrl = await resolveStorageUrl(
-      ctx,
-      eventDoc.coverStorageId,
-      eventDoc.coverImageUrl,
-    );
+    const coverImageUrl = await resolveStorageUrl(ctx, eventDoc.coverStorageId);
 
     const rsvpDocs = await ctx.db
       .query("rsvps")
@@ -358,7 +345,7 @@ export const getById = query({
       media: (
         await Promise.all(
           mediaDocs.map(async (mediaDoc) => {
-            const mediaUrl = await resolveStorageUrl(ctx, mediaDoc.storageId, mediaDoc.url);
+            const mediaUrl = await resolveStorageUrl(ctx, mediaDoc.storageId);
             if (!mediaUrl) {
               return null;
             }
@@ -535,12 +522,10 @@ export const create = mutation({
     region: v.optional(v.string()),
     country: v.string(),
     postalCode: v.optional(v.string()),
-    coverImageUrl: v.optional(v.string()),
     coverStorageId: v.optional(v.id("_storage")),
     impactSummary: v.optional(v.string()),
     capacity: v.optional(v.number()),
     galleryStorageIds: v.optional(v.array(v.id("_storage"))),
-    galleryImageUrls: v.optional(v.array(v.string())),
   },
   returns: v.id("events"),
   handler: async (ctx, args) => {
@@ -576,7 +561,6 @@ export const create = mutation({
       region: args.region,
       country: args.country,
       postalCode: args.postalCode,
-      coverImageUrl: args.coverImageUrl,
       coverStorageId: args.coverStorageId,
       impactSummary: args.impactSummary,
       capacity: args.capacity,
@@ -592,16 +576,6 @@ export const create = mutation({
       await ctx.db.insert("eventMedia", {
         eventId,
         storageId,
-        sortOrder: nextSortOrder,
-        createdAt: Date.now(),
-      });
-      nextSortOrder += 1;
-    }
-
-    for (const url of args.galleryImageUrls ?? []) {
-      await ctx.db.insert("eventMedia", {
-        eventId,
-        url,
         sortOrder: nextSortOrder,
         createdAt: Date.now(),
       });
