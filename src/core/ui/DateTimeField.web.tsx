@@ -1,7 +1,7 @@
+import * as Popover from "@radix-ui/react-popover";
 import { FontAwesome } from "@expo/vector-icons";
 import { format } from "date-fns";
 import { useMemo, useState, type CSSProperties } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
 import { DayPicker } from "react-day-picker";
 
 import { theme } from "@/src/core/theme/tokens";
@@ -16,11 +16,7 @@ type Props = {
   minuteInterval?: 1 | 5 | 10 | 15 | 20 | 30;
 };
 
-function clampTimestamp(
-  value: number,
-  minimumDate?: number,
-  maximumDate?: number,
-) {
+function clampTimestamp(value: number, minimumDate?: number, maximumDate?: number) {
   if (minimumDate !== undefined && value < minimumDate) {
     return minimumDate;
   }
@@ -57,122 +53,41 @@ function parseTimeValue(value: string) {
   return { hours, minutes };
 }
 
-export function DateTimeField({
-  label,
-  value,
-  onChange,
-  minimumDate,
-  maximumDate,
-  minuteInterval = 5,
-}: Props) {
-  const [isOpen, setIsOpen] = useState(false);
+const containerStyle: CSSProperties = {
+  display: "grid",
+  gap: 6,
+  width: "100%",
+};
 
-  const selectedDate = useMemo(() => new Date(value), [value]);
-  const timeOptions = useMemo(
-    () => buildTimeOptions(minuteInterval),
-    [minuteInterval],
-  );
+const triggerStyle: CSSProperties = {
+  alignItems: "center",
+  backgroundColor: theme.colors.elevatedMuted,
+  border: `1px solid ${theme.colors.border}`,
+  borderRadius: theme.radius.md,
+  color: theme.colors.heading,
+  cursor: "pointer",
+  display: "flex",
+  justifyContent: "space-between",
+  minHeight: 46,
+  padding: "10px 16px",
+  width: "100%",
+};
 
-  const onSelectDate = (nextDate: Date | undefined) => {
-    if (!nextDate) {
-      return;
-    }
+const triggerTextWrap: CSSProperties = {
+  alignItems: "center",
+  display: "flex",
+  gap: 12,
+};
 
-    const mergedDate = new Date(value);
-    mergedDate.setFullYear(
-      nextDate.getFullYear(),
-      nextDate.getMonth(),
-      nextDate.getDate(),
-    );
-
-    const nextTimestamp = clampTimestamp(
-      mergedDate.getTime(),
-      minimumDate,
-      maximumDate,
-    );
-    onChange(nextTimestamp);
-  };
-
-  const onSelectTime = (nextTimeValue: string) => {
-    const parsed = parseTimeValue(nextTimeValue);
-    if (!parsed) {
-      return;
-    }
-
-    const mergedDate = new Date(value);
-    mergedDate.setHours(parsed.hours, parsed.minutes, 0, 0);
-
-    const nextTimestamp = clampTimestamp(
-      mergedDate.getTime(),
-      minimumDate,
-      maximumDate,
-    );
-    onChange(nextTimestamp);
-  };
-
-  const selectedTimeValue = `${selectedDate.getHours()}:${selectedDate.getMinutes()}`;
-
-  return (
-    <View style={styles.wrapper}>
-      <AppText variant="caption" color={theme.colors.muted} style={styles.label}>
-        {label}
-      </AppText>
-
-      <View style={styles.shell}>
-        <Pressable
-          onPress={() => setIsOpen((current) => !current)}
-          style={({ pressed }) => [
-            styles.trigger,
-            pressed ? styles.triggerPressed : undefined,
-            isOpen ? styles.triggerOpen : undefined,
-          ]}>
-          <View style={styles.triggerContent}>
-            <FontAwesome color={theme.colors.muted} name="calendar-o" size={16} />
-            <AppText color={theme.colors.heading} style={styles.triggerText}>
-              {format(selectedDate, "PPP • h:mm a")}
-            </AppText>
-          </View>
-          <FontAwesome
-            color={theme.colors.subtle}
-            name={isOpen ? "chevron-up" : "chevron-down"}
-            size={12}
-          />
-        </Pressable>
-
-        {isOpen ? (
-          <View style={styles.popover}>
-            <DayPicker
-              fromDate={minimumDate ? new Date(minimumDate) : undefined}
-              mode="single"
-              onSelect={onSelectDate}
-              selected={selectedDate}
-              showOutsideDays
-              toDate={maximumDate ? new Date(maximumDate) : undefined}
-              weekStartsOn={0}
-              styles={dayPickerStyles}
-            />
-
-            <View style={styles.timeSection}>
-              <AppText variant="caption" color={theme.colors.muted}>
-                Time
-              </AppText>
-              <select
-                onChange={(event) => onSelectTime(event.target.value)}
-                style={styles.timeSelect as CSSProperties}
-                value={selectedTimeValue}>
-                {timeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </View>
-          </View>
-        ) : null}
-      </View>
-    </View>
-  );
-}
+const popoverContentStyle: CSSProperties = {
+  backgroundColor: theme.colors.elevated,
+  border: `1px solid ${theme.colors.border}`,
+  borderRadius: theme.radius.lg,
+  boxShadow: "0 18px 50px rgba(8, 24, 39, 0.18)",
+  minWidth: 326,
+  padding: 12,
+  zIndex: 80,
+};
 
 const dayPickerStyles: Record<string, CSSProperties> = {
   root: {
@@ -212,18 +127,17 @@ const dayPickerStyles: Record<string, CSSProperties> = {
   table: {
     borderCollapse: "separate",
     borderSpacing: "2px",
+    marginTop: 4,
     width: "100%",
   },
-  head_row: {},
   head_cell: {
     color: theme.colors.muted,
     fontFamily: theme.fonts.body,
     fontSize: 11,
     fontWeight: 600,
-    height: 26,
+    height: 24,
     textAlign: "center",
   },
-  row: {},
   cell: {
     textAlign: "center",
   },
@@ -247,82 +161,155 @@ const dayPickerStyles: Record<string, CSSProperties> = {
   },
   day_outside: {
     color: theme.colors.subtle,
-    opacity: 0.5,
+    opacity: 0.55,
   },
   day_disabled: {
     color: theme.colors.subtle,
-    opacity: 0.3,
+    opacity: 0.28,
   },
 };
 
-const styles = StyleSheet.create({
-  wrapper: {
-    gap: 6,
-  },
-  label: {
-    marginLeft: 1,
-    opacity: 0.92,
-  },
-  shell: {
-    gap: theme.spacing.xs,
-  },
-  trigger: {
-    alignItems: "center",
-    backgroundColor: theme.colors.elevatedMuted,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    minHeight: 46,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 10,
-  },
-  triggerPressed: {
-    opacity: 0.9,
-  },
-  triggerOpen: {
-    backgroundColor: theme.colors.elevated,
-    borderColor: theme.colors.primary,
-  },
-  triggerContent: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-  },
-  triggerText: {
-    fontWeight: "600",
-  },
-  popover: {
-    backgroundColor: theme.colors.elevated,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    minWidth: 302,
-    padding: theme.spacing.sm,
-    ...theme.elevation.soft,
-  },
-  timeSection: {
-    borderTopColor: theme.colors.border,
-    borderTopWidth: 1,
-    gap: theme.spacing.xs,
-    marginTop: theme.spacing.sm,
-    paddingTop: theme.spacing.sm,
-  },
-  timeSelect: {
-    backgroundColor: theme.colors.elevatedMuted,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    borderStyle: "solid",
-    borderWidth: 1,
-    color: theme.colors.heading,
-    fontFamily: theme.fonts.body,
-    fontSize: theme.typography.body,
-    minHeight: 42,
-    paddingBottom: 8,
-    paddingLeft: theme.spacing.sm,
-    paddingRight: theme.spacing.sm,
-    paddingTop: 8,
-    width: "100%",
-  },
-});
+const footerStyle: CSSProperties = {
+  borderTop: `1px solid ${theme.colors.border}`,
+  display: "grid",
+  gap: 8,
+  marginTop: 10,
+  paddingTop: 10,
+};
+
+const timeLabelStyle: CSSProperties = {
+  color: theme.colors.muted,
+  fontFamily: theme.fonts.body,
+  fontSize: theme.typography.caption,
+};
+
+const timeSelectStyle: CSSProperties = {
+  backgroundColor: theme.colors.elevatedMuted,
+  border: `1px solid ${theme.colors.border}`,
+  borderRadius: theme.radius.md,
+  color: theme.colors.heading,
+  fontFamily: theme.fonts.body,
+  fontSize: theme.typography.body,
+  minHeight: 42,
+  padding: "8px 10px",
+  width: "100%",
+};
+
+const actionsStyle: CSSProperties = {
+  display: "flex",
+  justifyContent: "flex-end",
+};
+
+const doneButtonStyle: CSSProperties = {
+  backgroundColor: theme.colors.primaryDeep,
+  border: "none",
+  borderRadius: theme.radius.md,
+  color: theme.colors.primaryText,
+  cursor: "pointer",
+  fontFamily: theme.fonts.body,
+  fontSize: 13,
+  fontWeight: 700,
+  minHeight: 34,
+  padding: "6px 12px",
+};
+
+export function DateTimeField({
+  label,
+  value,
+  onChange,
+  minimumDate,
+  maximumDate,
+  minuteInterval = 5,
+}: Props) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedDate = useMemo(() => new Date(value), [value]);
+  const timeOptions = useMemo(() => buildTimeOptions(minuteInterval), [minuteInterval]);
+
+  const onSelectDate = (nextDate: Date | undefined) => {
+    if (!nextDate) {
+      return;
+    }
+
+    const mergedDate = new Date(value);
+    mergedDate.setFullYear(nextDate.getFullYear(), nextDate.getMonth(), nextDate.getDate());
+
+    const nextTimestamp = clampTimestamp(mergedDate.getTime(), minimumDate, maximumDate);
+    onChange(nextTimestamp);
+  };
+
+  const onSelectTime = (nextTimeValue: string) => {
+    const parsed = parseTimeValue(nextTimeValue);
+    if (!parsed) {
+      return;
+    }
+
+    const mergedDate = new Date(value);
+    mergedDate.setHours(parsed.hours, parsed.minutes, 0, 0);
+
+    const nextTimestamp = clampTimestamp(mergedDate.getTime(), minimumDate, maximumDate);
+    onChange(nextTimestamp);
+  };
+
+  const selectedTimeValue = `${selectedDate.getHours()}:${selectedDate.getMinutes()}`;
+
+  return (
+    <div style={containerStyle}>
+      <AppText variant="caption" color={theme.colors.muted} style={{ marginLeft: 1, opacity: 0.92 }}>
+        {label}
+      </AppText>
+
+      <Popover.Root onOpenChange={setIsOpen} open={isOpen}>
+        <Popover.Trigger asChild>
+          <button style={triggerStyle} type="button">
+            <span style={triggerTextWrap}>
+              <FontAwesome color={theme.colors.muted} name="calendar-o" size={16} />
+              <span style={{ color: theme.colors.heading, fontFamily: theme.fonts.body, fontSize: 15, fontWeight: 600 }}>
+                {format(selectedDate, "PPP • h:mm a")}
+              </span>
+            </span>
+            <FontAwesome color={theme.colors.subtle} name={isOpen ? "chevron-up" : "chevron-down"} size={12} />
+          </button>
+        </Popover.Trigger>
+
+        <Popover.Portal>
+          <Popover.Content
+            align="start"
+            collisionPadding={16}
+            side="bottom"
+            sideOffset={8}
+            style={popoverContentStyle}>
+            <DayPicker
+              fromDate={minimumDate ? new Date(minimumDate) : undefined}
+              mode="single"
+              onSelect={onSelectDate}
+              selected={selectedDate}
+              showOutsideDays
+              styles={dayPickerStyles}
+              toDate={maximumDate ? new Date(maximumDate) : undefined}
+              weekStartsOn={0}
+            />
+
+            <div style={footerStyle}>
+              <span style={timeLabelStyle}>Time</span>
+              <select
+                onChange={(event) => onSelectTime(event.target.value)}
+                style={timeSelectStyle}
+                value={selectedTimeValue}>
+                {timeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <div style={actionsStyle}>
+                <button onClick={() => setIsOpen(false)} style={doneButtonStyle} type="button">
+                  Done
+                </button>
+              </div>
+            </div>
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+    </div>
+  );
+}
