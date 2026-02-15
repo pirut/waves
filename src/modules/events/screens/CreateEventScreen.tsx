@@ -13,6 +13,7 @@ import { AppText } from "@/src/core/ui/AppText";
 import { Badge } from "@/src/core/ui/Badge";
 import { Button } from "@/src/core/ui/Button";
 import { Card } from "@/src/core/ui/Card";
+import { DateTimeField } from "@/src/core/ui/DateTimeField";
 import { Screen } from "@/src/core/ui/Screen";
 import { TextField } from "@/src/core/ui/TextField";
 import { EventMap } from "@/src/modules/events/components/EventMap";
@@ -21,10 +22,6 @@ import { EVENT_CATEGORIES } from "@/src/modules/events/domain/types";
 import { createEventInputSchema } from "@/src/modules/events/domain/validation";
 import { useFileUpload } from "@/src/modules/events/hooks/useFileUpload";
 import { useViewerProfile } from "@/src/modules/events/hooks/useViewerProfile";
-import {
-  parseDateTimeInput,
-  toDateTimeInputValue,
-} from "@/src/modules/events/utils/formatters";
 
 type GeocodeResult = {
   displayName: string;
@@ -62,12 +59,8 @@ export function CreateEventScreen() {
   const [locationResults, setLocationResults] = useState<GeocodeResult[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<GeocodeResult | null>(null);
 
-  const [startAtInput, setStartAtInput] = useState(
-    toDateTimeInputValue(Date.now() + 1000 * 60 * 60 * 48),
-  );
-  const [endAtInput, setEndAtInput] = useState(
-    toDateTimeInputValue(Date.now() + 1000 * 60 * 60 * 51),
-  );
+  const [startAt, setStartAt] = useState(Date.now() + 1000 * 60 * 60 * 48);
+  const [endAt, setEndAt] = useState(Date.now() + 1000 * 60 * 60 * 51);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -206,8 +199,6 @@ export function CreateEventScreen() {
 
     setErrorMessage(null);
 
-    const parsedStartAt = parseDateTimeInput(startAtInput);
-    const parsedEndAt = parseDateTimeInput(endAtInput);
     const resolvedCity =
       selectedLocation.city?.trim() ||
       selectedLocation.region?.trim() ||
@@ -217,8 +208,8 @@ export function CreateEventScreen() {
       title,
       description,
       category,
-      startAt: parsedStartAt,
-      endAt: parsedEndAt,
+      startAt,
+      endAt,
       timezone,
       latitude: selectedLocation.latitude,
       longitude: selectedLocation.longitude,
@@ -268,6 +259,17 @@ export function CreateEventScreen() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const onChangeStartAt = (nextStartAt: number) => {
+    setStartAt(nextStartAt);
+    if (endAt <= nextStartAt) {
+      setEndAt(nextStartAt + 1000 * 60 * 60);
+    }
+  };
+
+  const onChangeEndAt = (nextEndAt: number) => {
+    setEndAt(nextEndAt);
   };
 
   if (viewerLoading) {
@@ -339,17 +341,17 @@ export function CreateEventScreen() {
         <AppText variant="h3" color={theme.colors.heading}>
           Schedule
         </AppText>
-        <TextField
-          label="Start (YYYY-MM-DD HH:mm)"
-          onChangeText={setStartAtInput}
-          placeholder="2026-03-15 09:00"
-          value={startAtInput}
+        <DateTimeField
+          label="Start"
+          minimumDate={Date.now()}
+          onChange={onChangeStartAt}
+          value={startAt}
         />
-        <TextField
-          label="End (YYYY-MM-DD HH:mm)"
-          onChangeText={setEndAtInput}
-          placeholder="2026-03-15 12:00"
-          value={endAtInput}
+        <DateTimeField
+          label="End"
+          minimumDate={startAt + 1000 * 60 * 15}
+          onChange={onChangeEndAt}
+          value={endAt}
         />
       </Card>
 

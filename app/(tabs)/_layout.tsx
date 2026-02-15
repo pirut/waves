@@ -84,8 +84,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="host"
         options={{
-          title: "Host",
-          tabBarIcon: ({ color }) => <TabBarIcon color={color} name="bullhorn" />,
+          title: "Profile",
+          tabBarIcon: ({ color }) => <TabBarIcon color={color} name="user-circle" />,
         }}
       />
     </Tabs>

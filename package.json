@@ -22,6 +22,7 @@
   "dependencies": {
     "@clerk/clerk-expo": "^2.19.22",
     "@expo/vector-icons": "^15.0.3",
+    "@react-native-community/datetimepicker": "8.4.4",
     "@react-navigation/native": "^7.1.8",
     "convex": "^1.31.7",
     "date-fns": "^4.1.0",

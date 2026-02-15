@@ -1,5 +1,5 @@
-import { HostDashboardScreen } from "@/src/modules/events/screens/HostDashboardScreen";
+import { ProfileScreen } from "@/src/modules/profile/screens/ProfileScreen";
 
 export default function HostRoute() {
-  return <HostDashboardScreen />;
+  return <ProfileScreen />;
 }
