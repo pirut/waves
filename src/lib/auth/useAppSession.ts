@@ -1,10 +1,8 @@
-import { useConvexAuth } from "convex/react";
+import { useAuth } from "@clerk/clerk-expo";
 
 import { localAuthBypassEnabled } from "@/src/lib/auth/devBypass";
 
 export function useAppSession() {
-  const convexAuth = useConvexAuth();
-
   if (localAuthBypassEnabled) {
     return {
       isLoading: false,
@@ -12,5 +10,17 @@ export function useAppSession() {
     };
   }
 
-  return convexAuth;
+  const { isLoaded, isSignedIn } = useAuth();
+
+  if (!isLoaded) {
+    return {
+      isLoading: true,
+      isAuthenticated: false,
+    };
+  }
+
+  return {
+    isLoading: false,
+    isAuthenticated: Boolean(isSignedIn),
+  };
 }
