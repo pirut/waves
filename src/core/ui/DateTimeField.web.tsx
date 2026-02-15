@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     opacity: 0.92,
   },
   shell: {
-    position: "relative",
+    gap: theme.spacing.xs,
   },
   trigger: {
     alignItems: "center",
@@ -298,13 +298,8 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
-    left: 0,
-    marginTop: theme.spacing.xs,
     minWidth: 302,
     padding: theme.spacing.sm,
-    position: "absolute",
-    top: "100%",
-    zIndex: 50,
     ...theme.elevation.soft,
   },
   timeSection: {
