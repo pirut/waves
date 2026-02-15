@@ -22,7 +22,7 @@ type SignInView =
   | "set-new-password"
   | "verify-second-factor";
 
-type SecondFactorStrategy = "totp" | "backup_code" | "phone_code";
+type SecondFactorStrategy = "totp" | "backup_code" | "phone_code" | "email_code";
 
 type SignInResultLike = {
   createdSessionId?: string | null;
@@ -36,7 +36,12 @@ type SignInResultLike = {
 function getSupportedSecondFactorStrategies(
   secondFactors: SignInResultLike["supportedSecondFactors"],
 ) {
-  const orderedStrategies: SecondFactorStrategy[] = ["totp", "phone_code", "backup_code"];
+  const orderedStrategies: SecondFactorStrategy[] = [
+    "totp",
+    "phone_code",
+    "email_code",
+    "backup_code",
+  ];
 
   return orderedStrategies.filter((candidateStrategy) =>
     secondFactors?.some((factor) => factor.strategy === candidateStrategy),
@@ -53,6 +58,14 @@ function getSecondFactorInfoMessage(
     }
 
     return "A verification code was sent to your phone.";
+  }
+
+  if (strategy === "email_code") {
+    if (safeIdentifier) {
+      return `A verification code was sent to ${safeIdentifier}.`;
+    }
+
+    return "A verification code was sent to your email.";
   }
 
   if (strategy === "backup_code") {
@@ -74,6 +87,13 @@ function getSecondFactorInputCopy(strategy: SecondFactorStrategy) {
     return {
       label: "Verification code",
       placeholder: "Enter the code from text message",
+    };
+  }
+
+  if (strategy === "email_code") {
+    return {
+      label: "Verification code",
+      placeholder: "Enter the code from your email",
     };
   }
 
@@ -213,8 +233,8 @@ export function SignInScreen() {
       (factor) => factor.strategy === strategy,
     );
 
-    if (strategy === "phone_code") {
-      await signIn.prepareSecondFactor({ strategy: "phone_code" });
+    if (strategy === "phone_code" || strategy === "email_code") {
+      await signIn.prepareSecondFactor({ strategy });
     }
 
     setAvailableSecondFactors(strategies);
@@ -314,7 +334,11 @@ export function SignInScreen() {
       return;
     }
 
-    if (strategy === secondFactorStrategy && strategy !== "phone_code") {
+    if (
+      strategy === secondFactorStrategy &&
+      strategy !== "phone_code" &&
+      strategy !== "email_code"
+    ) {
       return;
     }
 
@@ -511,6 +535,7 @@ export function SignInScreen() {
   const hasBackupCodeOption = availableSecondFactors.includes("backup_code");
   const hasTotpOption = availableSecondFactors.includes("totp");
   const hasPhoneCodeOption = availableSecondFactors.includes("phone_code");
+  const hasEmailCodeOption = availableSecondFactors.includes("email_code");
   const secondFactorInputCopy = getSecondFactorInputCopy(secondFactorStrategy);
   const isSignInView = view === "sign-in";
   const isSecondFactorView = view === "verify-second-factor";
@@ -705,6 +730,20 @@ export function SignInScreen() {
                   <Button
                     label="Resend Text Code"
                     onPress={() => onSwitchSecondFactor("phone_code")}
+                    variant="ghost"
+                  />
+                ) : null}
+                {hasEmailCodeOption && secondFactorStrategy !== "email_code" ? (
+                  <Button
+                    label="Use Email Code"
+                    onPress={() => onSwitchSecondFactor("email_code")}
+                    variant="ghost"
+                  />
+                ) : null}
+                {secondFactorStrategy === "email_code" ? (
+                  <Button
+                    label="Resend Email Code"
+                    onPress={() => onSwitchSecondFactor("email_code")}
                     variant="ghost"
                   />
                 ) : null}

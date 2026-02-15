@@ -164,7 +164,7 @@ export function EventCalendar({ events, onOpenEvent }: Props) {
               <AppText
                 color={isSelected ? theme.colors.primaryText : theme.colors.heading}
                 variant="caption"
-                style={{ fontWeight: "700" }}>
+                style={styles.dayLabel}>
                 {day}
               </AppText>
               {dayEvents.length > 0 ? (
@@ -214,15 +214,24 @@ export function EventCalendar({ events, onOpenEvent }: Props) {
 const styles = StyleSheet.create({
   headerRow: {
     alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.62)",
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
+    padding: theme.spacing.xs,
   },
   weekdayRow: {
     flexDirection: "row",
+    marginTop: theme.spacing.xs,
     justifyContent: "space-between",
   },
   weekdayLabel: {
+    color: theme.colors.muted,
+    letterSpacing: 0.5,
     textAlign: "center",
+    textTransform: "uppercase",
     width: `${100 / 7}%`,
   },
   calendarGrid: {
@@ -235,12 +244,12 @@ const styles = StyleSheet.create({
   },
   dayCell: {
     alignItems: "center",
-    backgroundColor: "#f5fbff",
+    backgroundColor: "rgba(255,255,255,0.72)",
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.sm,
+    borderRadius: theme.radius.md,
     borderWidth: 1,
-    minHeight: 46,
-    paddingTop: 6,
+    minHeight: 54,
+    paddingTop: 8,
     width: `${100 / 7 - 0.8}%`,
   },
   dayCellSelected: {
@@ -250,22 +259,25 @@ const styles = StyleSheet.create({
   eventDotRow: {
     flexDirection: "row",
     gap: 3,
-    marginTop: 4,
+    marginTop: 7,
   },
   eventDot: {
     borderRadius: 4,
     height: 6,
     width: 6,
   },
+  dayLabel: {
+    fontWeight: "700",
+  },
   selectedEventsSection: {
     gap: theme.spacing.xs,
   },
   selectedEventCard: {
-    backgroundColor: "#f7fcff",
+    backgroundColor: "rgba(255,255,255,0.7)",
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.sm,
+    borderRadius: theme.radius.md,
     borderWidth: 1,
     gap: 2,
-    padding: theme.spacing.sm,
+    padding: theme.spacing.md,
   },
 });

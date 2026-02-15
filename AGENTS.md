@@ -53,6 +53,10 @@ This repository is the long-term foundation for **Make Waves** (charitable event
 
 - Required client env: `EXPO_PUBLIC_CONVEX_URL`, `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`.
 - Optional notifications env: `RESEND_API_KEY`, `NOTIFICATIONS_FROM_EMAIL`.
+- Optional local-only auth bypass for UI/flow testing:
+  - Expo (local dev only): `EXPO_PUBLIC_LOCAL_AUTH_BYPASS=true`
+  - Convex dev env: `LOCAL_AUTH_BYPASS=true`
+  - Optional profile identity knobs: `EXPO_PUBLIC_LOCAL_AUTH_BYPASS_DISPLAY_NAME`, `EXPO_PUBLIC_LOCAL_AUTH_BYPASS_EMAIL`, `LOCAL_AUTH_BYPASS_EXTERNAL_ID`
 - `convex/auth.config.ts` domain must be replaced with the real Clerk issuer domain before production.
 
 ## Local verification checklist
@@ -68,5 +72,7 @@ npx expo export --platform web
 ## Notes for future agents
 
 - If you touch auth, start by checking `src/lib/providers/AppProviders.tsx`, `src/modules/events/providers/ViewerProfileProvider.tsx`, and `convex/lib/auth.ts`.
+- For local UI/flow validation without real sign-in, prefer the built-in local auth bypass instead of weakening production auth logic.
+- Keep bypass safety guarantees intact: Expo bypass must remain `__DEV__`-gated and Convex bypass must stay disabled on `prod:` deployments.
 - If you touch messaging/notifications, verify queue creation + dispatch + cron still chain correctly.
 - If you add new event list surfaces, default to pagination patterns rather than bulk list queries.

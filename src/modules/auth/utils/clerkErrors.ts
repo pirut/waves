@@ -25,6 +25,12 @@ const EMAIL_VERIFICATION_CODES = new Set([
   "identifier_not_verified",
 ]);
 
+const ALREADY_SIGNED_IN_CODES = new Set([
+  "already_signed_in",
+  "session_already_exists",
+  "session_exists",
+]);
+
 export function extractClerkErrorDetails(
   error: unknown,
   fallbackMessage: string,
@@ -72,4 +78,12 @@ export function isLikelyEmailVerificationIssue(details: ClerkErrorDetails) {
 
   const lowerMessage = details.message.toLowerCase();
   return lowerMessage.includes("verify") && lowerMessage.includes("email");
+}
+
+export function isAlreadySignedInError(details: ClerkErrorDetails) {
+  if (details.code && ALREADY_SIGNED_IN_CODES.has(details.code)) {
+    return true;
+  }
+
+  return details.message.toLowerCase().includes("already signed in");
 }

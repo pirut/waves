@@ -56,16 +56,17 @@ export function EventMap({ events, onSelectEvent, selectedEventId }: EventMapPro
 const styles = StyleSheet.create({
   mapShell: {
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.lg,
+    borderRadius: theme.radius.xl,
     borderWidth: 1,
-    height: 260,
+    height: 270,
     overflow: "hidden",
+    ...theme.elevation.soft,
   },
   emptyState: {
     alignItems: "center",
-    backgroundColor: theme.colors.elevated,
+    backgroundColor: "rgba(255,255,255,0.64)",
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.lg,
+    borderRadius: theme.radius.xl,
     borderWidth: 1,
     gap: theme.spacing.xs,
     padding: theme.spacing.lg,

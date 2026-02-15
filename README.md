@@ -60,12 +60,52 @@ npm run start
 
 Open web with `w`, iOS with `i`, Android with `a`.
 
-Note: Convex Node actions require Node 18/20/22. In this repo, Convex scripts are pinned to Homebrew Node 22 at `/opt/homebrew/opt/node@22/bin`.
+7. Run on a remote dev server (portable scripts, no Homebrew path assumptions):
+
+```bash
+npm run dev:server
+```
+
+8. Run remote dev server with auto-seed:
+
+```bash
+npm run dev:server:prime
+```
+
+No deploy loop: `convex dev` watches local file changes and syncs functions to your dev deployment automatically. You only need `convex deploy` when you intentionally ship.
+
+Note: Convex Node actions require Node 18/20/22.
 
 ## Required environment variables
 
 - `EXPO_PUBLIC_CONVEX_URL`
 - `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`
+
+## Local auth bypass for design testing (optional)
+
+Use this only on local dev to skip Clerk login and test app UX end-to-end.
+
+1. In `.env.local`, set:
+
+```bash
+EXPO_PUBLIC_LOCAL_AUTH_BYPASS=true
+EXPO_PUBLIC_LOCAL_AUTH_BYPASS_DISPLAY_NAME="Local Design Tester"
+EXPO_PUBLIC_LOCAL_AUTH_BYPASS_EMAIL="local-design@makewaves.test"
+```
+
+2. In your Convex dev deployment env, set:
+
+```bash
+npx convex env set LOCAL_AUTH_BYPASS true
+npx convex env set LOCAL_AUTH_BYPASS_EXTERNAL_ID local-design-viewer
+```
+
+3. Restart `npm run dev`.
+
+Notes:
+- Expo bypass is hard-gated by `__DEV__`, so release builds ignore it.
+- Convex bypass is disabled on `prod:` deployments even if the env var is set.
+- Turn it off by setting both bypass flags back to `false`.
 
 ## Notification environment variables (optional but recommended)
 

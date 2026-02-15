@@ -9,10 +9,15 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "dev": "concurrently -n convex,expo -c cyan,green \"npm:convex:dev\" \"npm:start\"",
+    "dev:server": "concurrently -n convex,expo -c cyan,green \"npm:convex:dev:portable\" \"npm:web:server\"",
     "dev:prime": "npm run convex:seed && npm run dev",
+    "dev:server:prime": "npm run convex:seed:portable && npm run dev:server",
     "typecheck": "tsc --noEmit",
     "convex:dev": "PATH=\"/opt/homebrew/opt/node@22/bin:$PATH\" convex dev --typecheck disable",
-    "convex:seed": "PATH=\"/opt/homebrew/opt/node@22/bin:$PATH\" convex dev --once --typecheck disable --run internal.seed.seedDemoData"
+    "convex:dev:portable": "npx convex dev --typecheck disable",
+    "convex:seed": "PATH=\"/opt/homebrew/opt/node@22/bin:$PATH\" convex dev --once --typecheck disable --run internal.seed.seedDemoData",
+    "convex:seed:portable": "npx convex dev --once --typecheck disable --run internal.seed.seedDemoData",
+    "web:server": "npx expo start --web --host lan"
   },
   "dependencies": {
     "@clerk/clerk-expo": "^2.19.22",

@@ -9,6 +9,7 @@ import { StyleSheet, View } from "react-native";
 import { theme } from "@/src/core/theme/tokens";
 import { AppText } from "@/src/core/ui/AppText";
 import { clerkPublishableKey } from "@/src/lib/auth/config";
+import { localAuthBypassEnabled } from "@/src/lib/auth/devBypass";
 import { AppProviders } from "@/src/lib/providers/AppProviders";
 import { convexUrl } from "@/src/lib/convexClient";
 
@@ -21,6 +22,18 @@ export const unstable_settings = {
 };
 
 SplashScreen.preventAutoHideAsync();
+
+const navigationTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: theme.colors.background,
+    border: "transparent",
+    card: "rgba(255,255,255,0.72)",
+    primary: theme.colors.primary,
+    text: theme.colors.heading,
+  },
+};
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -57,7 +70,7 @@ export default function RootLayout() {
     );
   }
 
-  if (!clerkPublishableKey) {
+  if (!clerkPublishableKey && !localAuthBypassEnabled) {
     return (
       <View style={styles.missingConfigShell}>
         <AppText variant="h1" color={theme.colors.heading}>
@@ -72,7 +85,7 @@ export default function RootLayout() {
 
   return (
     <AppProviders>
-      <ThemeProvider value={DefaultTheme}>
+      <ThemeProvider value={navigationTheme}>
         <Stack>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -81,7 +94,7 @@ export default function RootLayout() {
             options={{
               title: "Event Details",
               headerTintColor: theme.colors.heading,
-              headerStyle: { backgroundColor: "#f8fdff" },
+              headerStyle: { backgroundColor: "rgba(255,255,255,0.78)" },
             }}
           />
           <Stack.Screen name="+not-found" options={{ title: "Not Found" }} />
@@ -94,7 +107,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   missingConfigShell: {
     alignItems: "center",
-    backgroundColor: "#f8fdff",
+    backgroundColor: theme.colors.background,
     flex: 1,
     gap: 12,
     justifyContent: "center",

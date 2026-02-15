@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useMutation, useQuery } from "convex/react";
 import { useAuth } from "@clerk/clerk-expo";
+import { LinearGradient } from "expo-linear-gradient";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -84,21 +85,27 @@ export function HostDashboardScreen() {
 
   return (
     <Screen>
-      <Card>
-        <AppText variant="overline" color={theme.colors.primary}>
-          Organizer Hub
-        </AppText>
-        <AppText variant="h1" color={theme.colors.heading}>
-          Manage hosted events
-        </AppText>
-        <AppText>
-          Track attendance at a glance and send updates directly to people who signed up.
-        </AppText>
-        <Button
-          label="Sign Out"
-          onPress={() => signOut()}
-          variant="secondary"
-        />
+      <Card style={styles.heroCard}>
+        <LinearGradient
+          colors={[theme.colors.overlayStart, theme.colors.overlayEnd]}
+          end={{ x: 1, y: 1 }}
+          start={{ x: 0, y: 0 }}
+          style={styles.heroGradient}>
+          <AppText variant="overline" color={theme.colors.sky}>
+            Organizer Hub
+          </AppText>
+          <AppText variant="h1" color={theme.colors.primaryText}>
+            Manage hosted events
+          </AppText>
+          <AppText color="#d3ebff">
+            Track attendance at a glance and send updates directly to people who signed up.
+          </AppText>
+          <Button
+            label="Sign Out"
+            onPress={() => signOut()}
+            variant="secondary"
+          />
+        </LinearGradient>
       </Card>
 
       {hosting.length === 0 ? (
@@ -253,14 +260,22 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     justifyContent: "center",
   },
+  heroCard: {
+    overflow: "hidden",
+    padding: 0,
+  },
+  heroGradient: {
+    gap: theme.spacing.sm,
+    padding: theme.spacing.lg,
+  },
   eventSelectorList: {
     gap: theme.spacing.xs,
   },
   eventSelector: {
     alignItems: "center",
-    backgroundColor: theme.colors.elevated,
+    backgroundColor: "rgba(255,255,255,0.72)",
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.lg,
     borderWidth: 1,
     flexDirection: "row",
     gap: theme.spacing.xs,
@@ -268,8 +283,8 @@ const styles = StyleSheet.create({
     padding: theme.spacing.sm,
   },
   eventSelectorActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryDeep,
+    borderColor: theme.colors.primaryDeep,
   },
   eventSelectorText: {
     flex: 1,
@@ -290,14 +305,14 @@ const styles = StyleSheet.create({
   },
   attendeeRow: {
     alignItems: "center",
-    backgroundColor: "#f2fbff",
+    backgroundColor: "rgba(255,255,255,0.72)",
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.lg,
     borderWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
   attendeeIdentity: {
     gap: 2,
@@ -306,12 +321,12 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
   },
   messageItem: {
-    backgroundColor: "#f7fcff",
+    backgroundColor: "rgba(255,255,255,0.72)",
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.lg,
     borderWidth: 1,
     gap: theme.spacing.xs,
-    padding: theme.spacing.sm,
+    padding: theme.spacing.md,
   },
   messageHeader: {
     alignItems: "center",

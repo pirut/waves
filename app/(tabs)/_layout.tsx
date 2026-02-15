@@ -1,11 +1,11 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import React from "react";
 import { Redirect, Tabs } from "expo-router";
-import { useConvexAuth } from "convex/react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { AppText } from "@/src/core/ui/AppText";
 import { theme } from "@/src/core/theme/tokens";
+import { useAppSession } from "@/src/lib/auth/useAppSession";
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>["name"];
@@ -15,7 +15,7 @@ function TabBarIcon(props: {
 }
 
 export default function TabLayout() {
-  const { isAuthenticated, isLoading } = useConvexAuth();
+  const { isAuthenticated, isLoading } = useAppSession();
 
   if (isLoading) {
     return (
@@ -34,14 +34,30 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: "#7a97a8",
+        tabBarActiveTintColor: "#ffffff",
+        tabBarInactiveTintColor: "#b2c8d8",
+        tabBarLabelStyle: {
+          fontFamily: theme.fonts.body,
+          fontSize: 11,
+          letterSpacing: 0.4,
+          textTransform: "uppercase",
+        },
         tabBarStyle: {
-          backgroundColor: "#f8fdff",
-          borderTopColor: "#d8e9f0",
-          height: 68,
+          backgroundColor: "rgba(9, 26, 41, 0.94)",
+          borderTopColor: "transparent",
+          borderTopWidth: 0,
+          borderRadius: 24,
+          bottom: 12,
+          height: 72,
+          left: 14,
           paddingBottom: 8,
           paddingTop: 8,
+          position: "absolute",
+          right: 14,
+          ...theme.elevation.strong,
+        },
+        tabBarItemStyle: {
+          borderRadius: 16,
         },
       }}>
       <Tabs.Screen
@@ -79,7 +95,7 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   centeredState: {
     alignItems: "center",
-    backgroundColor: "#f8fdff",
+    backgroundColor: theme.colors.background,
     flex: 1,
     gap: theme.spacing.sm,
     justifyContent: "center",

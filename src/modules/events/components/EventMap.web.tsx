@@ -72,20 +72,20 @@ export function EventMap({ events, onSelectEvent, selectedEventId }: EventMapPro
         {events.map((eventItem) => (
           <Marker
             anchor={[eventItem.latitude, eventItem.longitude]}
-            color={selectedEventId === eventItem.id ? theme.colors.danger : theme.colors.primary}
+            color={selectedEventId === eventItem.id ? theme.colors.danger : theme.colors.primaryDeep}
             key={eventItem.id}
             onClick={() => onSelectEvent(eventItem.id)}
-            width={44}
+            width={48}
           />
         ))}
         <ZoomControl />
       </Map>
 
       <View style={styles.legend}>
-        <AppText variant="caption" color={theme.colors.primary} style={{ fontWeight: "700" }}>
+        <AppText variant="caption" color={theme.colors.primary} style={styles.legendTitle}>
           Interactive map
         </AppText>
-        <AppText variant="caption">Click any pin to focus an event.</AppText>
+        <AppText variant="caption" color={theme.colors.body}>Click any pin to focus an event.</AppText>
       </View>
     </View>
   );
@@ -93,33 +93,39 @@ export function EventMap({ events, onSelectEvent, selectedEventId }: EventMapPro
 
 const styles = StyleSheet.create({
   mapShell: {
-    backgroundColor: "#e7f7ff",
+    backgroundColor: "rgba(255,255,255,0.66)",
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.lg,
+    borderRadius: theme.radius.xl,
     borderWidth: 1,
-    height: 300,
+    height: 304,
     overflow: "hidden",
     position: "relative",
+    ...theme.elevation.soft,
   },
   legend: {
-    backgroundColor: "rgba(255,255,255,0.92)",
+    backgroundColor: "rgba(255,255,255,0.78)",
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
     borderWidth: 1,
-    bottom: 8,
+    bottom: 10,
     gap: 2,
-    left: 8,
+    left: 10,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     position: "absolute",
   },
+  legendTitle: {
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
   emptyState: {
     alignItems: "center",
-    backgroundColor: theme.colors.elevated,
+    backgroundColor: "rgba(255,255,255,0.64)",
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.lg,
+    borderRadius: theme.radius.xl,
     borderWidth: 1,
     gap: theme.spacing.xs,
     padding: theme.spacing.lg,
+    ...theme.elevation.soft,
   },
 });

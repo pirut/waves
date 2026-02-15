@@ -3,6 +3,7 @@ import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useMutation } from "convex/react";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 
 import { api } from "@/convex/_generated/api";
@@ -223,143 +224,179 @@ export function CreateEventScreen() {
 
   return (
     <Screen>
-      <Card>
-        <AppText variant="overline" color={theme.colors.primary}>
-          Host an Event
-        </AppText>
-        <AppText variant="h1" color={theme.colors.heading}>
-          Create something people want to show up for
-        </AppText>
-        <AppText>
-          Use clear details, impact goals, and visuals. The better your event page, the higher your RSVP conversion.
-        </AppText>
+      <Card style={styles.heroCard}>
+        <LinearGradient
+          colors={[theme.colors.overlayStart, theme.colors.overlayEnd]}
+          end={{ x: 1, y: 1 }}
+          start={{ x: 0, y: 0 }}
+          style={styles.heroGradient}>
+          <AppText variant="overline" color={theme.colors.sky}>
+            Host an Event
+          </AppText>
+          <AppText variant="h1" color={theme.colors.primaryText}>
+            Create something people want to show up for
+          </AppText>
+          <AppText color="#d3ebff">
+            Use clear details, impact goals, and visuals. The better your event page, the higher your RSVP conversion.
+          </AppText>
+        </LinearGradient>
       </Card>
 
-      <TextField label="Title" onChangeText={setTitle} placeholder="Neighborhood Cleanup + Picnic" value={title} />
+      <Card>
+        <AppText variant="h3" color={theme.colors.heading}>
+          Event basics
+        </AppText>
+        <TextField
+          label="Title"
+          onChangeText={setTitle}
+          placeholder="Neighborhood Cleanup + Picnic"
+          value={title}
+        />
 
-      <View style={styles.categoryRow}>
-        {EVENT_CATEGORIES.map((categoryOption) => (
-          <View key={categoryOption} style={styles.categoryItem}>
-            <Button
-              fullWidth={false}
-              label={categoryOption}
-              onPress={() => setCategory(categoryOption)}
-              variant={categoryOption === category ? "primary" : "secondary"}
-            />
-          </View>
-        ))}
-      </View>
-      <Badge label={`Selected: ${category}`} />
-
-      <TextField
-        label="Description"
-        multiline
-        onChangeText={setDescription}
-        placeholder="What will happen, what to bring, and who should join?"
-        value={description}
-      />
-      <TextField
-        label="Impact summary"
-        onChangeText={setImpactSummary}
-        placeholder="Target: package 5,000 meals"
-        value={impactSummary}
-      />
-
-      <TextField
-        label="Cover image URL"
-        onChangeText={setCoverImageUrl}
-        placeholder="https://..."
-        value={coverImageUrl}
-      />
-      <Button
-        label={coverStorageId ? "Replace Uploaded Cover Photo" : "Upload Cover Photo"}
-        loading={isUploadingMedia}
-        onPress={onUploadCoverPhoto}
-        variant="secondary"
-      />
-      {coverPreviewUri ? (
-        <Image contentFit="cover" source={coverPreviewUri} style={styles.previewImage} />
-      ) : null}
-
-      <TextField
-        label="Gallery image URLs (comma-separated)"
-        onChangeText={setGalleryCsv}
-        placeholder="https://img1, https://img2"
-        value={galleryCsv}
-      />
-      <Button
-        label="Upload Gallery Photos"
-        loading={isUploadingMedia}
-        onPress={onUploadGalleryPhotos}
-        variant="secondary"
-      />
-      {galleryUploads.length > 0 ? (
-        <View style={styles.galleryPreviewRow}>
-          {galleryUploads.map((uploadItem) => (
-            <Image
-              contentFit="cover"
-              key={`${uploadItem.storageId}-${uploadItem.previewUri}`}
-              source={uploadItem.previewUri}
-              style={styles.galleryPreviewImage}
-            />
+        <View style={styles.categoryRow}>
+          {EVENT_CATEGORIES.map((categoryOption) => (
+            <View key={categoryOption} style={styles.categoryItem}>
+              <Button
+                fullWidth={false}
+                label={categoryOption}
+                onPress={() => setCategory(categoryOption)}
+                variant={categoryOption === category ? "primary" : "secondary"}
+              />
+            </View>
           ))}
         </View>
-      ) : null}
+        <Badge label={`Selected: ${category}`} />
 
-      <TextField
-        label="Start (YYYY-MM-DD HH:mm)"
-        onChangeText={setStartAtInput}
-        placeholder="2026-03-15 09:00"
-        value={startAtInput}
-      />
-      <TextField
-        label="End (YYYY-MM-DD HH:mm)"
-        onChangeText={setEndAtInput}
-        placeholder="2026-03-15 12:00"
-        value={endAtInput}
-      />
+        <TextField
+          label="Description"
+          multiline
+          onChangeText={setDescription}
+          placeholder="What will happen, what to bring, and who should join?"
+          value={description}
+        />
+        <TextField
+          label="Impact summary"
+          onChangeText={setImpactSummary}
+          placeholder="Target: package 5,000 meals"
+          value={impactSummary}
+        />
+      </Card>
 
-      <TextField
-        label="Address"
-        onChangeText={setAddressLine1}
-        placeholder="123 Beach St"
-        value={addressLine1}
-      />
-      <TextField label="City" onChangeText={setCity} placeholder="San Francisco" value={city} />
-      <TextField label="Region/State" onChangeText={setRegion} placeholder="CA" value={region} />
-      <TextField label="Country" onChangeText={setCountry} placeholder="USA" value={country} />
-      <TextField
-        label="Postal code"
-        onChangeText={setPostalCode}
-        placeholder="94121"
-        value={postalCode}
-      />
+      <Card>
+        <AppText variant="h3" color={theme.colors.heading}>
+          Visuals
+        </AppText>
+        <TextField
+          label="Cover image URL"
+          onChangeText={setCoverImageUrl}
+          placeholder="https://..."
+          value={coverImageUrl}
+        />
+        <Button
+          label={coverStorageId ? "Replace Uploaded Cover Photo" : "Upload Cover Photo"}
+          loading={isUploadingMedia}
+          onPress={onUploadCoverPhoto}
+          variant="secondary"
+        />
+        {coverPreviewUri ? (
+          <Image contentFit="cover" source={coverPreviewUri} style={styles.previewImage} />
+        ) : null}
 
-      <TextField
-        keyboardType="decimal-pad"
-        label="Latitude"
-        onChangeText={setLatitude}
-        placeholder="37.7749"
-        value={latitude}
-      />
-      <TextField
-        keyboardType="decimal-pad"
-        label="Longitude"
-        onChangeText={setLongitude}
-        placeholder="-122.4194"
-        value={longitude}
-      />
-      <TextField
-        keyboardType="number-pad"
-        label="Capacity (optional)"
-        onChangeText={setCapacity}
-        placeholder="120"
-        value={capacity}
-      />
+        <TextField
+          label="Gallery image URLs (comma-separated)"
+          onChangeText={setGalleryCsv}
+          placeholder="https://img1, https://img2"
+          value={galleryCsv}
+        />
+        <Button
+          label="Upload Gallery Photos"
+          loading={isUploadingMedia}
+          onPress={onUploadGalleryPhotos}
+          variant="secondary"
+        />
+        {galleryUploads.length > 0 ? (
+          <View style={styles.galleryPreviewRow}>
+            {galleryUploads.map((uploadItem) => (
+              <Image
+                contentFit="cover"
+                key={`${uploadItem.storageId}-${uploadItem.previewUri}`}
+                source={uploadItem.previewUri}
+                style={styles.galleryPreviewImage}
+              />
+            ))}
+          </View>
+        ) : null}
+      </Card>
 
-      {errorMessage ? <AppText color={theme.colors.danger}>{errorMessage}</AppText> : null}
+      <Card>
+        <AppText variant="h3" color={theme.colors.heading}>
+          Schedule
+        </AppText>
+        <TextField
+          label="Start (YYYY-MM-DD HH:mm)"
+          onChangeText={setStartAtInput}
+          placeholder="2026-03-15 09:00"
+          value={startAtInput}
+        />
+        <TextField
+          label="End (YYYY-MM-DD HH:mm)"
+          onChangeText={setEndAtInput}
+          placeholder="2026-03-15 12:00"
+          value={endAtInput}
+        />
+      </Card>
 
-      <Button label="Publish Event" loading={isSaving} onPress={onCreate} />
+      <Card>
+        <AppText variant="h3" color={theme.colors.heading}>
+          Location
+        </AppText>
+        <TextField
+          label="Address"
+          onChangeText={setAddressLine1}
+          placeholder="123 Beach St"
+          value={addressLine1}
+        />
+        <TextField label="City" onChangeText={setCity} placeholder="San Francisco" value={city} />
+        <TextField label="Region/State" onChangeText={setRegion} placeholder="CA" value={region} />
+        <TextField label="Country" onChangeText={setCountry} placeholder="USA" value={country} />
+        <TextField
+          label="Postal code"
+          onChangeText={setPostalCode}
+          placeholder="94121"
+          value={postalCode}
+        />
+      </Card>
+
+      <Card>
+        <AppText variant="h3" color={theme.colors.heading}>
+          Capacity and coordinates
+        </AppText>
+        <TextField
+          keyboardType="decimal-pad"
+          label="Latitude"
+          onChangeText={setLatitude}
+          placeholder="37.7749"
+          value={latitude}
+        />
+        <TextField
+          keyboardType="decimal-pad"
+          label="Longitude"
+          onChangeText={setLongitude}
+          placeholder="-122.4194"
+          value={longitude}
+        />
+        <TextField
+          keyboardType="number-pad"
+          label="Capacity (optional)"
+          onChangeText={setCapacity}
+          placeholder="120"
+          value={capacity}
+        />
+
+        {errorMessage ? <AppText color={theme.colors.danger}>{errorMessage}</AppText> : null}
+
+        <Button label="Publish Event" loading={isSaving} onPress={onCreate} />
+      </Card>
     </Screen>
   );
 }
@@ -371,6 +408,14 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     justifyContent: "center",
   },
+  heroCard: {
+    overflow: "hidden",
+    padding: 0,
+  },
+  heroGradient: {
+    gap: theme.spacing.sm,
+    padding: theme.spacing.lg,
+  },
   categoryRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -380,8 +425,8 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.xs,
   },
   previewImage: {
-    borderRadius: theme.radius.md,
-    height: 180,
+    borderRadius: theme.radius.lg,
+    height: 188,
     width: "100%",
   },
   galleryPreviewRow: {
@@ -391,7 +436,7 @@ const styles = StyleSheet.create({
   },
   galleryPreviewImage: {
     borderRadius: theme.radius.md,
-    height: 72,
-    width: 72,
+    height: 76,
+    width: 76,
   },
 });

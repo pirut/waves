@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 
 import { api } from "@/convex/_generated/api";
@@ -149,18 +150,24 @@ export function EventDetailScreen({ eventId }: Props) {
 
   return (
     <Screen>
-      <Card>
-        <AppText variant="overline" color={theme.colors.primary}>
-          Event Detail
-        </AppText>
-        <AppText variant="h1" color={theme.colors.heading}>
-          {eventResult.event.title}
-        </AppText>
-        <View style={styles.badgeRow}>
-          <Badge label={eventResult.event.category} />
-          <Badge label={`${eventResult.attendeeBreakdown.going} going`} tone="success" />
-          <Badge label={`${eventResult.attendeeBreakdown.interested} interested`} tone="warning" />
-        </View>
+      <Card style={styles.heroCard}>
+        <LinearGradient
+          colors={[theme.colors.overlayStart, theme.colors.overlayEnd]}
+          end={{ x: 1, y: 1 }}
+          start={{ x: 0, y: 0 }}
+          style={styles.heroGradient}>
+          <AppText variant="overline" color={theme.colors.sky}>
+            Event Detail
+          </AppText>
+          <AppText variant="h1" color={theme.colors.primaryText}>
+            {eventResult.event.title}
+          </AppText>
+          <View style={styles.badgeRow}>
+            <Badge label={eventResult.event.category} />
+            <Badge label={`${eventResult.attendeeBreakdown.going} going`} tone="success" />
+            <Badge label={`${eventResult.attendeeBreakdown.interested} interested`} tone="warning" />
+          </View>
+        </LinearGradient>
       </Card>
 
       {eventResult.event.coverImageUrl ? (
@@ -205,6 +212,9 @@ export function EventDetailScreen({ eventId }: Props) {
         <AppText>Timezone: {eventResult.event.timezone}</AppText>
       </Card>
 
+      <AppText variant="overline" color={theme.colors.muted}>
+        Location map
+      </AppText>
       <EventMap
         events={mapItem}
         onSelectEvent={() => undefined}
@@ -352,10 +362,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: theme.spacing.xs,
   },
+  heroCard: {
+    overflow: "hidden",
+    padding: 0,
+  },
+  heroGradient: {
+    gap: theme.spacing.sm,
+    padding: theme.spacing.lg,
+  },
   coverImage: {
-    borderRadius: theme.radius.lg,
-    height: 240,
+    borderRadius: theme.radius.xl,
+    height: 252,
     width: "100%",
+    ...theme.elevation.soft,
   },
   attendeeList: {
     gap: theme.spacing.xs,
@@ -367,12 +386,14 @@ const styles = StyleSheet.create({
   },
   attendeeItem: {
     alignItems: "center",
-    backgroundColor: "#f2fbff",
-    borderRadius: theme.radius.md,
+    backgroundColor: "rgba(255,255,255,0.72)",
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
   attendeeIdentity: {
     gap: 2,
@@ -381,12 +402,12 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
   },
   messageItem: {
-    backgroundColor: "#f7fcff",
+    backgroundColor: "rgba(255,255,255,0.72)",
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.lg,
     borderWidth: 1,
     gap: theme.spacing.xs,
-    padding: theme.spacing.sm,
+    padding: theme.spacing.md,
   },
   messageHeader: {
     alignItems: "center",
@@ -399,8 +420,8 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
   },
   mediaImage: {
-    borderRadius: theme.radius.md,
-    height: 110,
-    width: 110,
+    borderRadius: theme.radius.lg,
+    height: 108,
+    width: 108,
   },
 });

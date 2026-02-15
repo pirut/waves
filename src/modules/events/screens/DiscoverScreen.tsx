@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useMutation, useQuery } from "convex/react";
+import { LinearGradient } from "expo-linear-gradient";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -86,15 +87,21 @@ export function DiscoverScreen() {
   return (
     <Screen>
       <Card style={styles.heroCard}>
-        <AppText variant="overline" color={theme.colors.primary}>
-          Make Waves
-        </AppText>
-        <AppText variant="hero" color={theme.colors.heading}>
-          Discover local impact events around you
-        </AppText>
-        <AppText>
-          Find meaningful opportunities on the map, RSVP instantly, and build your personal impact calendar.
-        </AppText>
+        <LinearGradient
+          colors={[theme.colors.overlayStart, theme.colors.overlayEnd]}
+          end={{ x: 1, y: 1 }}
+          start={{ x: 0, y: 0 }}
+          style={styles.heroGradient}>
+          <AppText variant="overline" color={theme.colors.sky}>
+            Make Waves
+          </AppText>
+          <AppText variant="hero" color={theme.colors.primaryText}>
+            Discover local impact events around you
+          </AppText>
+          <AppText color="#d3ebff">
+            Find meaningful opportunities on the map, RSVP instantly, and build your personal impact calendar.
+          </AppText>
+        </LinearGradient>
       </Card>
 
       <TextField
@@ -130,6 +137,9 @@ export function DiscoverScreen() {
         ))}
       </View>
 
+      <AppText variant="overline" color={theme.colors.muted}>
+        Live map
+      </AppText>
       <EventMap
         events={events}
         onSelectEvent={setSelectedEventId}
@@ -173,7 +183,12 @@ export function DiscoverScreen() {
 
 const styles = StyleSheet.create({
   heroCard: {
-    backgroundColor: "#ecfaff",
+    overflow: "hidden",
+    padding: 0,
+  },
+  heroGradient: {
+    gap: theme.spacing.sm,
+    padding: theme.spacing.lg,
   },
   centeredState: {
     alignItems: "center",
@@ -187,17 +202,18 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
   },
   filterChip: {
-    backgroundColor: theme.colors.elevated,
-    borderColor: theme.colors.primary,
+    backgroundColor: "rgba(255,255,255,0.7)",
+    borderColor: theme.colors.borderStrong,
     borderRadius: theme.radius.pill,
     borderWidth: 1,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 7,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 8,
   },
   filterChipActive: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryDeep,
+    borderColor: theme.colors.primaryDeep,
   },
   listSection: {
-    gap: theme.spacing.sm,
+    gap: theme.spacing.md,
   },
 });
