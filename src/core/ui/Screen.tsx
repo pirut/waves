@@ -1,13 +1,6 @@
 import { PropsWithChildren } from "react";
-import {
-  ScrollView,
-  StyleProp,
-  StyleSheet,
-  View,
-  ViewStyle,
-} from "react-native";
+import { ScrollView, StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 
 import { theme } from "@/src/core/theme/tokens";
 
@@ -25,33 +18,35 @@ export function Screen({ children, scroll = true, contentContainerStyle }: Props
       {children}
     </ScrollView>
   ) : (
-    <View style={[styles.contentContainer, contentContainerStyle]}>{children}</View>
+    <View style={[styles.contentContainer, contentContainerStyle]}>
+      {children}
+    </View>
   );
 
   return (
-    <LinearGradient
-      colors={["#f5fbff", "#e8f6fb", "#ffffff"]}
-      end={{ x: 1, y: 1 }}
-      start={{ x: 0, y: 0 }}
-      style={styles.gradient}>
+    <View style={styles.background}>
       <SafeAreaView edges={["top", "left", "right"]} style={styles.safeArea}>
         {content}
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: {
+  background: {
+    backgroundColor: theme.colors.background,
     flex: 1,
   },
   safeArea: {
     flex: 1,
   },
   contentContainer: {
+    alignSelf: "center",
     flexGrow: 1,
-    gap: theme.spacing.md,
-    padding: theme.spacing.md,
-    paddingBottom: theme.spacing.xxl,
+    gap: theme.spacing.lg,
+    maxWidth: 1180,
+    padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.xxl + theme.spacing.lg,
+    width: "100%",
   },
 });

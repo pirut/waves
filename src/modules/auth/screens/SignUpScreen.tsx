@@ -212,86 +212,152 @@ export function SignUpScreen() {
   }
 
   return (
-    <Screen>
-      <Card>
-        <AppText variant="overline" color={theme.colors.primary}>
-          Make Waves
-        </AppText>
-        <AppText variant="h1" color={theme.colors.heading}>
-          Create account
-        </AppText>
-        <AppText>Join your community and start building measurable impact.</AppText>
-      </Card>
+    <Screen contentContainerStyle={styles.screenContent}>
+      <View style={styles.layout}>
+        <Card style={styles.formCard}>
+          <View style={styles.formHeader}>
+            <AppText variant="caption" color={theme.colors.muted}>
+              Make Waves
+            </AppText>
+            <AppText variant="h2" color={theme.colors.heading}>
+              {pendingVerification ? "Verify your email" : "Create account"}
+            </AppText>
+            <AppText variant="caption">
+              {pendingVerification
+                ? "Enter the code we sent to your inbox."
+                : "Use your email and password to get started."}
+            </AppText>
+          </View>
 
-      <Card>
-        {pendingVerification ? (
-          <>
-            <AppText>Enter the verification code from your email.</AppText>
-            <TextField
-              label="Verification code"
-              onChangeText={setVerificationCode}
-              placeholder="Enter email code"
-              value={verificationCode}
-            />
-            {infoMessage ? <AppText color={theme.colors.primary}>{infoMessage}</AppText> : null}
-            {errorMessage ? <AppText color={theme.colors.danger}>{errorMessage}</AppText> : null}
-            <Button label="Verify Email" loading={isSubmitting} onPress={onVerifyEmail} />
-            <Button label="Resend Code" onPress={onResendVerification} variant="ghost" />
-          </>
-        ) : (
-          <>
-            <TextField
-              label="Email"
-              keyboardType="email-address"
-              onChangeText={setEmail}
-              placeholder="you@example.com"
-              value={email}
-            />
-            <TextField
-              label="Password"
-              onChangeText={setPassword}
-              placeholder="Use a strong password"
-              secureTextEntry
-              value={password}
-            />
-            {infoMessage ? <AppText color={theme.colors.primary}>{infoMessage}</AppText> : null}
-            {errorMessage ? <AppText color={theme.colors.danger}>{errorMessage}</AppText> : null}
-            <Button label="Create Account" loading={isSubmitting} onPress={onCreateAccount} />
-            {showExistingAccountRecovery ? (
-              <Button
-                label="Reset Password Instead"
-                onPress={() =>
-                  router.push({
-                    pathname: "/(auth)/sign-in",
-                    params: getAuthRouteParams(email, "1"),
-                  })
-                }
-                variant="ghost"
+          <View style={styles.formStack}>
+            {pendingVerification ? (
+              <TextField
+                label="Verification code"
+                onChangeText={setVerificationCode}
+                placeholder="Enter email code"
+                value={verificationCode}
               />
-            ) : null}
-          </>
-        )}
+            ) : (
+              <>
+                <TextField
+                  label="Email"
+                  keyboardType="email-address"
+                  onChangeText={setEmail}
+                  placeholder="you@example.com"
+                  value={email}
+                />
+                <TextField
+                  label="Password"
+                  onChangeText={setPassword}
+                  placeholder="Use at least 8 characters"
+                  secureTextEntry
+                  value={password}
+                />
+              </>
+            )}
+          </View>
 
-        <Button
-          label="Back to Sign In"
-          onPress={() =>
-            router.push({
-              pathname: "/(auth)/sign-in",
-              params: getAuthRouteParams(email),
-            })
-          }
-          variant="secondary"
-        />
-      </Card>
+          {infoMessage ? (
+            <View style={[styles.messageBox, styles.infoBox]}>
+              <AppText variant="caption" color={theme.colors.primaryDeep}>
+                {infoMessage}
+              </AppText>
+            </View>
+          ) : null}
+          {errorMessage ? (
+            <View style={[styles.messageBox, styles.errorBox]}>
+              <AppText variant="caption" color="#84262f">
+                {errorMessage}
+              </AppText>
+            </View>
+          ) : null}
+
+          <View style={styles.actionStack}>
+            {pendingVerification ? (
+              <>
+                <Button label="Verify Email" loading={isSubmitting} onPress={onVerifyEmail} />
+                <Button label="Resend Code" onPress={onResendVerification} variant="ghost" />
+              </>
+            ) : (
+              <>
+                <Button label="Create Account" loading={isSubmitting} onPress={onCreateAccount} />
+                {showExistingAccountRecovery ? (
+                  <Button
+                    label="Reset Password Instead"
+                    onPress={() =>
+                      router.push({
+                        pathname: "/(auth)/sign-in",
+                        params: getAuthRouteParams(email, "1"),
+                      })
+                    }
+                    variant="ghost"
+                  />
+                ) : null}
+              </>
+            )}
+
+            <Button
+              label="Back to Sign In"
+              onPress={() =>
+                router.push({
+                  pathname: "/(auth)/sign-in",
+                  params: getAuthRouteParams(email),
+                })
+              }
+              variant="ghost"
+            />
+          </View>
+        </Card>
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  screenContent: {
+    justifyContent: "center",
+    paddingBottom: theme.spacing.xl,
+  },
   centeredState: {
     alignItems: "center",
     flex: 1,
     gap: theme.spacing.sm,
     justifyContent: "center",
+  },
+  layout: {
+    alignSelf: "center",
+    maxWidth: 470,
+    width: "100%",
+  },
+  formCard: {
+    alignSelf: "center",
+    maxWidth: 470,
+    width: "100%",
+  },
+  formHeader: {
+    gap: 4,
+  },
+  formStack: {
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.xs,
+  },
+  messageBox: {
+    borderRadius: theme.radius.sm,
+    borderWidth: 1,
+    marginTop: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 7,
+  },
+  infoBox: {
+    backgroundColor: "#f3f7fc",
+    borderColor: theme.colors.border,
+  },
+  errorBox: {
+    backgroundColor: "#fff4f4",
+    borderColor: "#edcaca",
+  },
+  actionStack: {
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.sm,
   },
 });
