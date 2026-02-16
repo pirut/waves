@@ -18,7 +18,7 @@ export default function NotFoundScreen() {
         <AppText variant="h1" color={theme.colors.primaryText}>
           Page not found
         </AppText>
-        <AppText color="#d3ebff">This route doesn't exist in Make Waves.</AppText>
+        <AppText color={theme.colors.sky}>This route doesn't exist in Make Waves.</AppText>
         <Link href="/(tabs)" asChild>
           <Button label="Back to app" onPress={() => undefined} />
         </Link>

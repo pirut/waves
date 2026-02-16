@@ -15,6 +15,12 @@ import { Screen } from "@/src/core/ui/Screen";
 import { TextField } from "@/src/core/ui/TextField";
 import { useViewerProfile } from "@/src/modules/events/hooks/useViewerProfile";
 
+const HANDLE_PATTERN = /^[a-z0-9][a-z0-9_-]{2,23}$/;
+
+function normalizeHandleInput(value: string) {
+  return value.trim().toLowerCase().replace(/^@+/, "");
+}
+
 export function ProfileScreen() {
   const router = useRouter();
   const { signOut } = useAuth();
@@ -25,6 +31,7 @@ export function ProfileScreen() {
   const updateCurrentProfile = useMutation(api.viewer.updateCurrentProfile);
 
   const [displayName, setDisplayName] = useState("");
+  const [handle, setHandle] = useState("");
   const [city, setCity] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [statusNote, setStatusNote] = useState<string | null>(null);
@@ -35,6 +42,7 @@ export function ProfileScreen() {
     }
 
     setDisplayName(profile.displayName);
+    setHandle(profile.handle ?? profile.slug);
     setCity(profile.city ?? "");
   }, [profile]);
 
@@ -59,12 +67,21 @@ export function ProfileScreen() {
       return;
     }
 
+    const normalizedHandle = normalizeHandleInput(handle);
+    if (!HANDLE_PATTERN.test(normalizedHandle)) {
+      setStatusNote(
+        "Handle must be 3-24 characters using lowercase letters, numbers, underscores, or hyphens.",
+      );
+      return;
+    }
+
     setIsSaving(true);
     setStatusNote(null);
 
     try {
       await updateCurrentProfile({
         displayName: trimmedName,
+        handle: normalizedHandle,
         city: city.trim() || undefined,
       });
       setStatusNote("Profile updated.");
@@ -102,7 +119,7 @@ export function ProfileScreen() {
 
   return (
     <Screen>
-      <Card style={styles.heroCard}>
+      <Card innerStyle={styles.heroInner} style={styles.heroCard}>
         <LinearGradient
           colors={[theme.colors.overlayStart, theme.colors.overlayEnd]}
           end={{ x: 1, y: 1 }}
@@ -114,7 +131,7 @@ export function ProfileScreen() {
           <AppText variant="h1" color={theme.colors.primaryText}>
             Profile
           </AppText>
-          <AppText color="#d3ebff">
+          <AppText color={theme.colors.sky}>
             Manage your account details and track your event impact.
           </AppText>
         </LinearGradient>
@@ -137,7 +154,7 @@ export function ProfileScreen() {
               </AppText>
             ) : null}
             <AppText variant="caption" color={theme.colors.muted}>
-              @{profile.slug}
+              @{profile.handle ?? profile.slug}
             </AppText>
           </View>
         </View>
@@ -152,6 +169,12 @@ export function ProfileScreen() {
           onChangeText={setDisplayName}
           placeholder="Your name"
           value={displayName}
+        />
+        <TextField
+          label="Handle"
+          onChangeText={(nextHandle) => setHandle(normalizeHandleInput(nextHandle))}
+          placeholder="@makewaves_member"
+          value={handle}
         />
         <TextField
           label="City"
@@ -235,6 +258,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     padding: 0,
   },
+  heroInner: {
+    gap: 0,
+    padding: 0,
+  },
   heroGradient: {
     gap: theme.spacing.sm,
     padding: theme.spacing.lg,
@@ -271,7 +298,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
   },
   hostedItem: {
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: theme.colors.elevated,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.lg,
     borderWidth: 1,

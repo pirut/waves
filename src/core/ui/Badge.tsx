@@ -10,19 +10,19 @@ type Props = {
 
 const toneStyles = {
   default: {
-    backgroundColor: 'rgba(30,119,169,0.14)',
-    color: theme.colors.primary,
-    borderColor: 'rgba(30,119,169,0.34)',
+    backgroundColor: "rgba(255, 253, 250, 0.92)",
+    color: theme.colors.primaryDeep,
+    borderColor: "rgba(31, 74, 91, 0.48)",
   },
   success: {
-    backgroundColor: 'rgba(43,147,72,0.16)',
-    color: theme.colors.success,
-    borderColor: 'rgba(43,147,72,0.4)',
+    backgroundColor: "rgba(240, 249, 244, 0.95)",
+    color: "#285543",
+    borderColor: "rgba(63, 120, 97, 0.52)",
   },
   warning: {
-    backgroundColor: 'rgba(255,209,102,0.25)',
-    color: '#9c6b00',
-    borderColor: 'rgba(255,209,102,0.5)',
+    backgroundColor: "rgba(250, 241, 227, 0.95)",
+    color: "#7a5126",
+    borderColor: "rgba(184, 134, 70, 0.55)",
   },
 } as const;
 
@@ -48,13 +48,14 @@ export function Badge({ label, tone = 'default' }: Props) {
 const styles = StyleSheet.create({
   badge: {
     alignSelf: 'flex-start',
-    borderWidth: 1,
+    borderWidth: 1.2,
     borderRadius: theme.radius.pill,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 5,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 6,
   },
   label: {
-    letterSpacing: 0.3,
+    fontFamily: theme.fonts.mono,
+    letterSpacing: 0.55,
     textTransform: 'uppercase',
   },
 });

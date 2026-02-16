@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useAction, useMutation, useQuery } from "convex/react";
@@ -62,7 +62,6 @@ export function DiscoverScreen() {
   const router = useRouter();
   const { viewerProfileId, viewerLoading, viewerError } = useViewerProfile();
 
-  const [cityFilter, setCityFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
   const [selectedEventId, setSelectedEventId] = useState<string | undefined>(undefined);
   const [rsvpPendingId, setRsvpPendingId] = useState<string | null>(null);
@@ -81,14 +80,28 @@ export function DiscoverScreen() {
     api.events.listPublished,
     viewerProfileId
       ? {
-          city: cityFilter.trim() ? cityFilter.trim() : undefined,
           category: categoryFilter,
           limit: 80,
         }
       : "skip",
   );
 
-  const events = useMemo(() => (eventsResult ?? []) as EventListItem[], [eventsResult]);
+  const [eventsCache, setEventsCache] = useState<EventListItem[]>([]);
+  const [hasLoadedEvents, setHasLoadedEvents] = useState(false);
+
+  useEffect(() => {
+    if (!eventsResult) {
+      return;
+    }
+
+    setEventsCache(eventsResult as EventListItem[]);
+    setHasLoadedEvents(true);
+  }, [eventsResult]);
+
+  const events = useMemo(
+    () => ((eventsResult ?? eventsCache) as EventListItem[]),
+    [eventsCache, eventsResult],
+  );
 
   const eventsWithDistance = useMemo(() => {
     if (!focusLocation) {
@@ -197,7 +210,7 @@ export function DiscoverScreen() {
     setDistanceRadiusMiles(null);
   };
 
-  if (viewerLoading || (viewerProfileId && eventsResult === undefined)) {
+  if (viewerLoading || (viewerProfileId && eventsResult === undefined && !hasLoadedEvents)) {
     return (
       <Screen scroll={false}>
         <View style={styles.centeredState}>
@@ -223,7 +236,7 @@ export function DiscoverScreen() {
 
   return (
     <Screen>
-      <Card style={styles.heroCard}>
+      <Card innerStyle={styles.heroInner} style={styles.heroCard}>
         <LinearGradient
           colors={[theme.colors.overlayStart, theme.colors.overlayEnd]}
           end={{ x: 1, y: 1 }}
@@ -235,18 +248,11 @@ export function DiscoverScreen() {
           <AppText variant="hero" color={theme.colors.primaryText}>
             Discover local impact events around you
           </AppText>
-          <AppText color="#d3ebff">
+          <AppText color={theme.colors.sky}>
             Find meaningful opportunities on the map, RSVP instantly, and build your personal impact calendar.
           </AppText>
         </LinearGradient>
       </Card>
-
-      <TextField
-        label="Filter by city"
-        onChangeText={setCityFilter}
-        placeholder="San Francisco"
-        value={cityFilter}
-      />
 
       <View style={styles.filterRow}>
         <Pressable
@@ -423,6 +429,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     padding: 0,
   },
+  heroInner: {
+    gap: 0,
+    padding: 0,
+  },
   heroGradient: {
     gap: theme.spacing.sm,
     padding: theme.spacing.lg,
@@ -439,8 +449,8 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
   },
   filterChip: {
-    backgroundColor: "rgba(255,255,255,0.7)",
-    borderColor: theme.colors.borderStrong,
+    backgroundColor: theme.colors.elevatedMuted,
+    borderColor: theme.colors.border,
     borderRadius: theme.radius.pill,
     borderWidth: 1,
     paddingHorizontal: theme.spacing.md,
@@ -461,7 +471,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
   },
   lookupResultItem: {
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: theme.colors.elevated,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.lg,
     borderWidth: 1,

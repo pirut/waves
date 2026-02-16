@@ -29,7 +29,7 @@ const navigationTheme = {
     ...DefaultTheme.colors,
     background: theme.colors.background,
     border: "transparent",
-    card: "rgba(255,255,255,0.72)",
+    card: theme.colors.glass,
     primary: theme.colors.primary,
     text: theme.colors.heading,
   },
@@ -94,7 +94,7 @@ export default function RootLayout() {
             options={{
               title: "Event Details",
               headerTintColor: theme.colors.heading,
-              headerStyle: { backgroundColor: "rgba(255,255,255,0.78)" },
+              headerStyle: { backgroundColor: theme.colors.elevated },
             }}
           />
           <Stack.Screen name="+not-found" options={{ title: "Not Found" }} />

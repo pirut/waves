@@ -2,7 +2,9 @@ import { useAuth, useSignUp } from "@clerk/clerk-expo";
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { useMutation } from "convex/react";
 
+import { api } from "@/convex/_generated/api";
 import { theme } from "@/src/core/theme/tokens";
 import { AppText } from "@/src/core/ui/AppText";
 import { Button } from "@/src/core/ui/Button";
@@ -13,6 +15,8 @@ import {
   extractClerkErrorDetails,
   isIdentifierAlreadyInUseError,
 } from "@/src/modules/auth/utils/clerkErrors";
+
+const HANDLE_PATTERN = /^[a-z0-9][a-z0-9_-]{2,23}$/;
 
 function getAuthRouteParams(nextEmail: string, reset?: string) {
   const params: { email?: string; reset?: string } = {};
@@ -29,16 +33,38 @@ function getAuthRouteParams(nextEmail: string, reset?: string) {
   return params;
 }
 
+function normalizeHandleInput(handle: string) {
+  return handle.trim().toLowerCase().replace(/^@+/, "");
+}
+
+function getProfileValidationError(displayName: string, handle: string) {
+  if (displayName.trim().length < 2) {
+    return "Display name must be at least 2 characters.";
+  }
+
+  const normalizedHandle = normalizeHandleInput(handle);
+  if (!HANDLE_PATTERN.test(normalizedHandle)) {
+    return "Handle must be 3-24 characters using lowercase letters, numbers, underscores, or hyphens.";
+  }
+
+  return null;
+}
+
 export function SignUpScreen() {
   const params = useLocalSearchParams<{ email?: string }>();
   const router = useRouter();
   const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const { isLoaded: signUpLoaded, signUp, setActive } = useSignUp();
+  const syncCurrentUser = useMutation(api.viewer.syncCurrentUser);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [handle, setHandle] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [pendingVerification, setPendingVerification] = useState(false);
+  const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
+  const [suppressSignedInRedirect, setSuppressSignedInRedirect] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -100,6 +126,13 @@ export function SignUpScreen() {
 
     clearMessages();
     setShowExistingAccountRecovery(false);
+
+    const validationError = getProfileValidationError(displayName, handle);
+    if (validationError) {
+      setErrorMessage(validationError);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -162,14 +195,44 @@ export function SignUpScreen() {
       });
 
       if (result.status === "complete") {
+        setSuppressSignedInRedirect(true);
         await setActive({ session: result.createdSessionId });
-        router.replace("/(tabs)");
+        setPendingVerification(false);
+        setNeedsProfileSetup(true);
+        setInfoMessage("Email verified. Finish your profile to continue.");
       } else {
         setErrorMessage(`Additional sign-up steps are required (${result.status}).`);
       }
     } catch (error) {
       const details = extractClerkErrorDetails(error, "Verification failed.");
       setErrorMessage(details.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const onCompleteProfileSetup = async () => {
+    clearMessages();
+    const normalizedHandle = normalizeHandleInput(handle);
+    const trimmedDisplayName = displayName.trim();
+    const validationError = getProfileValidationError(trimmedDisplayName, normalizedHandle);
+
+    if (validationError) {
+      setErrorMessage(validationError);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await syncCurrentUser({
+        displayName: trimmedDisplayName,
+        handle: normalizedHandle,
+        email: email.trim() || undefined,
+      });
+      router.replace("/(tabs)");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Could not finish profile setup.");
     } finally {
       setIsSubmitting(false);
     }
@@ -207,7 +270,7 @@ export function SignUpScreen() {
     );
   }
 
-  if (isSignedIn) {
+  if (isSignedIn && !suppressSignedInRedirect) {
     return <Redirect href="/(tabs)" />;
   }
 
@@ -220,17 +283,38 @@ export function SignUpScreen() {
               Make Waves
             </AppText>
             <AppText variant="h2" color={theme.colors.heading}>
-              {pendingVerification ? "Verify your email" : "Create account"}
+              {needsProfileSetup
+                ? "Finish your profile"
+                : pendingVerification
+                  ? "Verify your email"
+                  : "Create account"}
             </AppText>
             <AppText variant="caption">
-              {pendingVerification
-                ? "Enter the code we sent to your inbox."
-                : "Use your email and password to get started."}
+              {needsProfileSetup
+                ? "Set your name and @handle so people can find you."
+                : pendingVerification
+                  ? "Enter the code we sent to your inbox."
+                  : "Use your email and password to get started."}
             </AppText>
           </View>
 
           <View style={styles.formStack}>
-            {pendingVerification ? (
+            {needsProfileSetup ? (
+              <>
+                <TextField
+                  label="Display name"
+                  onChangeText={setDisplayName}
+                  placeholder="Your name"
+                  value={displayName}
+                />
+                <TextField
+                  label="Handle"
+                  onChangeText={(nextHandle) => setHandle(normalizeHandleInput(nextHandle))}
+                  placeholder="@makewaves_member"
+                  value={handle}
+                />
+              </>
+            ) : pendingVerification ? (
               <TextField
                 label="Verification code"
                 onChangeText={setVerificationCode}
@@ -253,6 +337,18 @@ export function SignUpScreen() {
                   secureTextEntry
                   value={password}
                 />
+                <TextField
+                  label="Display name"
+                  onChangeText={setDisplayName}
+                  placeholder="Your name"
+                  value={displayName}
+                />
+                <TextField
+                  label="Handle"
+                  onChangeText={(nextHandle) => setHandle(normalizeHandleInput(nextHandle))}
+                  placeholder="@makewaves_member"
+                  value={handle}
+                />
               </>
             )}
           </View>
@@ -266,14 +362,20 @@ export function SignUpScreen() {
           ) : null}
           {errorMessage ? (
             <View style={[styles.messageBox, styles.errorBox]}>
-              <AppText variant="caption" color="#84262f">
+              <AppText variant="caption" color={theme.colors.danger}>
                 {errorMessage}
               </AppText>
             </View>
           ) : null}
 
           <View style={styles.actionStack}>
-            {pendingVerification ? (
+            {needsProfileSetup ? (
+              <Button
+                label="Finish Setup"
+                loading={isSubmitting}
+                onPress={onCompleteProfileSetup}
+              />
+            ) : pendingVerification ? (
               <>
                 <Button label="Verify Email" loading={isSubmitting} onPress={onVerifyEmail} />
                 <Button label="Resend Code" onPress={onResendVerification} variant="ghost" />
@@ -296,16 +398,18 @@ export function SignUpScreen() {
               </>
             )}
 
-            <Button
-              label="Back to Sign In"
-              onPress={() =>
-                router.push({
-                  pathname: "/(auth)/sign-in",
-                  params: getAuthRouteParams(email),
-                })
-              }
-              variant="ghost"
-            />
+            {!needsProfileSetup ? (
+              <Button
+                label="Back to Sign In"
+                onPress={() =>
+                  router.push({
+                    pathname: "/(auth)/sign-in",
+                    params: getAuthRouteParams(email),
+                  })
+                }
+                variant="ghost"
+              />
+            ) : null}
           </View>
         </Card>
       </View>
@@ -331,7 +435,7 @@ const styles = StyleSheet.create({
   },
   formCard: {
     alignSelf: "center",
-    maxWidth: 470,
+    maxWidth: 500,
     width: "100%",
   },
   formHeader: {
@@ -349,12 +453,12 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   infoBox: {
-    backgroundColor: "#f3f7fc",
+    backgroundColor: theme.colors.elevatedMuted,
     borderColor: theme.colors.border,
   },
   errorBox: {
-    backgroundColor: "#fff4f4",
-    borderColor: "#edcaca",
+    backgroundColor: "rgba(184, 90, 74, 0.08)",
+    borderColor: "rgba(184, 90, 74, 0.22)",
   },
   actionStack: {
     gap: theme.spacing.xs,

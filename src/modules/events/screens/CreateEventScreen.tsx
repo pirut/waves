@@ -146,6 +146,17 @@ export function CreateEventScreen() {
     }
   };
 
+  const onRemoveCoverPhoto = () => {
+    setCoverStorageId(null);
+    setCoverPreviewUri(null);
+  };
+
+  const onRemoveGalleryPhoto = (storageId: Id<"_storage">) => {
+    setGalleryUploads((previous) =>
+      previous.filter((uploadItem) => uploadItem.storageId !== storageId),
+    );
+  };
+
   const onLookupAddress = async () => {
     const normalizedQuery = locationQuery.trim();
     if (normalizedQuery.length < 3) {
@@ -285,7 +296,7 @@ export function CreateEventScreen() {
 
   return (
     <Screen>
-      <Card style={styles.heroCard}>
+      <Card innerStyle={styles.heroInner} style={styles.heroCard}>
         <LinearGradient
           colors={[theme.colors.overlayStart, theme.colors.overlayEnd]}
           end={{ x: 1, y: 1 }}
@@ -297,7 +308,7 @@ export function CreateEventScreen() {
           <AppText variant="h1" color={theme.colors.primaryText}>
             Create an event in a few steps
           </AppText>
-          <AppText color="#d3ebff">
+          <AppText color={theme.colors.sky}>
             Share what it is, when it happens, where it is, then upload photos.
           </AppText>
         </LinearGradient>
@@ -341,18 +352,56 @@ export function CreateEventScreen() {
         <AppText variant="h3" color={theme.colors.heading}>
           Schedule
         </AppText>
-        <DateTimeField
-          label="Start"
-          minimumDate={Date.now()}
-          onChange={onChangeStartAt}
-          value={startAt}
-        />
-        <DateTimeField
-          label="End"
-          minimumDate={startAt + 1000 * 60 * 15}
-          onChange={onChangeEndAt}
-          value={endAt}
-        />
+        <View style={styles.scheduleGroup}>
+          <AppText variant="caption" color={theme.colors.muted}>
+            Date range
+          </AppText>
+          <View style={styles.scheduleRow}>
+            <View style={styles.scheduleField}>
+              <DateTimeField
+                label="Start date"
+                minimumDate={Date.now()}
+                onChange={onChangeStartAt}
+                picker="date"
+                value={startAt}
+              />
+            </View>
+            <View style={styles.scheduleField}>
+              <DateTimeField
+                label="End date"
+                minimumDate={startAt}
+                onChange={onChangeEndAt}
+                picker="date"
+                value={endAt}
+              />
+            </View>
+          </View>
+        </View>
+        <View style={styles.scheduleGroup}>
+          <AppText variant="caption" color={theme.colors.muted}>
+            Times
+          </AppText>
+          <View style={styles.scheduleRow}>
+            <View style={styles.scheduleField}>
+              <DateTimeField
+                label="Start time"
+                minuteInterval={5}
+                onChange={onChangeStartAt}
+                picker="time"
+                value={startAt}
+              />
+            </View>
+            <View style={styles.scheduleField}>
+              <DateTimeField
+                label="End time"
+                minuteInterval={5}
+                onChange={onChangeEndAt}
+                picker="time"
+                value={endAt}
+              />
+            </View>
+          </View>
+        </View>
       </Card>
 
       <Card>
@@ -424,7 +473,10 @@ export function CreateEventScreen() {
           variant="secondary"
         />
         {coverPreviewUri ? (
-          <Image contentFit="cover" source={coverPreviewUri} style={styles.previewImage} />
+          <>
+            <Image contentFit="cover" source={coverPreviewUri} style={styles.previewImage} />
+            <Button label="Remove Cover Photo" onPress={onRemoveCoverPhoto} variant="danger" />
+          </>
         ) : null}
 
         <Button
@@ -436,12 +488,23 @@ export function CreateEventScreen() {
         {galleryUploads.length > 0 ? (
           <View style={styles.galleryPreviewRow}>
             {galleryUploads.map((uploadItem) => (
-              <Image
-                contentFit="cover"
-                key={`${uploadItem.storageId}-${uploadItem.previewUri}`}
-                source={uploadItem.previewUri}
-                style={styles.galleryPreviewImage}
-              />
+              <View key={`${uploadItem.storageId}-${uploadItem.previewUri}`} style={styles.galleryPreviewItem}>
+                <Image
+                  contentFit="cover"
+                  source={uploadItem.previewUri}
+                  style={styles.galleryPreviewImage}
+                />
+                <Pressable
+                  onPress={() => onRemoveGalleryPhoto(uploadItem.storageId)}
+                  style={styles.galleryRemoveBadge}>
+                  <AppText
+                    color={theme.colors.primaryText}
+                    style={styles.galleryRemoveBadgeText}
+                    variant="caption">
+                    Remove
+                  </AppText>
+                </Pressable>
+              </View>
             ))}
           </View>
         ) : null}
@@ -484,6 +547,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     padding: 0,
   },
+  heroInner: {
+    gap: 0,
+    padding: 0,
+  },
   heroGradient: {
     gap: theme.spacing.sm,
     padding: theme.spacing.lg,
@@ -496,6 +563,18 @@ const styles = StyleSheet.create({
   categoryItem: {
     marginBottom: theme.spacing.xs,
   },
+  scheduleGroup: {
+    gap: theme.spacing.xs,
+  },
+  scheduleRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.sm,
+  },
+  scheduleField: {
+    flex: 1,
+    minWidth: 240,
+  },
   previewImage: {
     borderRadius: theme.radius.lg,
     height: 188,
@@ -506,16 +585,33 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: theme.spacing.xs,
   },
+  galleryPreviewItem: {
+    gap: 6,
+  },
   galleryPreviewImage: {
     borderRadius: theme.radius.md,
     height: 76,
     width: 76,
   },
+  galleryRemoveBadge: {
+    alignItems: "center",
+    backgroundColor: theme.colors.coral,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 4,
+  },
+  galleryRemoveBadgeText: {
+    fontFamily: theme.fonts.body,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.45,
+    textTransform: "uppercase",
+  },
   lookupResultList: {
     gap: theme.spacing.xs,
   },
   lookupResultItem: {
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: theme.colors.elevated,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
@@ -525,7 +621,7 @@ const styles = StyleSheet.create({
   },
   mapHint: {
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.64)",
+    backgroundColor: theme.colors.elevatedMuted,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.lg,
     borderWidth: 1,

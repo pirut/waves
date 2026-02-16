@@ -632,7 +632,7 @@ export function SignInScreen() {
           ) : null}
           {errorMessage ? (
             <View style={[styles.messageBox, styles.errorBox]}>
-              <AppText variant="caption" color="#84262f">
+              <AppText variant="caption" color={theme.colors.danger}>
                 {errorMessage}
               </AppText>
             </View>
@@ -775,7 +775,7 @@ const styles = StyleSheet.create({
   },
   formCard: {
     alignSelf: "center",
-    maxWidth: 470,
+    maxWidth: 500,
     width: "100%",
   },
   formHeader: {
@@ -793,12 +793,12 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   infoBox: {
-    backgroundColor: "#f3f7fc",
+    backgroundColor: theme.colors.elevatedMuted,
     borderColor: theme.colors.border,
   },
   errorBox: {
-    backgroundColor: "#fff4f4",
-    borderColor: "#edcaca",
+    backgroundColor: "rgba(184, 90, 74, 0.08)",
+    borderColor: "rgba(184, 90, 74, 0.22)",
   },
   actionStack: {
     gap: theme.spacing.xs,

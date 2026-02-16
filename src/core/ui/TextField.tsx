@@ -49,11 +49,11 @@ export function TextField({
 
 const styles = StyleSheet.create({
   wrapper: {
-    gap: 5,
+    gap: 6,
   },
   label: {
     marginLeft: 1,
-    opacity: 0.92,
+    opacity: 0.95,
   },
   input: {
     backgroundColor: theme.colors.elevatedMuted,
@@ -63,16 +63,21 @@ const styles = StyleSheet.create({
     color: theme.colors.heading,
     fontFamily: theme.fonts.body,
     fontSize: theme.typography.body,
-    minHeight: 46,
+    minHeight: 50,
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: 10,
+    paddingVertical: 11,
   },
   inputFocused: {
-    borderColor: theme.colors.primary,
+    borderColor: theme.colors.primaryDeep,
     backgroundColor: theme.colors.elevated,
+    shadowColor: "#26414f",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 2,
   },
   multiline: {
-    minHeight: 120,
+    minHeight: 132,
     textAlignVertical: "top",
   },
 });

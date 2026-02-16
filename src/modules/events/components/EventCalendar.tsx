@@ -174,7 +174,7 @@ export function EventCalendar({ events, onOpenEvent }: Props) {
                       key={`${eventItem.id}-${day}`}
                       style={[
                         styles.eventDot,
-                        { backgroundColor: isSelected ? "#dff7ff" : theme.colors.primary },
+                        { backgroundColor: isSelected ? theme.colors.sky : theme.colors.primary },
                       ]}
                     />
                   ))}
@@ -214,7 +214,7 @@ export function EventCalendar({ events, onOpenEvent }: Props) {
 const styles = StyleSheet.create({
   headerRow: {
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.62)",
+    backgroundColor: theme.colors.elevatedMuted,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   },
   dayCell: {
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: theme.colors.elevated,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
     borderWidth: 1,
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
   },
   selectedEventCard: {
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: theme.colors.elevatedMuted,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
     borderWidth: 1,

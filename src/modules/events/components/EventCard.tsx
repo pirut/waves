@@ -32,7 +32,7 @@ export function EventCard({ item, onOpen, onRsvp, rsvpBusy, distanceMiles }: Pro
         <View style={styles.coverShell}>
           <Image contentFit="cover" source={item.coverImageUrl} style={styles.cover} />
           <LinearGradient
-            colors={["rgba(8,20,33,0)", "rgba(8,20,33,0.52)"]}
+            colors={["rgba(12, 28, 36, 0)", "rgba(12, 28, 36, 0.5)"]}
             end={{ x: 0.5, y: 1 }}
             start={{ x: 0.5, y: 0 }}
             style={styles.coverOverlay}

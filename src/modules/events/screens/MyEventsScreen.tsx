@@ -38,7 +38,7 @@ export function MyEventsScreen() {
 
   return (
     <Screen>
-      <Card style={styles.heroCard}>
+      <Card innerStyle={styles.heroInner} style={styles.heroCard}>
         <LinearGradient
           colors={[theme.colors.overlayStart, theme.colors.overlayEnd]}
           end={{ x: 1, y: 1 }}
@@ -50,7 +50,7 @@ export function MyEventsScreen() {
           <AppText variant="h1" color={theme.colors.primaryText}>
             My events
           </AppText>
-          <AppText color="#d3ebff">
+          <AppText color={theme.colors.sky}>
             Everything you signed up for is grouped by month below. Keep momentum and track your impact cadence.
           </AppText>
         </LinearGradient>
@@ -109,6 +109,10 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     overflow: "hidden",
+    padding: 0,
+  },
+  heroInner: {
+    gap: 0,
     padding: 0,
   },
   heroGradient: {

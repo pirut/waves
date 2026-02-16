@@ -20,6 +20,7 @@ type Props = {
   label: string;
   value: number;
   onChange: (nextValue: number) => void;
+  picker?: "datetime" | "date" | "time";
   minimumDate?: number;
   maximumDate?: number;
   minuteInterval?: 1 | 5 | 10 | 15 | 20 | 30;
@@ -45,6 +46,7 @@ export function DateTimeField({
   label,
   value,
   onChange,
+  picker = "datetime",
   minimumDate,
   maximumDate,
   minuteInterval = 5,
@@ -81,51 +83,57 @@ export function DateTimeField({
     paddingVertical: theme.spacing.sm,
   };
 
+  const openPicker = (nextMode: DateTimePickerMode) => {
+    setActiveMode(nextMode);
+  };
+
+  const renderSingleControl = (
+    mode: DateTimePickerMode,
+    heading: string,
+    valueText: string,
+  ) => (
+    <Pressable
+      onBlur={() => setFocusedControl(null)}
+      onFocus={() => setFocusedControl(mode)}
+      onPress={() => openPicker(mode)}
+      style={[controlBase, focusedControl === mode ? styles.controlFocused : undefined]}>
+      <AppText variant="caption" color={theme.colors.muted}>
+        {heading}
+      </AppText>
+      <AppText color={theme.colors.heading} style={styles.valueText}>
+        {valueText}
+      </AppText>
+    </Pressable>
+  );
+
   return (
     <View style={styles.wrapper}>
       <AppText variant="caption" color={theme.colors.muted} style={styles.label}>
         {label}
       </AppText>
 
-      <View style={styles.controlsRow}>
-        <Pressable
-          onBlur={() => setFocusedControl(null)}
-          onFocus={() => setFocusedControl("date")}
-          onPress={() => setActiveMode("date")}
-          style={[
-            controlBase,
-            focusedControl === "date" ? styles.controlFocused : undefined,
-          ]}>
-          <AppText variant="caption" color={theme.colors.muted}>
-            Date
-          </AppText>
-          <AppText color={theme.colors.heading} style={styles.valueText}>
-            {format(selectedDate, "EEE, MMM d, yyyy")}
-          </AppText>
-        </Pressable>
-
-        <Pressable
-          onBlur={() => setFocusedControl(null)}
-          onFocus={() => setFocusedControl("time")}
-          onPress={() => setActiveMode("time")}
-          style={[
-            controlBase,
-            focusedControl === "time" ? styles.controlFocused : undefined,
-          ]}>
-          <AppText variant="caption" color={theme.colors.muted}>
-            Time
-          </AppText>
-          <AppText color={theme.colors.heading} style={styles.valueText}>
-            {format(selectedDate, "h:mm a")}
-          </AppText>
-        </Pressable>
-      </View>
+      {picker === "datetime" ? (
+        <View style={styles.controlsRow}>
+          {renderSingleControl("date", "Date", format(selectedDate, "EEE, MMM d, yyyy"))}
+          {renderSingleControl("time", "Time", format(selectedDate, "h:mm a"))}
+        </View>
+      ) : (
+        <View style={styles.singleControlRow}>
+          {picker === "date"
+            ? renderSingleControl("date", "Date", format(selectedDate, "EEE, MMM d, yyyy"))
+            : renderSingleControl("time", "Time", format(selectedDate, "h:mm a"))}
+        </View>
+      )}
 
       {activeMode ? (
         <DateTimePicker
           display={Platform.OS === "ios" ? "spinner" : "default"}
-          maximumDate={maximumDate ? new Date(maximumDate) : undefined}
-          minimumDate={minimumDate ? new Date(minimumDate) : undefined}
+          maximumDate={
+            activeMode === "date" && maximumDate ? new Date(maximumDate) : undefined
+          }
+          minimumDate={
+            activeMode === "date" && minimumDate ? new Date(minimumDate) : undefined
+          }
           minuteInterval={minuteInterval}
           mode={activeMode}
           onChange={onPickerChange}
@@ -148,11 +156,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: theme.spacing.sm,
   },
+  singleControlRow: {
+    flexDirection: "row",
+  },
   controlFocused: {
     backgroundColor: theme.colors.elevated,
-    borderColor: theme.colors.primary,
+    borderColor: theme.colors.primaryDeep,
+    shadowColor: "#26414f",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 2,
   },
   valueText: {
     fontWeight: "600",
+    letterSpacing: 0.18,
   },
 });

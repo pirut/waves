@@ -4,6 +4,7 @@ type Props = {
   label: string;
   value: number;
   onChange: (nextValue: number) => void;
+  picker?: "datetime" | "date" | "time";
   minimumDate?: number;
   maximumDate?: number;
   minuteInterval?: 1 | 5 | 10 | 15 | 20 | 30;

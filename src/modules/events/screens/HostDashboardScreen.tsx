@@ -85,7 +85,7 @@ export function HostDashboardScreen() {
 
   return (
     <Screen>
-      <Card style={styles.heroCard}>
+      <Card innerStyle={styles.heroInner} style={styles.heroCard}>
         <LinearGradient
           colors={[theme.colors.overlayStart, theme.colors.overlayEnd]}
           end={{ x: 1, y: 1 }}
@@ -97,7 +97,7 @@ export function HostDashboardScreen() {
           <AppText variant="h1" color={theme.colors.primaryText}>
             Manage hosted events
           </AppText>
-          <AppText color="#d3ebff">
+          <AppText color={theme.colors.sky}>
             Track attendance at a glance and send updates directly to people who signed up.
           </AppText>
           <Button
@@ -138,7 +138,7 @@ export function HostDashboardScreen() {
                       {eventItem.title}
                     </AppText>
                     <AppText
-                      color={selectedEventId === eventItem.id ? "#dff7ff" : theme.colors.body}
+                      color={selectedEventId === eventItem.id ? theme.colors.sky : theme.colors.body}
                       variant="caption">
                       {eventItem.city} • {eventItem.attendeeCount} attendees
                     </AppText>
@@ -264,6 +264,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     padding: 0,
   },
+  heroInner: {
+    gap: 0,
+    padding: 0,
+  },
   heroGradient: {
     gap: theme.spacing.sm,
     padding: theme.spacing.lg,
@@ -273,7 +277,7 @@ const styles = StyleSheet.create({
   },
   eventSelector: {
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: theme.colors.elevated,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
@@ -305,7 +309,7 @@ const styles = StyleSheet.create({
   },
   attendeeRow: {
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: theme.colors.elevatedMuted,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
@@ -321,7 +325,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
   },
   messageItem: {
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: theme.colors.elevatedMuted,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.lg,
     borderWidth: 1,

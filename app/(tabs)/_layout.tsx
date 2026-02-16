@@ -34,19 +34,19 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#ffffff",
-        tabBarInactiveTintColor: "#b2c8d8",
+        tabBarActiveTintColor: theme.colors.primaryText,
+        tabBarInactiveTintColor: theme.colors.sky,
         tabBarLabelStyle: {
           fontFamily: theme.fonts.body,
           fontSize: 11,
-          letterSpacing: 0.4,
+          letterSpacing: 0.55,
           textTransform: "uppercase",
         },
         tabBarStyle: {
-          backgroundColor: "rgba(9, 26, 41, 0.94)",
+          backgroundColor: theme.colors.canvas,
           borderTopColor: "transparent",
           borderTopWidth: 0,
-          borderRadius: 24,
+          borderRadius: 22,
           bottom: 12,
           height: 72,
           left: 14,

@@ -88,7 +88,6 @@ function ClerkViewerProfileProvider({ children }: PropsWithChildren) {
 
       try {
         const viewerProfileId = await syncCurrentUser({
-          displayName: user.fullName ?? user.username ?? undefined,
           avatarUrl: user.imageUrl,
           city: metadataCity,
           email: user.primaryEmailAddress?.emailAddress,

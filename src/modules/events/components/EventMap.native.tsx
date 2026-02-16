@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     width: 292,
   },
   legend: {
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: theme.colors.elevated,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
     borderWidth: 1,
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.64)",
+    backgroundColor: theme.colors.glass,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.xl,
     borderWidth: 1,

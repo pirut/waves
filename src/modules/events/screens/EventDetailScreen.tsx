@@ -170,7 +170,7 @@ export function EventDetailScreen({ eventId }: Props) {
 
   return (
     <Screen>
-      <Card style={styles.heroCard}>
+      <Card innerStyle={styles.heroInner} style={styles.heroCard}>
         <LinearGradient
           colors={[theme.colors.overlayStart, theme.colors.overlayEnd]}
           end={{ x: 1, y: 1 }}
@@ -387,6 +387,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     padding: 0,
   },
+  heroInner: {
+    gap: 0,
+    padding: 0,
+  },
   heroGradient: {
     gap: theme.spacing.sm,
     padding: theme.spacing.lg,
@@ -407,7 +411,7 @@ const styles = StyleSheet.create({
   },
   attendeeItem: {
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: theme.colors.elevatedMuted,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
@@ -423,7 +427,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
   },
   messageItem: {
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: theme.colors.elevatedMuted,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.lg,
     borderWidth: 1,

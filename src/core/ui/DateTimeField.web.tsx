@@ -1,16 +1,17 @@
-import * as Popover from "@radix-ui/react-popover";
 import { FontAwesome } from "@expo/vector-icons";
 import { format } from "date-fns";
-import { useMemo, useState, type CSSProperties } from "react";
-import { DayPicker } from "react-day-picker";
+import { type ChangeEvent, useMemo, type CSSProperties } from "react";
 
 import { theme } from "@/src/core/theme/tokens";
 import { AppText } from "@/src/core/ui/AppText";
+
+type PickerKind = "datetime" | "date" | "time";
 
 type Props = {
   label: string;
   value: number;
   onChange: (nextValue: number) => void;
+  picker?: PickerKind;
   minimumDate?: number;
   maximumDate?: number;
   minuteInterval?: 1 | 5 | 10 | 15 | 20 | 30;
@@ -26,22 +27,33 @@ function clampTimestamp(value: number, minimumDate?: number, maximumDate?: numbe
   return value;
 }
 
-function buildTimeOptions(stepMinutes: number) {
-  const options: Array<{ value: string; label: string }> = [];
-  for (let totalMinutes = 0; totalMinutes < 24 * 60; totalMinutes += stepMinutes) {
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    const date = new Date();
-    date.setHours(hours, minutes, 0, 0);
-    options.push({
-      value: `${hours}:${minutes}`,
-      label: format(date, "h:mm a"),
-    });
-  }
-  return options;
+function toDateInputValue(value: Date) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
-function parseTimeValue(value: string) {
+function toTimeInputValue(value: Date) {
+  const hours = String(value.getHours()).padStart(2, "0");
+  const minutes = String(value.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
+function parseDateInput(value: string) {
+  const [yearPart, monthPart, dayPart] = value.split("-");
+  const year = Number(yearPart);
+  const month = Number(monthPart);
+  const day = Number(dayPart);
+
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return null;
+  }
+
+  return { year, month, day };
+}
+
+function parseTimeInput(value: string) {
   const [hoursPart, minutesPart] = value.split(":");
   const hours = Number(hoursPart);
   const minutes = Number(minutesPart);
@@ -59,257 +71,160 @@ const containerStyle: CSSProperties = {
   width: "100%",
 };
 
-const triggerStyle: CSSProperties = {
-  alignItems: "center",
-  backgroundColor: theme.colors.elevatedMuted,
-  border: `1px solid ${theme.colors.border}`,
-  borderRadius: theme.radius.md,
-  color: theme.colors.heading,
-  cursor: "pointer",
-  display: "flex",
-  justifyContent: "space-between",
-  minHeight: 46,
-  padding: "10px 16px",
-  width: "100%",
-};
-
-const triggerTextWrap: CSSProperties = {
-  alignItems: "center",
-  display: "flex",
-  gap: 12,
-};
-
-const popoverContentStyle: CSSProperties = {
-  backgroundColor: theme.colors.elevated,
-  border: `1px solid ${theme.colors.border}`,
-  borderRadius: theme.radius.lg,
-  boxShadow: "0 18px 50px rgba(8, 24, 39, 0.18)",
-  minWidth: 326,
-  padding: 12,
-  zIndex: 80,
-};
-
-const dayPickerStyles: Record<string, CSSProperties> = {
-  root: {
-    margin: 0,
-  },
-  month: {
-    margin: 0,
-  },
-  caption: {
-    alignItems: "center",
-    display: "flex",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  caption_label: {
-    color: theme.colors.heading,
-    fontFamily: theme.fonts.body,
-    fontSize: 14,
-    fontWeight: 700,
-  },
-  nav: {
-    display: "flex",
-    gap: 6,
-  },
-  nav_button: {
-    alignItems: "center",
-    background: theme.colors.elevatedMuted,
-    border: `1px solid ${theme.colors.border}`,
-    borderRadius: 8,
-    color: theme.colors.heading,
-    cursor: "pointer",
-    display: "flex",
-    height: 28,
-    justifyContent: "center",
-    width: 28,
-  },
-  table: {
-    borderCollapse: "separate",
-    borderSpacing: "2px",
-    marginTop: 4,
-    width: "100%",
-  },
-  head_cell: {
-    color: theme.colors.muted,
-    fontFamily: theme.fonts.body,
-    fontSize: 11,
-    fontWeight: 600,
-    height: 24,
-    textAlign: "center",
-  },
-  cell: {
-    textAlign: "center",
-  },
-  day: {
-    background: "transparent",
-    border: "none",
-    borderRadius: 8,
-    color: theme.colors.heading,
-    cursor: "pointer",
-    fontFamily: theme.fonts.body,
-    fontSize: 13,
-    height: 34,
-    width: 34,
-  },
-  day_today: {
-    border: `1px solid ${theme.colors.borderStrong}`,
-  },
-  day_selected: {
-    background: theme.colors.primaryDeep,
-    color: theme.colors.primaryText,
-  },
-  day_outside: {
-    color: theme.colors.subtle,
-    opacity: 0.55,
-  },
-  day_disabled: {
-    color: theme.colors.subtle,
-    opacity: 0.28,
-  },
-};
-
-const footerStyle: CSSProperties = {
-  borderTop: `1px solid ${theme.colors.border}`,
+const rowStyle: CSSProperties = {
   display: "grid",
-  gap: 8,
-  marginTop: 10,
-  paddingTop: 10,
-};
-
-const timeLabelStyle: CSSProperties = {
-  color: theme.colors.muted,
-  fontFamily: theme.fonts.body,
-  fontSize: theme.typography.caption,
-};
-
-const timeSelectStyle: CSSProperties = {
-  backgroundColor: theme.colors.elevatedMuted,
-  border: `1px solid ${theme.colors.border}`,
-  borderRadius: theme.radius.md,
-  color: theme.colors.heading,
-  fontFamily: theme.fonts.body,
-  fontSize: theme.typography.body,
-  minHeight: 42,
-  padding: "8px 10px",
+  gap: 12,
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
   width: "100%",
 };
 
-const actionsStyle: CSSProperties = {
+const controlShellStyle: CSSProperties = {
+  alignItems: "center",
+  backgroundColor: theme.colors.elevatedMuted,
+  border: `1px solid ${theme.colors.borderStrong}`,
+  borderRadius: theme.radius.md,
   display: "flex",
-  justifyContent: "flex-end",
+  gap: 10,
+  minHeight: 48,
+  paddingLeft: 12,
+  paddingRight: 10,
+  width: "100%",
 };
 
-const doneButtonStyle: CSSProperties = {
-  backgroundColor: theme.colors.primaryDeep,
+const inputStyle: CSSProperties = {
+  appearance: "none",
+  backgroundColor: "transparent",
   border: "none",
-  borderRadius: theme.radius.md,
-  color: theme.colors.primaryText,
-  cursor: "pointer",
+  color: theme.colors.heading,
   fontFamily: theme.fonts.body,
-  fontSize: 13,
-  fontWeight: 700,
-  minHeight: 34,
-  padding: "6px 12px",
+  fontSize: 15,
+  fontWeight: 600,
+  minHeight: 46,
+  outline: "none",
+  width: "100%",
 };
+
+type ControlProps = {
+  kind: "date" | "time";
+  value: Date;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  minDate?: string;
+  maxDate?: string;
+  minuteInterval: number;
+};
+
+function Control({ kind, value, onChange, minDate, maxDate, minuteInterval }: ControlProps) {
+  const isDate = kind === "date";
+  const valueText = isDate ? toDateInputValue(value) : toTimeInputValue(value);
+
+  return (
+    <label style={controlShellStyle}>
+      <FontAwesome
+        color={theme.colors.muted}
+        name={isDate ? "calendar-o" : "clock-o"}
+        size={16}
+      />
+      <input
+        max={isDate ? maxDate : undefined}
+        min={isDate ? minDate : undefined}
+        onChange={onChange}
+        step={isDate ? undefined : minuteInterval * 60}
+        style={inputStyle}
+        type={isDate ? "date" : "time"}
+        value={valueText}
+      />
+    </label>
+  );
+}
 
 export function DateTimeField({
   label,
   value,
   onChange,
+  picker = "datetime",
   minimumDate,
   maximumDate,
   minuteInterval = 5,
 }: Props) {
-  const [isOpen, setIsOpen] = useState(false);
   const selectedDate = useMemo(() => new Date(value), [value]);
-  const timeOptions = useMemo(() => buildTimeOptions(minuteInterval), [minuteInterval]);
+  const minDate = minimumDate ? toDateInputValue(new Date(minimumDate)) : undefined;
+  const maxDate = maximumDate ? toDateInputValue(new Date(maximumDate)) : undefined;
 
-  const onSelectDate = (nextDate: Date | undefined) => {
-    if (!nextDate) {
+  const onChangeDate = (event: ChangeEvent<HTMLInputElement>) => {
+    const parsed = parseDateInput(event.target.value);
+    if (!parsed) {
       return;
     }
 
     const mergedDate = new Date(value);
-    mergedDate.setFullYear(nextDate.getFullYear(), nextDate.getMonth(), nextDate.getDate());
-
+    mergedDate.setFullYear(parsed.year, parsed.month - 1, parsed.day);
     const nextTimestamp = clampTimestamp(mergedDate.getTime(), minimumDate, maximumDate);
     onChange(nextTimestamp);
   };
 
-  const onSelectTime = (nextTimeValue: string) => {
-    const parsed = parseTimeValue(nextTimeValue);
+  const onChangeTime = (event: ChangeEvent<HTMLInputElement>) => {
+    const parsed = parseTimeInput(event.target.value);
     if (!parsed) {
       return;
     }
 
     const mergedDate = new Date(value);
     mergedDate.setHours(parsed.hours, parsed.minutes, 0, 0);
-
     const nextTimestamp = clampTimestamp(mergedDate.getTime(), minimumDate, maximumDate);
     onChange(nextTimestamp);
   };
 
-  const selectedTimeValue = `${selectedDate.getHours()}:${selectedDate.getMinutes()}`;
+  const previewText =
+    picker === "date"
+      ? format(selectedDate, "EEEE, MMMM d, yyyy")
+      : picker === "time"
+        ? format(selectedDate, "h:mm a")
+        : format(selectedDate, "EEEE, MMMM d, yyyy • h:mm a");
 
   return (
     <div style={containerStyle}>
-      <AppText variant="caption" color={theme.colors.muted} style={{ marginLeft: 1, opacity: 0.92 }}>
+      <AppText variant="caption" color={theme.colors.muted} style={{ marginLeft: 1, opacity: 0.95 }}>
         {label}
       </AppText>
 
-      <Popover.Root onOpenChange={setIsOpen} open={isOpen}>
-        <Popover.Trigger asChild>
-          <button style={triggerStyle} type="button">
-            <span style={triggerTextWrap}>
-              <FontAwesome color={theme.colors.muted} name="calendar-o" size={16} />
-              <span style={{ color: theme.colors.heading, fontFamily: theme.fonts.body, fontSize: 15, fontWeight: 600 }}>
-                {format(selectedDate, "PPP • h:mm a")}
-              </span>
-            </span>
-            <FontAwesome color={theme.colors.subtle} name={isOpen ? "chevron-up" : "chevron-down"} size={12} />
-          </button>
-        </Popover.Trigger>
+      {picker === "datetime" ? (
+        <div style={rowStyle}>
+          <Control
+            kind="date"
+            maxDate={maxDate}
+            minDate={minDate}
+            minuteInterval={minuteInterval}
+            onChange={onChangeDate}
+            value={selectedDate}
+          />
+          <Control
+            kind="time"
+            minuteInterval={minuteInterval}
+            onChange={onChangeTime}
+            value={selectedDate}
+          />
+        </div>
+      ) : picker === "date" ? (
+        <Control
+          kind="date"
+          maxDate={maxDate}
+          minDate={minDate}
+          minuteInterval={minuteInterval}
+          onChange={onChangeDate}
+          value={selectedDate}
+        />
+      ) : (
+        <Control
+          kind="time"
+          minuteInterval={minuteInterval}
+          onChange={onChangeTime}
+          value={selectedDate}
+        />
+      )}
 
-        <Popover.Portal>
-          <Popover.Content
-            align="start"
-            collisionPadding={16}
-            side="bottom"
-            sideOffset={8}
-            style={popoverContentStyle}>
-            <DayPicker
-              fromDate={minimumDate ? new Date(minimumDate) : undefined}
-              mode="single"
-              onSelect={onSelectDate}
-              selected={selectedDate}
-              showOutsideDays
-              styles={dayPickerStyles}
-              toDate={maximumDate ? new Date(maximumDate) : undefined}
-              weekStartsOn={0}
-            />
-
-            <div style={footerStyle}>
-              <span style={timeLabelStyle}>Time</span>
-              <select
-                onChange={(event) => onSelectTime(event.target.value)}
-                style={timeSelectStyle}
-                value={selectedTimeValue}>
-                {timeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <div style={actionsStyle}>
-                <button onClick={() => setIsOpen(false)} style={doneButtonStyle} type="button">
-                  Done
-                </button>
-              </div>
-            </div>
-          </Popover.Content>
-        </Popover.Portal>
-      </Popover.Root>
+      <AppText variant="caption" color={theme.colors.subtle} style={{ marginLeft: 1, opacity: 0.9 }}>
+        {previewText}
+      </AppText>
     </div>
   );
 }

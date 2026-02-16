@@ -3,6 +3,7 @@ export const EVENT_CATEGORIES = [
   "Food Security",
   "Fundraiser",
   "Mentoring",
+  "Worship",
   "Health",
   "Education",
 ] as const;

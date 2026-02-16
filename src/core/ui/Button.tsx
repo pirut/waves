@@ -17,7 +17,7 @@ type Props = {
 const styles = StyleSheet.create({
   base: {
     borderRadius: theme.radius.md,
-    minHeight: 46,
+    minHeight: 48,
     overflow: "hidden",
     borderWidth: 1,
   },
@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: theme.spacing.xs,
     justifyContent: "center",
-    minHeight: 46,
+    minHeight: 48,
     paddingHorizontal: theme.spacing.lg,
   },
   primary: {
@@ -34,12 +34,12 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   secondary: {
-    backgroundColor: theme.colors.elevated,
-    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.elevatedMuted,
+    borderColor: theme.colors.borderStrong,
   },
   ghost: {
     backgroundColor: "transparent",
-    borderColor: "transparent",
+    borderColor: theme.colors.border,
   },
   danger: {
     backgroundColor: theme.colors.coral,
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
 
 const textColors: Record<ButtonVariant, string> = {
   primary: theme.colors.primaryText,
-  secondary: theme.colors.primaryDeep,
+  secondary: theme.colors.heading,
   ghost: theme.colors.primaryDeep,
   danger: theme.colors.primaryText,
 };
@@ -69,7 +69,7 @@ export function Button({
 
   return (
     <Pressable
-      android_ripple={{ color: "rgba(47, 95, 142, 0.12)" }}
+      android_ripple={{ color: "rgba(31, 74, 91, 0.12)" }}
       accessibilityRole="button"
       disabled={disabled || loading}
       onPress={onPress}
@@ -77,14 +77,14 @@ export function Button({
         styles.base,
         variantStyle,
         fullWidth ? { alignSelf: "stretch" } : undefined,
-        pressed ? { opacity: 0.84 } : undefined,
+        pressed ? { opacity: 0.9, transform: [{ translateY: 1 }] } : undefined,
         (disabled || loading) && styles.disabled,
       ]}>
       <View style={styles.fill}>
         {loading ? (
           <ActivityIndicator color={textColors[variant]} />
         ) : (
-          <AppText color={textColors[variant]} style={{ fontWeight: "600", letterSpacing: 0.1 }}>
+          <AppText color={textColors[variant]} style={{ fontWeight: "600", letterSpacing: 0.35 }}>
             {label}
           </AppText>
         )}

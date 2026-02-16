@@ -16,7 +16,9 @@ export default function ModalScreen() {
         <AppText variant="h1" color={theme.colors.primaryText}>
           Make Waves
         </AppText>
-        <AppText color="#d3ebff">This placeholder modal can be reused for future global workflows.</AppText>
+        <AppText color={theme.colors.sky}>
+          This placeholder modal can be reused for future global workflows.
+        </AppText>
       </LinearGradient>
     </Screen>
   );
