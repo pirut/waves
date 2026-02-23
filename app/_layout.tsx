@@ -4,7 +4,7 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 
 import { theme } from "@/src/core/theme/tokens";
 import { AppText } from "@/src/core/ui/AppText";
@@ -37,7 +37,6 @@ const navigationTheme = {
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
     ...FontAwesome.font,
   });
 
@@ -93,6 +92,8 @@ export default function RootLayout() {
             name="events/[eventId]"
             options={{
               title: "Event Details",
+              headerLargeTitle: Platform.OS === "ios",
+              headerShadowVisible: false,
               headerTintColor: theme.colors.heading,
               headerStyle: { backgroundColor: theme.colors.elevated },
             }}

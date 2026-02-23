@@ -17,7 +17,7 @@ type Props = {
 const styles = StyleSheet.create({
   base: {
     borderRadius: theme.radius.md,
-    minHeight: 48,
+    minHeight: theme.control.minTouchSize + 4,
     overflow: "hidden",
     borderWidth: 1,
   },
@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: theme.spacing.xs,
     justifyContent: "center",
-    minHeight: 48,
+    minHeight: theme.control.minTouchSize + 4,
     paddingHorizontal: theme.spacing.lg,
   },
   primary: {
@@ -71,20 +71,21 @@ export function Button({
     <Pressable
       android_ripple={{ color: "rgba(31, 74, 91, 0.12)" }}
       accessibilityRole="button"
+      accessibilityState={{ disabled: !!(disabled || loading), busy: !!loading }}
       disabled={disabled || loading}
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
         variantStyle,
         fullWidth ? { alignSelf: "stretch" } : undefined,
-        pressed ? { opacity: 0.9, transform: [{ translateY: 1 }] } : undefined,
+        pressed ? { opacity: 0.78 } : undefined,
         (disabled || loading) && styles.disabled,
       ]}>
       <View style={styles.fill}>
         {loading ? (
           <ActivityIndicator color={textColors[variant]} />
         ) : (
-          <AppText color={textColors[variant]} style={{ fontWeight: "600", letterSpacing: 0.35 }}>
+          <AppText color={textColors[variant]} style={{ fontWeight: "600", letterSpacing: 0 }}>
             {label}
           </AppText>
         )}

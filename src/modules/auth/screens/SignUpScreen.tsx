@@ -302,12 +302,16 @@ export function SignUpScreen() {
             {needsProfileSetup ? (
               <>
                 <TextField
+                  autoCapitalize="words"
+                  autoCorrect={false}
                   label="Display name"
                   onChangeText={setDisplayName}
                   placeholder="Your name"
                   value={displayName}
                 />
                 <TextField
+                  autoCapitalize="none"
+                  autoCorrect={false}
                   label="Handle"
                   onChangeText={(nextHandle) => setHandle(normalizeHandleInput(nextHandle))}
                   placeholder="@makewaves_member"
@@ -316,34 +320,49 @@ export function SignUpScreen() {
               </>
             ) : pendingVerification ? (
               <TextField
+                autoCapitalize="none"
+                autoCorrect={false}
                 label="Verification code"
                 onChangeText={setVerificationCode}
                 placeholder="Enter email code"
+                textContentType="oneTimeCode"
                 value={verificationCode}
               />
             ) : (
               <>
                 <TextField
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  autoCorrect={false}
                   label="Email"
                   keyboardType="email-address"
                   onChangeText={setEmail}
                   placeholder="you@example.com"
+                  textContentType="emailAddress"
                   value={email}
                 />
                 <TextField
+                  autoCapitalize="none"
+                  autoComplete="new-password"
+                  autoCorrect={false}
                   label="Password"
                   onChangeText={setPassword}
                   placeholder="Use at least 8 characters"
                   secureTextEntry
+                  textContentType="newPassword"
                   value={password}
                 />
                 <TextField
+                  autoCapitalize="words"
+                  autoCorrect={false}
                   label="Display name"
                   onChangeText={setDisplayName}
                   placeholder="Your name"
                   value={displayName}
                 />
                 <TextField
+                  autoCapitalize="none"
+                  autoCorrect={false}
                   label="Handle"
                   onChangeText={(nextHandle) => setHandle(normalizeHandleInput(nextHandle))}
                   placeholder="@makewaves_member"

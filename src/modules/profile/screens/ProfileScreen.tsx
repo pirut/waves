@@ -165,18 +165,23 @@ export function ProfileScreen() {
           Edit profile
         </AppText>
         <TextField
+          autoCapitalize="words"
+          autoCorrect={false}
           label="Display name"
           onChangeText={setDisplayName}
           placeholder="Your name"
           value={displayName}
         />
         <TextField
+          autoCapitalize="none"
+          autoCorrect={false}
           label="Handle"
           onChangeText={(nextHandle) => setHandle(normalizeHandleInput(nextHandle))}
           placeholder="@makewaves_member"
           value={handle}
         />
         <TextField
+          autoCapitalize="words"
           label="City"
           onChangeText={setCity}
           placeholder="San Francisco"
@@ -227,9 +232,13 @@ export function ProfileScreen() {
           <View style={styles.hostedList}>
             {myEvents.hosting.slice(0, 6).map((eventItem) => (
               <Pressable
+                accessibilityRole="button"
                 key={eventItem.id}
                 onPress={() => router.push(`/events/${eventItem.id}`)}
-                style={styles.hostedItem}>
+                style={({ pressed }) => [
+                  styles.hostedItem,
+                  pressed ? styles.touchPressed : undefined,
+                ]}>
                 <AppText color={theme.colors.heading} variant="caption" style={{ fontWeight: "700" }}>
                   {eventItem.title}
                 </AppText>
@@ -303,7 +312,12 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     gap: 2,
+    minHeight: theme.control.minTouchSize,
+    justifyContent: "center",
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
+  },
+  touchPressed: {
+    opacity: 0.8,
   },
 });

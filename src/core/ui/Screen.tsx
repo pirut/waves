@@ -14,6 +14,7 @@ export function Screen({ children, scroll = true, contentContainerStyle }: Props
   const content = scroll ? (
     <ScrollView
       contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
+      keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}>
       {children}
@@ -35,7 +36,7 @@ export function Screen({ children, scroll = true, contentContainerStyle }: Props
       />
       <View pointerEvents="none" style={styles.orbitTop} />
       <View pointerEvents="none" style={styles.orbitBottom} />
-      <SafeAreaView edges={["top", "left", "right"]} style={styles.safeArea}>
+      <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safeArea}>
         {content}
       </SafeAreaView>
     </View>
@@ -81,7 +82,7 @@ const styles = StyleSheet.create({
     maxWidth: 1180,
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.lg,
-    paddingBottom: theme.spacing.xxl + theme.spacing.xl,
+    paddingBottom: theme.spacing.xxl,
     width: "100%",
   },
 });

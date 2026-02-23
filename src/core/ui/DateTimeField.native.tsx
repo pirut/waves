@@ -78,7 +78,7 @@ export function DateTimeField({
     borderRadius: theme.radius.md,
     borderWidth: 1,
     flex: 1,
-    minHeight: 50,
+    minHeight: theme.control.minTouchSize + 4,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
   };
@@ -93,10 +93,16 @@ export function DateTimeField({
     valueText: string,
   ) => (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${label} ${heading}`}
       onBlur={() => setFocusedControl(null)}
       onFocus={() => setFocusedControl(mode)}
       onPress={() => openPicker(mode)}
-      style={[controlBase, focusedControl === mode ? styles.controlFocused : undefined]}>
+      style={({ pressed }) => [
+        controlBase,
+        focusedControl === mode ? styles.controlFocused : undefined,
+        pressed ? styles.controlPressed : undefined,
+      ]}>
       <AppText variant="caption" color={theme.colors.muted}>
         {heading}
       </AppText>
@@ -167,6 +173,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 2,
+  },
+  controlPressed: {
+    opacity: 0.82,
   },
   valueText: {
     fontWeight: "600",

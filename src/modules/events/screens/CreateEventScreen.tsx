@@ -433,9 +433,13 @@ export function CreateEventScreen() {
           <View style={styles.lookupResultList}>
             {locationResults.map((resultItem) => (
               <Pressable
+                accessibilityRole="button"
                 key={`${resultItem.latitude}-${resultItem.longitude}`}
                 onPress={() => onSelectLocation(resultItem)}
-                style={styles.lookupResultItem}>
+                style={({ pressed }) => [
+                  styles.lookupResultItem,
+                  pressed ? styles.touchPressed : undefined,
+                ]}>
                 <AppText color={theme.colors.heading} variant="caption" style={{ fontWeight: "700" }}>
                   {resultItem.addressLine1}
                 </AppText>
@@ -495,8 +499,12 @@ export function CreateEventScreen() {
                   style={styles.galleryPreviewImage}
                 />
                 <Pressable
+                  accessibilityRole="button"
                   onPress={() => onRemoveGalleryPhoto(uploadItem.storageId)}
-                  style={styles.galleryRemoveBadge}>
+                  style={({ pressed }) => [
+                    styles.galleryRemoveBadge,
+                    pressed ? styles.touchPressed : undefined,
+                  ]}>
                   <AppText
                     color={theme.colors.primaryText}
                     style={styles.galleryRemoveBadgeText}
@@ -597,15 +605,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: theme.colors.coral,
     borderRadius: theme.radius.pill,
+    minHeight: theme.control.minTouchSize,
+    justifyContent: "center",
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: 8,
   },
   galleryRemoveBadgeText: {
     fontFamily: theme.fonts.body,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 0.45,
-    textTransform: "uppercase",
+    letterSpacing: 0,
   },
   lookupResultList: {
     gap: theme.spacing.xs,
@@ -616,8 +625,13 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     gap: 4,
+    minHeight: theme.control.minTouchSize,
+    justifyContent: "center",
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
+  },
+  touchPressed: {
+    opacity: 0.8,
   },
   mapHint: {
     alignItems: "center",

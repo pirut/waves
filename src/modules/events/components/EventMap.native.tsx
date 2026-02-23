@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   },
   legendTitle: {
     fontWeight: "700",
-    textTransform: "uppercase",
+    letterSpacing: 0,
   },
   emptyState: {
     alignItems: "center",

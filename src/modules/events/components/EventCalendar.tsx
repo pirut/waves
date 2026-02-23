@@ -158,9 +158,14 @@ export function EventCalendar({ events, onOpenEvent }: Props) {
 
           return (
             <Pressable
+              accessibilityRole="button"
               key={`${selectedMonth.key}-${day}`}
               onPress={() => setSelectedDay(day)}
-              style={[styles.dayCell, isSelected ? styles.dayCellSelected : undefined]}>
+              style={({ pressed }) => [
+                styles.dayCell,
+                isSelected ? styles.dayCellSelected : undefined,
+                pressed ? styles.touchPressed : undefined,
+              ]}>
               <AppText
                 color={isSelected ? theme.colors.primaryText : theme.colors.heading}
                 variant="caption"
@@ -195,9 +200,13 @@ export function EventCalendar({ events, onOpenEvent }: Props) {
           ) : (
             selectedDayEvents.map((eventItem) => (
               <Pressable
+                accessibilityRole="button"
                 key={eventItem.id}
                 onPress={() => onOpenEvent(eventItem.id)}
-                style={styles.selectedEventCard}>
+                style={({ pressed }) => [
+                  styles.selectedEventCard,
+                  pressed ? styles.touchPressed : undefined,
+                ]}>
                 <AppText color={theme.colors.heading} variant="caption" style={{ fontWeight: "700" }}>
                   {eventItem.title}
                 </AppText>
@@ -229,9 +238,8 @@ const styles = StyleSheet.create({
   },
   weekdayLabel: {
     color: theme.colors.muted,
-    letterSpacing: 0.5,
+    letterSpacing: 0,
     textAlign: "center",
-    textTransform: "uppercase",
     width: `${100 / 7}%`,
   },
   calendarGrid: {
@@ -248,7 +256,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
     borderWidth: 1,
-    minHeight: 54,
+    minHeight: theme.control.minTouchSize,
     paddingTop: 8,
     width: `${100 / 7 - 0.8}%`,
   },
@@ -278,6 +286,11 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.md,
     borderWidth: 1,
     gap: 2,
+    minHeight: theme.control.minTouchSize,
+    justifyContent: "center",
     padding: theme.spacing.md,
+  },
+  touchPressed: {
+    opacity: 0.8,
   },
 });

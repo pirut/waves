@@ -19,17 +19,25 @@ export const palette = {
 
 const displayFont =
   Platform.select({
-    ios: "Iowan Old Style",
-    android: "serif",
-    web: "'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', serif",
+    ios: "System",
+    android: "sans-serif-medium",
+    web: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif',
     default: "System",
   }) ?? "System";
 
 const bodyFont =
   Platform.select({
-    ios: "Avenir Next",
+    ios: "System",
     android: "sans-serif",
-    web: "'Trebuchet MS', 'Gill Sans', 'Avenir Next', sans-serif",
+    web: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif',
+    default: "System",
+  }) ?? "System";
+
+const monoFont =
+  Platform.select({
+    ios: "Menlo",
+    android: "monospace",
+    web: '"SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace',
     default: "System",
   }) ?? "System";
 
@@ -82,16 +90,19 @@ export const theme = {
   fonts: {
     display: displayFont,
     body: bodyFont,
-    mono: "SpaceMono",
+    mono: monoFont,
   },
   typography: {
-    hero: 42,
+    hero: 38,
     h1: 34,
-    h2: 26,
-    h3: 20,
-    body: 16,
+    h2: 28,
+    h3: 22,
+    body: 17,
     caption: 13,
-    overline: 11,
+    overline: 12,
+  },
+  control: {
+    minTouchSize: 44,
   },
   elevation: {
     soft: {

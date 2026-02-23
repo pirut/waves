@@ -568,17 +568,25 @@ export function SignInScreen() {
             {view === "sign-in" ? (
               <>
                 <TextField
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  autoCorrect={false}
                   label="Email"
                   keyboardType="email-address"
                   onChangeText={setEmail}
                   placeholder="you@example.com"
+                  textContentType="emailAddress"
                   value={email}
                 />
                 <TextField
+                  autoCapitalize="none"
+                  autoComplete="current-password"
+                  autoCorrect={false}
                   label="Password"
                   onChangeText={setPassword}
                   placeholder="Enter your password"
                   secureTextEntry
+                  textContentType="password"
                   value={password}
                 />
               </>
@@ -586,38 +594,52 @@ export function SignInScreen() {
 
             {view === "request-reset-code" ? (
               <TextField
+                autoCapitalize="none"
+                autoComplete="email"
+                autoCorrect={false}
                 label="Account email"
                 keyboardType="email-address"
                 onChangeText={setEmail}
                 placeholder="you@example.com"
+                textContentType="emailAddress"
                 value={email}
               />
             ) : null}
 
             {view === "verify-reset-code" ? (
               <TextField
+                autoCapitalize="none"
+                autoCorrect={false}
                 label="Reset code"
                 onChangeText={setResetCode}
                 placeholder="Enter code from email"
+                textContentType="oneTimeCode"
                 value={resetCode}
               />
             ) : null}
 
             {view === "set-new-password" ? (
               <TextField
+                autoCapitalize="none"
+                autoComplete="new-password"
+                autoCorrect={false}
                 label="New password"
                 onChangeText={setNewPassword}
                 placeholder="Use at least 8 characters"
                 secureTextEntry
+                textContentType="newPassword"
                 value={newPassword}
               />
             ) : null}
 
             {view === "verify-second-factor" ? (
               <TextField
+                autoCapitalize="none"
+                autoCorrect={false}
                 label={secondFactorInputCopy.label}
                 onChangeText={setSecondFactorCode}
                 placeholder={secondFactorInputCopy.placeholder}
+                textContentType="oneTimeCode"
                 value={secondFactorCode}
               />
             ) : null}

@@ -125,11 +125,13 @@ export function HostDashboardScreen() {
             <View style={styles.eventSelectorList}>
               {hosting.map((eventItem) => (
                 <Pressable
+                  accessibilityRole="button"
                   key={eventItem.id}
                   onPress={() => setSelectedEventId(eventItem.id)}
-                  style={[
+                  style={({ pressed }) => [
                     styles.eventSelector,
                     selectedEventId === eventItem.id ? styles.eventSelectorActive : undefined,
+                    pressed ? styles.touchPressed : undefined,
                   ]}>
                   <View style={styles.eventSelectorText}>
                     <AppText
@@ -284,6 +286,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: theme.spacing.xs,
     justifyContent: "space-between",
+    minHeight: theme.control.minTouchSize,
     padding: theme.spacing.sm,
   },
   eventSelectorActive: {
@@ -336,5 +339,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  touchPressed: {
+    opacity: 0.8,
   },
 });

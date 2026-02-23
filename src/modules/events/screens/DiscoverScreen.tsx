@@ -256,8 +256,13 @@ export function DiscoverScreen() {
 
       <View style={styles.filterRow}>
         <Pressable
+          accessibilityRole="button"
           onPress={() => setCategoryFilter(undefined)}
-          style={[styles.filterChip, !categoryFilter ? styles.filterChipActive : undefined]}>
+          style={({ pressed }) => [
+            styles.filterChip,
+            !categoryFilter ? styles.filterChipActive : undefined,
+            pressed ? styles.touchPressed : undefined,
+          ]}>
           <AppText
             color={!categoryFilter ? theme.colors.primaryText : theme.colors.primary}
             variant="caption"
@@ -267,9 +272,14 @@ export function DiscoverScreen() {
         </Pressable>
         {EVENT_CATEGORIES.map((category) => (
           <Pressable
+            accessibilityRole="button"
             key={category}
             onPress={() => setCategoryFilter(category)}
-            style={[styles.filterChip, categoryFilter === category ? styles.filterChipActive : undefined]}>
+            style={({ pressed }) => [
+              styles.filterChip,
+              categoryFilter === category ? styles.filterChipActive : undefined,
+              pressed ? styles.touchPressed : undefined,
+            ]}>
             <AppText
               color={categoryFilter === category ? theme.colors.primaryText : theme.colors.primary}
               variant="caption"
@@ -311,10 +321,12 @@ export function DiscoverScreen() {
             </AppText>
             <View style={styles.filterRow}>
               <Pressable
+                accessibilityRole="button"
                 onPress={() => setDistanceRadiusMiles(null)}
-                style={[
+                style={({ pressed }) => [
                   styles.filterChip,
                   distanceRadiusMiles === null ? styles.filterChipActive : undefined,
+                  pressed ? styles.touchPressed : undefined,
                 ]}>
                 <AppText
                   color={distanceRadiusMiles === null ? theme.colors.primaryText : theme.colors.primary}
@@ -325,11 +337,13 @@ export function DiscoverScreen() {
               </Pressable>
               {DISTANCE_RADIUS_OPTIONS.map((radiusMiles) => (
                 <Pressable
+                  accessibilityRole="button"
                   key={radiusMiles}
                   onPress={() => setDistanceRadiusMiles(radiusMiles)}
-                  style={[
+                  style={({ pressed }) => [
                     styles.filterChip,
                     distanceRadiusMiles === radiusMiles ? styles.filterChipActive : undefined,
+                    pressed ? styles.touchPressed : undefined,
                   ]}>
                   <AppText
                     color={
@@ -351,9 +365,13 @@ export function DiscoverScreen() {
           <View style={styles.lookupResultList}>
             {lookupResults.map((resultItem) => (
               <Pressable
+                accessibilityRole="button"
                 key={`${resultItem.latitude}-${resultItem.longitude}`}
                 onPress={() => onSelectLookupResult(resultItem)}
-                style={styles.lookupResultItem}>
+                style={({ pressed }) => [
+                  styles.lookupResultItem,
+                  pressed ? styles.touchPressed : undefined,
+                ]}>
                 <AppText color={theme.colors.heading} variant="caption" style={{ fontWeight: "700" }}>
                   {resultItem.addressLine1}
                 </AppText>
@@ -449,12 +467,15 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
   },
   filterChip: {
+    alignItems: "center",
     backgroundColor: theme.colors.elevatedMuted,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.pill,
     borderWidth: 1,
+    justifyContent: "center",
+    minHeight: theme.control.minTouchSize,
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: 8,
+    paddingVertical: theme.spacing.xs,
   },
   filterChipActive: {
     backgroundColor: theme.colors.primaryDeep,
@@ -476,8 +497,13 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     gap: 4,
+    minHeight: theme.control.minTouchSize,
+    justifyContent: "center",
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
+  },
+  touchPressed: {
+    opacity: 0.8,
   },
   proximitySection: {
     gap: theme.spacing.xs,

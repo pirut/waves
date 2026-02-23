@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { StyleSheet, TextInput, View } from "react-native";
+import type { TextInputProps } from "react-native";
 
 import { theme } from "@/src/core/theme/tokens";
 import { AppText } from "@/src/core/ui/AppText";
@@ -12,6 +13,11 @@ type Props = {
   multiline?: boolean;
   keyboardType?: 'default' | 'number-pad' | 'decimal-pad' | 'email-address';
   secureTextEntry?: boolean;
+  autoCapitalize?: TextInputProps["autoCapitalize"];
+  autoComplete?: TextInputProps["autoComplete"];
+  autoCorrect?: boolean;
+  returnKeyType?: TextInputProps["returnKeyType"];
+  textContentType?: TextInputProps["textContentType"];
 };
 
 export function TextField({
@@ -22,6 +28,11 @@ export function TextField({
   multiline,
   keyboardType,
   secureTextEntry,
+  autoCapitalize = "sentences",
+  autoComplete,
+  autoCorrect = true,
+  returnKeyType,
+  textContentType,
 }: Props) {
   const [focused, setFocused] = useState(false);
 
@@ -31,6 +42,10 @@ export function TextField({
         {label}
       </AppText>
       <TextInput
+        accessibilityLabel={label}
+        autoCapitalize={autoCapitalize}
+        autoComplete={autoComplete}
+        autoCorrect={autoCorrect}
         keyboardType={keyboardType ?? "default"}
         multiline={multiline}
         onChangeText={onChangeText}
@@ -38,8 +53,10 @@ export function TextField({
         onFocus={() => setFocused(true)}
         placeholder={placeholder}
         placeholderTextColor={theme.colors.muted}
+        returnKeyType={returnKeyType}
         secureTextEntry={secureTextEntry}
         selectionColor={theme.colors.primary}
+        textContentType={textContentType}
         style={[styles.input, focused ? styles.inputFocused : undefined, multiline ? styles.multiline : undefined]}
         value={value}
       />
@@ -63,9 +80,9 @@ const styles = StyleSheet.create({
     color: theme.colors.heading,
     fontFamily: theme.fonts.body,
     fontSize: theme.typography.body,
-    minHeight: 50,
+    minHeight: theme.control.minTouchSize + 4,
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: 11,
+    paddingVertical: 12,
   },
   inputFocused: {
     borderColor: theme.colors.primaryDeep,

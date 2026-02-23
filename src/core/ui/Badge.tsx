@@ -50,12 +50,14 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     borderWidth: 1.2,
     borderRadius: theme.radius.pill,
+    minHeight: theme.control.minTouchSize - 8,
+    justifyContent: "center",
     paddingHorizontal: theme.spacing.md,
     paddingVertical: 6,
   },
   label: {
-    fontFamily: theme.fonts.mono,
-    letterSpacing: 0.55,
-    textTransform: 'uppercase',
+    fontFamily: theme.fonts.body,
+    fontWeight: "600",
+    letterSpacing: 0.1,
   },
 });

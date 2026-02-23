@@ -1,7 +1,7 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import React from "react";
 import { Redirect, Tabs } from "expo-router";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
 
 import { AppText } from "@/src/core/ui/AppText";
 import { theme } from "@/src/core/theme/tokens";
@@ -11,7 +11,7 @@ function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>["name"];
   color: string;
 }) {
-  return <FontAwesome size={22} style={{ marginBottom: -2 }} {...props} />;
+  return <FontAwesome size={20} {...props} />;
 }
 
 export default function TabLayout() {
@@ -34,30 +34,25 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: theme.colors.primaryText,
-        tabBarInactiveTintColor: theme.colors.sky,
+        tabBarHideOnKeyboard: true,
+        tabBarActiveTintColor: theme.colors.primaryDeep,
+        tabBarInactiveTintColor: theme.colors.muted,
         tabBarLabelStyle: {
           fontFamily: theme.fonts.body,
-          fontSize: 11,
-          letterSpacing: 0.55,
-          textTransform: "uppercase",
+          fontSize: 12,
+          fontWeight: "600",
+          letterSpacing: 0,
         },
         tabBarStyle: {
-          backgroundColor: theme.colors.canvas,
-          borderTopColor: "transparent",
-          borderTopWidth: 0,
-          borderRadius: 22,
-          bottom: 12,
-          height: 72,
-          left: 14,
-          paddingBottom: 8,
+          backgroundColor: theme.colors.elevated,
+          borderTopColor: theme.colors.border,
+          borderTopWidth: 1,
+          height: Platform.select({ ios: 88, android: 66, default: 66 }),
+          paddingBottom: Platform.select({ ios: 8, android: 6, default: 6 }),
           paddingTop: 8,
-          position: "absolute",
-          right: 14,
-          ...theme.elevation.strong,
         },
         tabBarItemStyle: {
-          borderRadius: 16,
+          minHeight: theme.control.minTouchSize,
         },
       }}>
       <Tabs.Screen
