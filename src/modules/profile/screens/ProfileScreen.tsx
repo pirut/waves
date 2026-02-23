@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
 import { useMutation, useQuery } from "convex/react";
@@ -31,7 +38,8 @@ function ProfileScreenContent({ showSignOut, onSignOut }: ProfileContentProps) {
   const router = useRouter();
   const { viewerProfileId, viewerLoading } = useViewerProfile();
   const { width } = useWindowDimensions();
-  const isWideLayout = width >= 1024;
+  const isWideLayout = (Platform.OS === "ios" && Platform.isPad) || width >= 1024;
+  const useInlineQuickActions = width >= 1320;
 
   const profile = useQuery(api.viewer.getCurrent, viewerProfileId ? {} : "skip");
   const myEvents = useQuery(api.events.listForViewer, viewerProfileId ? {} : "skip");
@@ -205,7 +213,7 @@ function ProfileScreenContent({ showSignOut, onSignOut }: ProfileContentProps) {
       <AppText variant="h3" color={theme.colors.heading}>
         Quick actions
       </AppText>
-      <View style={[styles.actionsRow, isWideLayout ? styles.actionsRowWide : undefined]}>
+      <View style={[styles.actionsRow, useInlineQuickActions ? styles.actionsRowWide : undefined]}>
         <View style={styles.actionItem}>
           <Button label="Discover" onPress={() => router.push("/(tabs)")} variant="secondary" />
         </View>

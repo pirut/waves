@@ -1,4 +1,4 @@
-import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Platform, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { useQuery } from "convex/react";
 
@@ -16,7 +16,7 @@ export function MyEventsScreen() {
   const router = useRouter();
   const { viewerProfileId, viewerLoading } = useViewerProfile();
   const { width } = useWindowDimensions();
-  const isWideLayout = width >= 1024;
+  const isWideLayout = (Platform.OS === "ios" && Platform.isPad) || width >= 1024;
 
   const myEventsResult = useQuery(
     api.events.listForViewer,

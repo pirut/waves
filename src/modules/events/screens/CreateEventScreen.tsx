@@ -45,7 +45,7 @@ export function CreateEventScreen() {
   const router = useRouter();
   const { viewerProfileId, viewerLoading } = useViewerProfile();
   const { width } = useWindowDimensions();
-  const isWideLayout = width >= 1024;
+  const isWideLayout = (Platform.OS === "ios" && Platform.isPad) || width >= 1024;
 
   const createEvent = useMutation(api.events.create);
   const lookupAddress = useAction(api.geocoding.search);
