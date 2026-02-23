@@ -3,7 +3,6 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
 import { useMutation, useQuery } from "convex/react";
-import { LinearGradient } from "expo-linear-gradient";
 
 import { api } from "@/convex/_generated/api";
 import { theme } from "@/src/core/theme/tokens";
@@ -119,23 +118,11 @@ export function ProfileScreen() {
 
   return (
     <Screen>
-      <Card innerStyle={styles.heroInner} style={styles.heroCard}>
-        <LinearGradient
-          colors={[theme.colors.overlayStart, theme.colors.overlayEnd]}
-          end={{ x: 1, y: 1 }}
-          start={{ x: 0, y: 0 }}
-          style={styles.heroGradient}>
-          <AppText variant="overline" color={theme.colors.sky}>
-            Account
-          </AppText>
-          <AppText variant="h1" color={theme.colors.primaryText}>
-            Profile
-          </AppText>
-          <AppText color={theme.colors.sky}>
-            Manage your account details and track your event impact.
-          </AppText>
-        </LinearGradient>
-      </Card>
+      <View style={styles.headerSection}>
+        <AppText color={theme.colors.body}>
+          Manage account details and track your participation.
+        </AppText>
+      </View>
 
       <Card>
         <View style={styles.identityRow}>
@@ -263,17 +250,9 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     justifyContent: "center",
   },
-  heroCard: {
-    overflow: "hidden",
-    padding: 0,
-  },
-  heroInner: {
-    gap: 0,
-    padding: 0,
-  },
-  heroGradient: {
+  headerSection: {
     gap: theme.spacing.sm,
-    padding: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.xs,
   },
   identityRow: {
     alignItems: "center",

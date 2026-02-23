@@ -85,12 +85,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   inputFocused: {
-    borderColor: theme.colors.primaryDeep,
+    borderColor: theme.colors.primary,
     backgroundColor: theme.colors.elevated,
-    shadowColor: "#26414f",
+    shadowColor: "#0A84FF",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
     elevation: 2,
   },
   multiline: {

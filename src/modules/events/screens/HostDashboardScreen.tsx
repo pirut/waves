@@ -3,7 +3,6 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useMutation, useQuery } from "convex/react";
 import { useAuth } from "@clerk/clerk-expo";
-import { LinearGradient } from "expo-linear-gradient";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -85,28 +84,14 @@ export function HostDashboardScreen() {
 
   return (
     <Screen>
-      <Card innerStyle={styles.heroInner} style={styles.heroCard}>
-        <LinearGradient
-          colors={[theme.colors.overlayStart, theme.colors.overlayEnd]}
-          end={{ x: 1, y: 1 }}
-          start={{ x: 0, y: 0 }}
-          style={styles.heroGradient}>
-          <AppText variant="overline" color={theme.colors.sky}>
-            Organizer Hub
-          </AppText>
-          <AppText variant="h1" color={theme.colors.primaryText}>
-            Manage hosted events
-          </AppText>
-          <AppText color={theme.colors.sky}>
-            Track attendance at a glance and send updates directly to people who signed up.
-          </AppText>
-          <Button
-            label="Sign Out"
-            onPress={() => signOut()}
-            variant="secondary"
-          />
-        </LinearGradient>
-      </Card>
+      <View style={styles.headerSection}>
+        <AppText color={theme.colors.body}>
+          Manage hosted events, attendee activity, and organizer updates.
+        </AppText>
+        <View style={styles.headerAction}>
+          <Button fullWidth={false} label="Sign Out" onPress={() => signOut()} variant="ghost" />
+        </View>
+      </View>
 
       {hosting.length === 0 ? (
         <Card>
@@ -262,17 +247,12 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     justifyContent: "center",
   },
-  heroCard: {
-    overflow: "hidden",
-    padding: 0,
-  },
-  heroInner: {
-    gap: 0,
-    padding: 0,
-  },
-  heroGradient: {
+  headerSection: {
     gap: theme.spacing.sm,
-    padding: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.xs,
+  },
+  headerAction: {
+    alignSelf: "flex-start",
   },
   eventSelectorList: {
     gap: theme.spacing.xs,

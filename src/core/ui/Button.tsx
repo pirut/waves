@@ -35,11 +35,11 @@ const styles = StyleSheet.create({
   },
   secondary: {
     backgroundColor: theme.colors.elevatedMuted,
-    borderColor: theme.colors.borderStrong,
+    borderColor: theme.colors.elevatedMuted,
   },
   ghost: {
     backgroundColor: "transparent",
-    borderColor: theme.colors.border,
+    borderColor: "transparent",
   },
   danger: {
     backgroundColor: theme.colors.coral,
@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
 const textColors: Record<ButtonVariant, string> = {
   primary: theme.colors.primaryText,
   secondary: theme.colors.heading,
-  ghost: theme.colors.primaryDeep,
+  ghost: theme.colors.primary,
   danger: theme.colors.primaryText,
 };
 
@@ -69,7 +69,7 @@ export function Button({
 
   return (
     <Pressable
-      android_ripple={{ color: "rgba(31, 74, 91, 0.12)" }}
+      android_ripple={{ color: "rgba(0, 122, 255, 0.12)" }}
       accessibilityRole="button"
       accessibilityState={{ disabled: !!(disabled || loading), busy: !!loading }}
       disabled={disabled || loading}
@@ -78,7 +78,7 @@ export function Button({
         styles.base,
         variantStyle,
         fullWidth ? { alignSelf: "stretch" } : undefined,
-        pressed ? { opacity: 0.78 } : undefined,
+        pressed ? { opacity: 0.62 } : undefined,
         (disabled || loading) && styles.disabled,
       ]}>
       <View style={styles.fill}>

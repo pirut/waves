@@ -28,8 +28,8 @@ const navigationTheme = {
   colors: {
     ...DefaultTheme.colors,
     background: theme.colors.background,
-    border: "transparent",
-    card: theme.colors.glass,
+    border: theme.colors.border,
+    card: theme.colors.elevated,
     primary: theme.colors.primary,
     text: theme.colors.heading,
   },
@@ -95,7 +95,7 @@ export default function RootLayout() {
               headerLargeTitle: Platform.OS === "ios",
               headerShadowVisible: false,
               headerTintColor: theme.colors.heading,
-              headerStyle: { backgroundColor: theme.colors.elevated },
+              headerStyle: { backgroundColor: theme.colors.background },
             }}
           />
           <Stack.Screen name="+not-found" options={{ title: "Not Found" }} />

@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Linking, Platform, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 
 import { api } from "@/convex/_generated/api";
@@ -170,25 +169,16 @@ export function EventDetailScreen({ eventId }: Props) {
 
   return (
     <Screen>
-      <Card innerStyle={styles.heroInner} style={styles.heroCard}>
-        <LinearGradient
-          colors={[theme.colors.overlayStart, theme.colors.overlayEnd]}
-          end={{ x: 1, y: 1 }}
-          start={{ x: 0, y: 0 }}
-          style={styles.heroGradient}>
-          <AppText variant="overline" color={theme.colors.sky}>
-            Event Detail
-          </AppText>
-          <AppText variant="h1" color={theme.colors.primaryText}>
-            {eventResult.event.title}
-          </AppText>
-          <View style={styles.badgeRow}>
-            <Badge label={eventResult.event.category} />
-            <Badge label={`${eventResult.attendeeBreakdown.going} going`} tone="success" />
-            <Badge label={`${eventResult.attendeeBreakdown.interested} interested`} tone="warning" />
-          </View>
-        </LinearGradient>
-      </Card>
+      <View style={styles.headerSection}>
+        <AppText variant="h1" color={theme.colors.heading}>
+          {eventResult.event.title}
+        </AppText>
+        <View style={styles.badgeRow}>
+          <Badge label={eventResult.event.category} />
+          <Badge label={`${eventResult.attendeeBreakdown.going} going`} tone="success" />
+          <Badge label={`${eventResult.attendeeBreakdown.interested} interested`} tone="warning" />
+        </View>
+      </View>
 
       {eventResult.event.coverImageUrl ? (
         <Image contentFit="cover" source={eventResult.event.coverImageUrl} style={styles.coverImage} />
@@ -233,7 +223,7 @@ export function EventDetailScreen({ eventId }: Props) {
         <Button label="Open in Maps" onPress={onOpenInMaps} variant="secondary" />
       </Card>
 
-      <AppText variant="overline" color={theme.colors.muted}>
+      <AppText variant="caption" color={theme.colors.muted} style={styles.sectionLabel}>
         Location map
       </AppText>
       <EventMap
@@ -383,17 +373,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: theme.spacing.xs,
   },
-  heroCard: {
-    overflow: "hidden",
-    padding: 0,
-  },
-  heroInner: {
-    gap: 0,
-    padding: 0,
-  },
-  heroGradient: {
+  headerSection: {
     gap: theme.spacing.sm,
-    padding: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.xs,
   },
   coverImage: {
     borderRadius: theme.radius.xl,
@@ -448,5 +430,8 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.lg,
     height: 108,
     width: 108,
+  },
+  sectionLabel: {
+    fontWeight: "600",
   },
 });

@@ -1,4 +1,4 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import React from "react";
 import { Redirect, Tabs } from "expo-router";
 import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
@@ -8,10 +8,10 @@ import { theme } from "@/src/core/theme/tokens";
 import { useAppSession } from "@/src/lib/auth/useAppSession";
 
 function TabBarIcon(props: {
-  name: React.ComponentProps<typeof FontAwesome>["name"];
+  name: React.ComponentProps<typeof Ionicons>["name"];
   color: string;
 }) {
-  return <FontAwesome size={20} {...props} />;
+  return <Ionicons size={20} {...props} />;
 }
 
 export default function TabLayout() {
@@ -33,9 +33,21 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        headerShown: true,
+        headerShadowVisible: false,
+        headerStyle: {
+          backgroundColor: theme.colors.background,
+        },
+        headerTintColor: theme.colors.primary,
+        headerTitleStyle: {
+          color: theme.colors.heading,
+          fontFamily: theme.fonts.body,
+        },
+        sceneStyle: {
+          backgroundColor: theme.colors.background,
+        },
         tabBarHideOnKeyboard: true,
-        tabBarActiveTintColor: theme.colors.primaryDeep,
+        tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.muted,
         tabBarLabelStyle: {
           fontFamily: theme.fonts.body,
@@ -59,28 +71,28 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Discover",
-          tabBarIcon: ({ color }) => <TabBarIcon color={color} name="map-marker" />,
+          tabBarIcon: ({ color }) => <TabBarIcon color={color} name="map-outline" />,
         }}
       />
       <Tabs.Screen
         name="create"
         options={{
           title: "Create",
-          tabBarIcon: ({ color }) => <TabBarIcon color={color} name="plus-circle" />,
+          tabBarIcon: ({ color }) => <TabBarIcon color={color} name="add-circle-outline" />,
         }}
       />
       <Tabs.Screen
         name="my-events"
         options={{
           title: "My Events",
-          tabBarIcon: ({ color }) => <TabBarIcon color={color} name="calendar" />,
+          tabBarIcon: ({ color }) => <TabBarIcon color={color} name="calendar-outline" />,
         }}
       />
       <Tabs.Screen
         name="host"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color }) => <TabBarIcon color={color} name="user-circle" />,
+          tabBarIcon: ({ color }) => <TabBarIcon color={color} name="person-circle-outline" />,
         }}
       />
     </Tabs>

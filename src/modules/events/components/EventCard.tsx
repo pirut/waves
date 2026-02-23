@@ -1,6 +1,5 @@
 import { Image } from "expo-image";
 import { StyleSheet, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 
 import { theme } from "@/src/core/theme/tokens";
 import { AppText } from "@/src/core/ui/AppText";
@@ -31,12 +30,6 @@ export function EventCard({ item, onOpen, onRsvp, rsvpBusy, distanceMiles }: Pro
       {item.coverImageUrl ? (
         <View style={styles.coverShell}>
           <Image contentFit="cover" source={item.coverImageUrl} style={styles.cover} />
-          <LinearGradient
-            colors={["rgba(12, 28, 36, 0)", "rgba(12, 28, 36, 0.5)"]}
-            end={{ x: 0.5, y: 1 }}
-            start={{ x: 0.5, y: 0 }}
-            style={styles.coverOverlay}
-          />
         </View>
       ) : null}
 
@@ -94,9 +87,6 @@ const styles = StyleSheet.create({
   cover: {
     height: 188,
     width: "100%",
-  },
-  coverOverlay: {
-    ...StyleSheet.absoluteFillObject,
   },
   metaRow: {
     flexDirection: "row",

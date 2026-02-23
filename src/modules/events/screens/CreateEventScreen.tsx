@@ -3,7 +3,6 @@ import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from "react-
 import { useRouter } from "expo-router";
 import { useAction, useMutation } from "convex/react";
 import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 
 import { api } from "@/convex/_generated/api";
@@ -296,23 +295,11 @@ export function CreateEventScreen() {
 
   return (
     <Screen>
-      <Card innerStyle={styles.heroInner} style={styles.heroCard}>
-        <LinearGradient
-          colors={[theme.colors.overlayStart, theme.colors.overlayEnd]}
-          end={{ x: 1, y: 1 }}
-          start={{ x: 0, y: 0 }}
-          style={styles.heroGradient}>
-          <AppText variant="overline" color={theme.colors.sky}>
-            Host an Event
-          </AppText>
-          <AppText variant="h1" color={theme.colors.primaryText}>
-            Create an event in a few steps
-          </AppText>
-          <AppText color={theme.colors.sky}>
-            Share what it is, when it happens, where it is, then upload photos.
-          </AppText>
-        </LinearGradient>
-      </Card>
+      <View style={styles.headerSection}>
+        <AppText color={theme.colors.body}>
+          Add details, schedule, location, and photos to publish a new event.
+        </AppText>
+      </View>
 
       <Card>
         <AppText variant="h3" color={theme.colors.heading}>
@@ -551,17 +538,9 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     justifyContent: "center",
   },
-  heroCard: {
-    overflow: "hidden",
-    padding: 0,
-  },
-  heroInner: {
-    gap: 0,
-    padding: 0,
-  },
-  heroGradient: {
+  headerSection: {
     gap: theme.spacing.sm,
-    padding: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.xs,
   },
   categoryRow: {
     flexDirection: "row",

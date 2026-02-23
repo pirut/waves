@@ -10,19 +10,19 @@ type Props = {
 
 const toneStyles = {
   default: {
-    backgroundColor: "rgba(255, 253, 250, 0.92)",
-    color: theme.colors.primaryDeep,
-    borderColor: "rgba(31, 74, 91, 0.48)",
+    backgroundColor: "#EEF0F5",
+    color: theme.colors.body,
+    borderColor: "#E5E5EA",
   },
   success: {
-    backgroundColor: "rgba(240, 249, 244, 0.95)",
-    color: "#285543",
-    borderColor: "rgba(63, 120, 97, 0.52)",
+    backgroundColor: "#EAF9EF",
+    color: "#1D7A3A",
+    borderColor: "#D4F0DE",
   },
   warning: {
-    backgroundColor: "rgba(250, 241, 227, 0.95)",
-    color: "#7a5126",
-    borderColor: "rgba(184, 134, 70, 0.55)",
+    backgroundColor: "#FFF4E5",
+    color: "#8A5300",
+    borderColor: "#FFE5C2",
   },
 } as const;
 

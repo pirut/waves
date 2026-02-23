@@ -2,6 +2,7 @@ import { useAuth, useSignIn } from "@clerk/clerk-expo";
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { Image } from "expo-image";
 
 import { theme } from "@/src/core/theme/tokens";
 import { AppText } from "@/src/core/ui/AppText";
@@ -545,6 +546,7 @@ export function SignInScreen() {
       <View style={styles.layout}>
         <Card style={styles.formCard}>
           <View style={styles.formHeader}>
+            <Image source={require("@/assets/images/splash-icon.png")} style={styles.logoMark} />
             <AppText variant="caption" color={theme.colors.muted}>
               Make Waves
             </AppText>
@@ -802,6 +804,10 @@ const styles = StyleSheet.create({
   },
   formHeader: {
     gap: 4,
+  },
+  logoMark: {
+    height: 34,
+    width: 34,
   },
   formStack: {
     gap: theme.spacing.sm,

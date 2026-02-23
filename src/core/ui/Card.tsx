@@ -18,7 +18,7 @@ export function Card({ children, style, innerStyle }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.colors.glass,
+    backgroundColor: theme.colors.elevated,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
@@ -27,6 +27,6 @@ const styles = StyleSheet.create({
   },
   inner: {
     gap: theme.spacing.md,
-    padding: theme.spacing.lg + 2,
+    padding: theme.spacing.lg,
   },
 });

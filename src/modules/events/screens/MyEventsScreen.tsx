@@ -1,7 +1,6 @@
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useQuery } from "convex/react";
-import { LinearGradient } from "expo-linear-gradient";
 
 import { api } from "@/convex/_generated/api";
 import { theme } from "@/src/core/theme/tokens";
@@ -38,23 +37,11 @@ export function MyEventsScreen() {
 
   return (
     <Screen>
-      <Card innerStyle={styles.heroInner} style={styles.heroCard}>
-        <LinearGradient
-          colors={[theme.colors.overlayStart, theme.colors.overlayEnd]}
-          end={{ x: 1, y: 1 }}
-          start={{ x: 0, y: 0 }}
-          style={styles.heroGradient}>
-          <AppText variant="overline" color={theme.colors.sky}>
-            Your Commitments
-          </AppText>
-          <AppText variant="h1" color={theme.colors.primaryText}>
-            My events
-          </AppText>
-          <AppText color={theme.colors.sky}>
-            Everything you signed up for is grouped by month below. Keep momentum and track your impact cadence.
-          </AppText>
-        </LinearGradient>
-      </Card>
+      <View style={styles.headerSection}>
+        <AppText color={theme.colors.body}>
+          Review upcoming commitments and events you host.
+        </AppText>
+      </View>
 
       <View style={styles.section}>
         <AppText variant="h2" color={theme.colors.heading}>
@@ -107,16 +94,8 @@ const styles = StyleSheet.create({
   section: {
     gap: theme.spacing.sm,
   },
-  heroCard: {
-    overflow: "hidden",
-    padding: 0,
-  },
-  heroInner: {
-    gap: 0,
-    padding: 0,
-  },
-  heroGradient: {
+  headerSection: {
     gap: theme.spacing.sm,
-    padding: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.xs,
   },
 });

@@ -3,6 +3,7 @@ import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useMutation } from "convex/react";
+import { Image } from "expo-image";
 
 import { api } from "@/convex/_generated/api";
 import { theme } from "@/src/core/theme/tokens";
@@ -279,6 +280,7 @@ export function SignUpScreen() {
       <View style={styles.layout}>
         <Card style={styles.formCard}>
           <View style={styles.formHeader}>
+            <Image source={require("@/assets/images/splash-icon.png")} style={styles.logoMark} />
             <AppText variant="caption" color={theme.colors.muted}>
               Make Waves
             </AppText>
@@ -459,6 +461,10 @@ const styles = StyleSheet.create({
   },
   formHeader: {
     gap: 4,
+  },
+  logoMark: {
+    height: 34,
+    width: 34,
   },
   formStack: {
     gap: theme.spacing.sm,
