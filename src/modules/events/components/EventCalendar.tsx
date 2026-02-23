@@ -149,7 +149,9 @@ export function EventCalendar({ events, onOpenEvent }: Props) {
 
       <View style={styles.calendarGrid}>
         {leadingCells.map((key) => (
-          <View key={key} style={styles.dayPlaceholder} />
+          <View key={key} style={styles.daySlot}>
+            <View style={styles.dayPlaceholder} />
+          </View>
         ))}
 
         {dayCells.map((day) => {
@@ -157,35 +159,36 @@ export function EventCalendar({ events, onOpenEvent }: Props) {
           const isSelected = selectedDay === day;
 
           return (
-            <Pressable
-              accessibilityRole="button"
-              key={`${selectedMonth.key}-${day}`}
-              onPress={() => setSelectedDay(day)}
-              style={({ pressed }) => [
-                styles.dayCell,
-                isSelected ? styles.dayCellSelected : undefined,
-                pressed ? styles.touchPressed : undefined,
-              ]}>
-              <AppText
-                color={isSelected ? theme.colors.primaryText : theme.colors.heading}
-                variant="caption"
-                style={styles.dayLabel}>
-                {day}
-              </AppText>
-              {dayEvents.length > 0 ? (
-                <View style={styles.eventDotRow}>
-                  {dayEvents.slice(0, 3).map((eventItem) => (
-                    <View
-                      key={`${eventItem.id}-${day}`}
-                      style={[
-                        styles.eventDot,
-                        { backgroundColor: isSelected ? theme.colors.sky : theme.colors.primary },
-                      ]}
-                    />
-                  ))}
-                </View>
-              ) : null}
-            </Pressable>
+            <View key={`${selectedMonth.key}-${day}`} style={styles.daySlot}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setSelectedDay(day)}
+                style={({ pressed }) => [
+                  styles.dayCell,
+                  isSelected ? styles.dayCellSelected : undefined,
+                  pressed ? styles.touchPressed : undefined,
+                ]}>
+                <AppText
+                  color={isSelected ? theme.colors.primaryText : theme.colors.heading}
+                  variant="caption"
+                  style={styles.dayLabel}>
+                  {day}
+                </AppText>
+                {dayEvents.length > 0 ? (
+                  <View style={styles.eventDotRow}>
+                    {dayEvents.slice(0, 3).map((eventItem) => (
+                      <View
+                        key={`${eventItem.id}-${day}`}
+                        style={[
+                          styles.eventDot,
+                          { backgroundColor: isSelected ? theme.colors.sky : theme.colors.primary },
+                        ]}
+                      />
+                    ))}
+                  </View>
+                ) : null}
+              </Pressable>
+            </View>
           );
         })}
       </View>
@@ -245,10 +248,14 @@ const styles = StyleSheet.create({
   calendarGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 4,
+  },
+  daySlot: {
+    paddingBottom: 4,
+    paddingHorizontal: 2,
+    width: "14.2857%",
   },
   dayPlaceholder: {
-    width: `${100 / 7 - 0.8}%`,
+    minHeight: theme.control.minTouchSize,
   },
   dayCell: {
     alignItems: "center",
@@ -256,9 +263,11 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
     borderWidth: 1,
+    justifyContent: "flex-start",
     minHeight: theme.control.minTouchSize,
     paddingTop: 8,
-    width: `${100 / 7 - 0.8}%`,
+    paddingBottom: 6,
+    width: "100%",
   },
   dayCellSelected: {
     backgroundColor: theme.colors.primary,

@@ -78,15 +78,6 @@ export function EventMap({ events, onSelectEvent, selectedEventId, focusLocation
     });
   }, [events, focusLocation, selectedEventId]);
 
-  const isGlobeMode = region.latitudeDelta >= 90;
-  const mapRegion = isGlobeMode
-    ? {
-        ...region,
-        latitudeDelta: Math.min(180, region.latitudeDelta),
-        longitudeDelta: Math.min(180, region.longitudeDelta),
-      }
-    : region;
-
   if (events.length === 0 && !focusLocation) {
     return (
       <View style={styles.emptyState}>
@@ -99,46 +90,39 @@ export function EventMap({ events, onSelectEvent, selectedEventId, focusLocation
   }
 
   return (
-    <View style={[styles.mapShell, isGlobeMode ? styles.mapShellGlobe : undefined]}>
-      <View style={[styles.mapViewport, isGlobeMode ? styles.mapViewportGlobe : undefined]}>
-        <MapView
-          initialRegion={targetRegion}
-          mapType={isGlobeMode ? "satellite" : "standard"}
-          onRegionChangeComplete={setRegion}
-          ref={mapRef}
-          region={mapRegion}
-          rotateEnabled
-          style={StyleSheet.absoluteFillObject}>
-          {events.map((eventItem) => (
-            <Marker
-              coordinate={{
-                latitude: eventItem.latitude,
-                longitude: eventItem.longitude,
-              }}
-              key={eventItem.id}
-              pinColor={selectedEventId === eventItem.id ? theme.colors.danger : theme.colors.primary}
-              title={eventItem.title}
-              onPress={() => onSelectEvent(eventItem.id)}
-            />
-          ))}
-          {focusLocation ? (
-            <Marker
-              coordinate={{
-                latitude: focusLocation.latitude,
-                longitude: focusLocation.longitude,
-              }}
-              pinColor={theme.colors.accent}
-              title={focusLocation.label ?? "Searched location"}
-            />
-          ) : null}
-        </MapView>
-      </View>
-
-      <View style={styles.legend}>
-        <AppText variant="caption" color={theme.colors.primary} style={styles.legendTitle}>
-          {isGlobeMode ? "Globe view" : "Map view"}
-        </AppText>
-      </View>
+    <View style={styles.mapShell}>
+      <MapView
+        initialRegion={targetRegion}
+        mapType="standard"
+        onRegionChangeComplete={setRegion}
+        pitchEnabled={false}
+        ref={mapRef}
+        region={region}
+        rotateEnabled={false}
+        style={StyleSheet.absoluteFillObject}>
+        {events.map((eventItem) => (
+          <Marker
+            coordinate={{
+              latitude: eventItem.latitude,
+              longitude: eventItem.longitude,
+            }}
+            key={eventItem.id}
+            pinColor={selectedEventId === eventItem.id ? theme.colors.danger : theme.colors.primary}
+            title={eventItem.title}
+            onPress={() => onSelectEvent(eventItem.id)}
+          />
+        ))}
+        {focusLocation ? (
+          <Marker
+            coordinate={{
+              latitude: focusLocation.latitude,
+              longitude: focusLocation.longitude,
+            }}
+            pinColor={theme.colors.accent}
+            title={focusLocation.label ?? "Searched location"}
+          />
+        ) : null}
+      </MapView>
     </View>
   );
 }
@@ -146,51 +130,17 @@ export function EventMap({ events, onSelectEvent, selectedEventId, focusLocation
 const styles = StyleSheet.create({
   mapShell: {
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.xl,
+    borderRadius: theme.radius.lg,
     borderWidth: 1,
-    height: 300,
+    height: 268,
     overflow: "hidden",
-    padding: 2,
-    position: "relative",
     ...theme.elevation.soft,
-  },
-  mapShellGlobe: {
-    alignItems: "center",
-    height: 340,
-    paddingTop: theme.spacing.sm,
-  },
-  mapViewport: {
-    flex: 1,
-    overflow: "hidden",
-  },
-  mapViewportGlobe: {
-    borderColor: theme.colors.borderStrong,
-    borderRadius: 146,
-    borderWidth: 2,
-    height: 292,
-    overflow: "hidden",
-    width: 292,
-  },
-  legend: {
-    backgroundColor: theme.colors.elevated,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    bottom: 10,
-    left: 10,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    position: "absolute",
-  },
-  legendTitle: {
-    fontWeight: "700",
-    letterSpacing: 0,
   },
   emptyState: {
     alignItems: "center",
-    backgroundColor: theme.colors.glass,
+    backgroundColor: theme.colors.elevated,
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.xl,
+    borderRadius: theme.radius.lg,
     borderWidth: 1,
     gap: theme.spacing.xs,
     padding: theme.spacing.lg,

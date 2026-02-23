@@ -38,7 +38,7 @@ export function EventCard({ item, onOpen, onRsvp, rsvpBusy, distanceMiles }: Pro
         <Badge label={`${item.attendeeCount} going`} tone="success" />
       </View>
 
-      <AppText variant="h2" color={theme.colors.heading}>
+      <AppText variant="h3" color={theme.colors.heading}>
         {item.title}
       </AppText>
       <AppText variant="caption" color={theme.colors.primary}>
@@ -56,7 +56,7 @@ export function EventCard({ item, onOpen, onRsvp, rsvpBusy, distanceMiles }: Pro
       {item.impactSummary ? <AppText numberOfLines={3}>{item.impactSummary}</AppText> : null}
 
       <View style={styles.actionRow}>
-        <View style={styles.actionButton}>
+        <View style={onRsvp ? styles.actionButton : styles.singleActionButton}>
           <Button fullWidth={false} label="Details" onPress={onOpen} variant="secondary" />
         </View>
         {onRsvp ? (
@@ -64,7 +64,7 @@ export function EventCard({ item, onOpen, onRsvp, rsvpBusy, distanceMiles }: Pro
             <Button
               disabled={item.viewerRsvp === "going"}
               fullWidth={false}
-              label={item.viewerRsvp === "going" ? "You're Going" : "Join"}
+              label={item.viewerRsvp === "going" ? "Going" : "Join"}
               loading={rsvpBusy}
               onPress={onRsvp}
             />
@@ -77,7 +77,7 @@ export function EventCard({ item, onOpen, onRsvp, rsvpBusy, distanceMiles }: Pro
 
 const styles = StyleSheet.create({
   card: {
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   coverShell: {
     borderRadius: theme.radius.lg,
@@ -90,13 +90,17 @@ const styles = StyleSheet.create({
   },
   metaRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: theme.spacing.xs,
   },
   actionRow: {
     flexDirection: "row",
     gap: theme.spacing.sm,
   },
   actionButton: {
+    flex: 1,
+  },
+  singleActionButton: {
     flex: 1,
   },
 });

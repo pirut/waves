@@ -1,5 +1,13 @@
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { useAction, useMutation } from "convex/react";
 import { Image } from "expo-image";
@@ -36,6 +44,8 @@ type GeocodeResult = {
 export function CreateEventScreen() {
   const router = useRouter();
   const { viewerProfileId, viewerLoading } = useViewerProfile();
+  const { width } = useWindowDimensions();
+  const isWideLayout = width >= 1024;
 
   const createEvent = useMutation(api.events.create);
   const lookupAddress = useAction(api.geocoding.search);
@@ -282,6 +292,271 @@ export function CreateEventScreen() {
     setEndAt(nextEndAt);
   };
 
+  const basicsCard = (
+    <Card>
+      <AppText variant="h3" color={theme.colors.heading}>
+        Event basics
+      </AppText>
+      <TextField
+        label="Title"
+        onChangeText={setTitle}
+        placeholder="Neighborhood Cleanup + Picnic"
+        value={title}
+      />
+
+      <View style={styles.categoryGroup}>
+        <AppText variant="caption" color={theme.colors.muted}>
+          Category
+        </AppText>
+        <ScrollView
+          contentContainerStyle={styles.categoryScrollContent}
+          horizontal
+          showsHorizontalScrollIndicator={false}>
+          {EVENT_CATEGORIES.map((categoryOption) => (
+            <Pressable
+              accessibilityRole="button"
+              key={categoryOption}
+              onPress={() => setCategory(categoryOption)}
+              style={({ pressed }) => [
+                styles.categoryChip,
+                categoryOption === category ? styles.categoryChipActive : undefined,
+                pressed ? styles.touchPressed : undefined,
+              ]}>
+              <AppText
+                color={categoryOption === category ? theme.colors.primaryText : theme.colors.primary}
+                style={styles.categoryChipLabel}
+                variant="caption">
+                {categoryOption}
+              </AppText>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+
+      <TextField
+        label="Description"
+        multiline
+        onChangeText={setDescription}
+        placeholder="What will happen, what to bring, and who should join?"
+        value={description}
+      />
+    </Card>
+  );
+
+  const scheduleCard = (
+    <Card>
+      <AppText variant="h3" color={theme.colors.heading}>
+        Schedule
+      </AppText>
+      <View style={styles.scheduleGroup}>
+        <AppText variant="caption" color={theme.colors.muted}>
+          Date range
+        </AppText>
+        <View style={styles.scheduleRow}>
+          <View style={styles.scheduleField}>
+            <DateTimeField
+              label="Start date"
+              minimumDate={Date.now()}
+              onChange={onChangeStartAt}
+              picker="date"
+              value={startAt}
+            />
+          </View>
+          <View style={styles.scheduleField}>
+            <DateTimeField
+              label="End date"
+              minimumDate={startAt}
+              onChange={onChangeEndAt}
+              picker="date"
+              value={endAt}
+            />
+          </View>
+        </View>
+      </View>
+      <View style={styles.scheduleGroup}>
+        <AppText variant="caption" color={theme.colors.muted}>
+          Times
+        </AppText>
+        <View style={styles.scheduleRow}>
+          <View style={styles.scheduleField}>
+            <DateTimeField
+              label="Start time"
+              minuteInterval={5}
+              onChange={onChangeStartAt}
+              picker="time"
+              value={startAt}
+            />
+          </View>
+          <View style={styles.scheduleField}>
+            <DateTimeField
+              label="End time"
+              minuteInterval={5}
+              onChange={onChangeEndAt}
+              picker="time"
+              value={endAt}
+            />
+          </View>
+        </View>
+      </View>
+    </Card>
+  );
+
+  const locationCard = (
+    <Card>
+      <AppText variant="h3" color={theme.colors.heading}>
+        Location
+      </AppText>
+      <TextField
+        label="Address or landmark"
+        onChangeText={(nextValue) => {
+          setLocationQuery(nextValue);
+          if (selectedLocation && nextValue.trim() !== selectedLocation.displayName) {
+            setSelectedLocation(null);
+          }
+        }}
+        placeholder="1 Ferry Building, San Francisco"
+        value={locationQuery}
+      />
+      <View style={styles.lookupActionRow}>
+        <View style={styles.lookupPrimaryAction}>
+          <Button
+            label="Look Up Address"
+            loading={locationBusy}
+            onPress={onLookupAddress}
+            variant="secondary"
+          />
+        </View>
+        {(locationQuery.length > 0 || selectedLocation) && (
+          <Button
+            fullWidth={false}
+            label="Clear"
+            onPress={() => {
+              setLocationQuery("");
+              setLocationResults([]);
+              setSelectedLocation(null);
+              setErrorMessage(null);
+            }}
+            variant="ghost"
+          />
+        )}
+      </View>
+      {selectedLocation ? (
+        <Badge label={`Selected: ${selectedLocation.displayName}`} tone="success" />
+      ) : null}
+
+      {locationResults.length > 0 ? (
+        <View style={styles.lookupResultList}>
+          {locationResults.map((resultItem) => (
+            <Pressable
+              accessibilityRole="button"
+              key={`${resultItem.latitude}-${resultItem.longitude}`}
+              onPress={() => onSelectLocation(resultItem)}
+              style={({ pressed }) => [
+                styles.lookupResultItem,
+                pressed ? styles.touchPressed : undefined,
+              ]}>
+              <AppText color={theme.colors.heading} variant="caption" style={{ fontWeight: "700" }}>
+                {resultItem.addressLine1}
+              </AppText>
+              <AppText variant="caption" color={theme.colors.body}>
+                {resultItem.displayName}
+              </AppText>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
+      {mapFocus ? (
+        <EventMap events={[]} focusLocation={mapFocus} onSelectEvent={() => undefined} />
+      ) : (
+        <View style={styles.mapHint}>
+          <AppText variant="caption" color={theme.colors.muted}>
+            Look up an address to preview it on the map.
+          </AppText>
+        </View>
+      )}
+    </Card>
+  );
+
+  const photosCard = (
+    <Card>
+      <AppText variant="h3" color={theme.colors.heading}>
+        Photos
+      </AppText>
+      <Button
+        label={coverStorageId ? "Replace Cover Photo" : "Upload Cover Photo"}
+        loading={isUploadingMedia}
+        onPress={onUploadCoverPhoto}
+        variant="secondary"
+      />
+      {coverPreviewUri ? (
+        <>
+          <Image contentFit="cover" source={coverPreviewUri} style={styles.previewImage} />
+          <Button label="Remove Cover Photo" onPress={onRemoveCoverPhoto} variant="danger" />
+        </>
+      ) : null}
+
+      <Button
+        label="Upload Gallery Photos"
+        loading={isUploadingMedia}
+        onPress={onUploadGalleryPhotos}
+        variant="secondary"
+      />
+      {galleryUploads.length > 0 ? (
+        <View style={styles.galleryPreviewRow}>
+          {galleryUploads.map((uploadItem) => (
+            <View key={`${uploadItem.storageId}-${uploadItem.previewUri}`} style={styles.galleryPreviewItem}>
+              <Image
+                contentFit="cover"
+                source={uploadItem.previewUri}
+                style={styles.galleryPreviewImage}
+              />
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => onRemoveGalleryPhoto(uploadItem.storageId)}
+                style={({ pressed }) => [
+                  styles.galleryRemoveBadge,
+                  pressed ? styles.touchPressed : undefined,
+                ]}>
+                <AppText
+                  color={theme.colors.primaryText}
+                  style={styles.galleryRemoveBadgeText}
+                  variant="caption">
+                  Remove
+                </AppText>
+              </Pressable>
+            </View>
+          ))}
+        </View>
+      ) : null}
+    </Card>
+  );
+
+  const publishCard = (
+    <Card>
+      <AppText variant="h3" color={theme.colors.heading}>
+        Optional details
+      </AppText>
+      <TextField
+        label="Impact summary"
+        onChangeText={setImpactSummary}
+        placeholder="Target: package 5,000 meals"
+        value={impactSummary}
+      />
+      <TextField
+        keyboardType="number-pad"
+        label="Capacity (optional)"
+        onChangeText={setCapacity}
+        placeholder="120"
+        value={capacity}
+      />
+
+      {errorMessage ? <AppText color={theme.colors.danger}>{errorMessage}</AppText> : null}
+
+      <Button label="Publish Event" loading={isSaving} onPress={onCreate} />
+    </Card>
+  );
+
   if (viewerLoading) {
     return (
       <Screen scroll={false}>
@@ -300,233 +575,27 @@ export function CreateEventScreen() {
           Add details, schedule, location, and photos to publish a new event.
         </AppText>
       </View>
-
-      <Card>
-        <AppText variant="h3" color={theme.colors.heading}>
-          Event basics
-        </AppText>
-        <TextField
-          label="Title"
-          onChangeText={setTitle}
-          placeholder="Neighborhood Cleanup + Picnic"
-          value={title}
-        />
-
-        <View style={styles.categoryRow}>
-          {EVENT_CATEGORIES.map((categoryOption) => (
-            <View key={categoryOption} style={styles.categoryItem}>
-              <Button
-                fullWidth={false}
-                label={categoryOption}
-                onPress={() => setCategory(categoryOption)}
-                variant={categoryOption === category ? "primary" : "secondary"}
-              />
-            </View>
-          ))}
-        </View>
-        <Badge label={`Selected: ${category}`} />
-
-        <TextField
-          label="Description"
-          multiline
-          onChangeText={setDescription}
-          placeholder="What will happen, what to bring, and who should join?"
-          value={description}
-        />
-      </Card>
-
-      <Card>
-        <AppText variant="h3" color={theme.colors.heading}>
-          Schedule
-        </AppText>
-        <View style={styles.scheduleGroup}>
-          <AppText variant="caption" color={theme.colors.muted}>
-            Date range
-          </AppText>
-          <View style={styles.scheduleRow}>
-            <View style={styles.scheduleField}>
-              <DateTimeField
-                label="Start date"
-                minimumDate={Date.now()}
-                onChange={onChangeStartAt}
-                picker="date"
-                value={startAt}
-              />
-            </View>
-            <View style={styles.scheduleField}>
-              <DateTimeField
-                label="End date"
-                minimumDate={startAt}
-                onChange={onChangeEndAt}
-                picker="date"
-                value={endAt}
-              />
-            </View>
+      {isWideLayout ? (
+        <View style={styles.columns}>
+          <View style={styles.primaryColumn}>
+            {basicsCard}
+            {scheduleCard}
+            {locationCard}
+          </View>
+          <View style={styles.secondaryColumn}>
+            {photosCard}
+            {publishCard}
           </View>
         </View>
-        <View style={styles.scheduleGroup}>
-          <AppText variant="caption" color={theme.colors.muted}>
-            Times
-          </AppText>
-          <View style={styles.scheduleRow}>
-            <View style={styles.scheduleField}>
-              <DateTimeField
-                label="Start time"
-                minuteInterval={5}
-                onChange={onChangeStartAt}
-                picker="time"
-                value={startAt}
-              />
-            </View>
-            <View style={styles.scheduleField}>
-              <DateTimeField
-                label="End time"
-                minuteInterval={5}
-                onChange={onChangeEndAt}
-                picker="time"
-                value={endAt}
-              />
-            </View>
-          </View>
-        </View>
-      </Card>
-
-      <Card>
-        <AppText variant="h3" color={theme.colors.heading}>
-          Location
-        </AppText>
-        <TextField
-          label="Address or landmark"
-          onChangeText={(nextValue) => {
-            setLocationQuery(nextValue);
-            if (selectedLocation && nextValue.trim() !== selectedLocation.displayName) {
-              setSelectedLocation(null);
-            }
-          }}
-          placeholder="1 Ferry Building, San Francisco"
-          value={locationQuery}
-        />
-        <Button
-          label="Look Up Address"
-          loading={locationBusy}
-          onPress={onLookupAddress}
-          variant="secondary"
-        />
-        {selectedLocation ? (
-          <Badge label={`Selected: ${selectedLocation.displayName}`} tone="success" />
-        ) : null}
-
-        {locationResults.length > 0 ? (
-          <View style={styles.lookupResultList}>
-            {locationResults.map((resultItem) => (
-              <Pressable
-                accessibilityRole="button"
-                key={`${resultItem.latitude}-${resultItem.longitude}`}
-                onPress={() => onSelectLocation(resultItem)}
-                style={({ pressed }) => [
-                  styles.lookupResultItem,
-                  pressed ? styles.touchPressed : undefined,
-                ]}>
-                <AppText color={theme.colors.heading} variant="caption" style={{ fontWeight: "700" }}>
-                  {resultItem.addressLine1}
-                </AppText>
-                <AppText variant="caption" color={theme.colors.body}>
-                  {resultItem.displayName}
-                </AppText>
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
-
-        {mapFocus ? (
-          <EventMap
-            events={[]}
-            focusLocation={mapFocus}
-            onSelectEvent={() => undefined}
-          />
-        ) : (
-          <View style={styles.mapHint}>
-            <AppText variant="caption" color={theme.colors.muted}>
-              Look up an address to preview it on the map.
-            </AppText>
-          </View>
-        )}
-      </Card>
-
-      <Card>
-        <AppText variant="h3" color={theme.colors.heading}>
-          Photos
-        </AppText>
-        <Button
-          label={coverStorageId ? "Replace Cover Photo" : "Upload Cover Photo"}
-          loading={isUploadingMedia}
-          onPress={onUploadCoverPhoto}
-          variant="secondary"
-        />
-        {coverPreviewUri ? (
-          <>
-            <Image contentFit="cover" source={coverPreviewUri} style={styles.previewImage} />
-            <Button label="Remove Cover Photo" onPress={onRemoveCoverPhoto} variant="danger" />
-          </>
-        ) : null}
-
-        <Button
-          label="Upload Gallery Photos"
-          loading={isUploadingMedia}
-          onPress={onUploadGalleryPhotos}
-          variant="secondary"
-        />
-        {galleryUploads.length > 0 ? (
-          <View style={styles.galleryPreviewRow}>
-            {galleryUploads.map((uploadItem) => (
-              <View key={`${uploadItem.storageId}-${uploadItem.previewUri}`} style={styles.galleryPreviewItem}>
-                <Image
-                  contentFit="cover"
-                  source={uploadItem.previewUri}
-                  style={styles.galleryPreviewImage}
-                />
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => onRemoveGalleryPhoto(uploadItem.storageId)}
-                  style={({ pressed }) => [
-                    styles.galleryRemoveBadge,
-                    pressed ? styles.touchPressed : undefined,
-                  ]}>
-                  <AppText
-                    color={theme.colors.primaryText}
-                    style={styles.galleryRemoveBadgeText}
-                    variant="caption">
-                    Remove
-                  </AppText>
-                </Pressable>
-              </View>
-            ))}
-          </View>
-        ) : null}
-      </Card>
-
-      <Card>
-        <AppText variant="h3" color={theme.colors.heading}>
-          Optional details
-        </AppText>
-        <TextField
-          label="Impact summary"
-          onChangeText={setImpactSummary}
-          placeholder="Target: package 5,000 meals"
-          value={impactSummary}
-        />
-        <TextField
-          keyboardType="number-pad"
-          label="Capacity (optional)"
-          onChangeText={setCapacity}
-          placeholder="120"
-          value={capacity}
-        />
-
-        {errorMessage ? <AppText color={theme.colors.danger}>{errorMessage}</AppText> : null}
-
-        <Button label="Publish Event" loading={isSaving} onPress={onCreate} />
-      </Card>
+      ) : (
+        <>
+          {basicsCard}
+          {scheduleCard}
+          {locationCard}
+          {photosCard}
+          {publishCard}
+        </>
+      )}
     </Screen>
   );
 }
@@ -539,16 +608,46 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerSection: {
-    gap: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.xs,
-  },
-  categoryRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
     gap: theme.spacing.xs,
   },
-  categoryItem: {
-    marginBottom: theme.spacing.xs,
+  columns: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: theme.spacing.md,
+  },
+  primaryColumn: {
+    flex: 1.15,
+    gap: theme.spacing.md,
+    minWidth: 0,
+  },
+  secondaryColumn: {
+    flex: 1,
+    gap: theme.spacing.md,
+    minWidth: 0,
+  },
+  categoryGroup: {
+    gap: theme.spacing.xs,
+  },
+  categoryScrollContent: {
+    gap: theme.spacing.xs,
+  },
+  categoryChip: {
+    alignItems: "center",
+    backgroundColor: theme.colors.elevated,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.pill,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: theme.control.minTouchSize,
+    minWidth: 44,
+    paddingHorizontal: theme.spacing.md,
+  },
+  categoryChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  categoryChipLabel: {
+    fontWeight: "700",
   },
   scheduleGroup: {
     gap: theme.spacing.xs,
@@ -597,6 +696,14 @@ const styles = StyleSheet.create({
   },
   lookupResultList: {
     gap: theme.spacing.xs,
+  },
+  lookupActionRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: theme.spacing.xs,
+  },
+  lookupPrimaryAction: {
+    flex: 1,
   },
   lookupResultItem: {
     backgroundColor: theme.colors.elevated,

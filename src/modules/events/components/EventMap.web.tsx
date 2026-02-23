@@ -112,50 +112,36 @@ export function EventMap({ events, onSelectEvent, selectedEventId, focusLocation
     );
   }
 
-  const isGlobeMode = viewState.zoom <= 2.5;
-  const mapHeight = isGlobeMode ? 292 : 300;
-
   return (
-    <View style={[styles.mapShell, isGlobeMode ? styles.mapShellGlobe : undefined]}>
-      <View style={[styles.mapViewport, isGlobeMode ? styles.mapViewportGlobe : undefined]}>
-        <Map
-          center={viewState.center}
-          height={mapHeight}
-          onBoundsChanged={({ center, zoom }) => {
-            setViewState({
-              center,
-              zoom,
-            });
-          }}
-          zoom={viewState.zoom}>
-          {events.map((eventItem) => (
-            <Marker
-              anchor={[eventItem.latitude, eventItem.longitude]}
-              color={selectedEventId === eventItem.id ? theme.colors.danger : theme.colors.primaryDeep}
-              key={eventItem.id}
-              onClick={() => onSelectEvent(eventItem.id)}
-              width={48}
-            />
-          ))}
-          {focusLocation ? (
-            <Marker
-              anchor={[focusLocation.latitude, focusLocation.longitude]}
-              color={theme.colors.accent}
-              width={42}
-            />
-          ) : null}
-          <ZoomControl />
-        </Map>
-      </View>
-
-      <View style={styles.legend}>
-        <AppText variant="caption" color={theme.colors.primary} style={styles.legendTitle}>
-          {isGlobeMode ? "Globe view" : "Interactive map"}
-        </AppText>
-        <AppText variant="caption" color={theme.colors.body}>
-          {isGlobeMode ? "Zoom in to switch from globe to street-level map." : "Click any pin to focus an event."}
-        </AppText>
-      </View>
+    <View style={styles.mapShell}>
+      <Map
+        center={viewState.center}
+        height={264}
+        onBoundsChanged={({ center, zoom }) => {
+          setViewState({
+            center,
+            zoom,
+          });
+        }}
+        zoom={viewState.zoom}>
+        {events.map((eventItem) => (
+          <Marker
+            anchor={[eventItem.latitude, eventItem.longitude]}
+            color={selectedEventId === eventItem.id ? theme.colors.danger : theme.colors.primaryDeep}
+            key={eventItem.id}
+            onClick={() => onSelectEvent(eventItem.id)}
+            width={44}
+          />
+        ))}
+        {focusLocation ? (
+          <Marker
+            anchor={[focusLocation.latitude, focusLocation.longitude]}
+            color={theme.colors.accent}
+            width={40}
+          />
+        ) : null}
+        <ZoomControl />
+      </Map>
     </View>
   );
 }
@@ -163,53 +149,20 @@ export function EventMap({ events, onSelectEvent, selectedEventId, focusLocation
 const styles = StyleSheet.create({
   mapShell: {
     alignItems: "stretch",
-    backgroundColor: theme.colors.glass,
+    backgroundColor: theme.colors.elevated,
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.xl,
+    borderRadius: theme.radius.lg,
     borderWidth: 1,
-    minHeight: 304,
+    height: 264,
     overflow: "hidden",
-    paddingVertical: 2,
     position: "relative",
     ...theme.elevation.soft,
   },
-  mapShellGlobe: {
-    alignItems: "center",
-    minHeight: 340,
-    paddingTop: theme.spacing.sm,
-  },
-  mapViewport: {
-    overflow: "hidden",
-  },
-  mapViewportGlobe: {
-    borderColor: theme.colors.borderStrong,
-    borderRadius: 146,
-    borderWidth: 2,
-    height: 292,
-    overflow: "hidden",
-    width: 292,
-  },
-  legend: {
-    backgroundColor: theme.colors.elevated,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    bottom: 10,
-    gap: 2,
-    left: 10,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    position: "absolute",
-  },
-  legendTitle: {
-    fontWeight: "700",
-    letterSpacing: 0,
-  },
   emptyState: {
     alignItems: "center",
-    backgroundColor: theme.colors.glass,
+    backgroundColor: theme.colors.elevated,
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.xl,
+    borderRadius: theme.radius.lg,
     borderWidth: 1,
     gap: theme.spacing.xs,
     padding: theme.spacing.lg,

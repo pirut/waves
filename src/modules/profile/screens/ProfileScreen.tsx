@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
 import { useMutation, useQuery } from "convex/react";
@@ -12,6 +12,8 @@ import { Button } from "@/src/core/ui/Button";
 import { Card } from "@/src/core/ui/Card";
 import { Screen } from "@/src/core/ui/Screen";
 import { TextField } from "@/src/core/ui/TextField";
+import { clerkPublishableKey } from "@/src/lib/auth/config";
+import { localAuthBypassEnabled } from "@/src/lib/auth/devBypass";
 import { useViewerProfile } from "@/src/modules/events/hooks/useViewerProfile";
 
 const HANDLE_PATTERN = /^[a-z0-9][a-z0-9_-]{2,23}$/;
@@ -20,10 +22,16 @@ function normalizeHandleInput(value: string) {
   return value.trim().toLowerCase().replace(/^@+/, "");
 }
 
-export function ProfileScreen() {
+type ProfileContentProps = {
+  showSignOut: boolean;
+  onSignOut?: () => void;
+};
+
+function ProfileScreenContent({ showSignOut, onSignOut }: ProfileContentProps) {
   const router = useRouter();
-  const { signOut } = useAuth();
   const { viewerProfileId, viewerLoading } = useViewerProfile();
+  const { width } = useWindowDimensions();
+  const isWideLayout = width >= 1024;
 
   const profile = useQuery(api.viewer.getCurrent, viewerProfileId ? {} : "skip");
   const myEvents = useQuery(api.events.listForViewer, viewerProfileId ? {} : "skip");
@@ -110,11 +118,142 @@ export function ProfileScreen() {
             Profile unavailable
           </AppText>
           <AppText>Try refreshing or signing in again.</AppText>
-          <Button label="Sign Out" onPress={() => signOut()} variant="secondary" />
+          {showSignOut && onSignOut ? (
+            <Button label="Sign Out" onPress={onSignOut} variant="secondary" />
+          ) : null}
         </View>
       </Screen>
     );
   }
+
+  const identityCard = (
+    <Card>
+      <View style={styles.identityRow}>
+        <View style={styles.avatar}>
+          <AppText color={theme.colors.primaryText} variant="h3">
+            {initials}
+          </AppText>
+        </View>
+        <View style={styles.identityMeta}>
+          <AppText variant="h3" color={theme.colors.heading}>
+            {profile.displayName}
+          </AppText>
+          {profile.email ? (
+            <AppText variant="caption" color={theme.colors.muted}>
+              {profile.email}
+            </AppText>
+          ) : null}
+          <AppText variant="caption" color={theme.colors.muted}>
+            @{profile.handle ?? profile.slug}
+          </AppText>
+        </View>
+      </View>
+    </Card>
+  );
+
+  const editCard = (
+    <Card>
+      <AppText variant="h3" color={theme.colors.heading}>
+        Edit profile
+      </AppText>
+      <TextField
+        autoCapitalize="words"
+        autoCorrect={false}
+        label="Display name"
+        onChangeText={setDisplayName}
+        placeholder="Your name"
+        value={displayName}
+      />
+      <TextField
+        autoCapitalize="none"
+        autoCorrect={false}
+        label="Handle"
+        onChangeText={(nextHandle) => setHandle(normalizeHandleInput(nextHandle))}
+        placeholder="@makewaves_member"
+        value={handle}
+      />
+      <TextField
+        autoCapitalize="words"
+        label="City"
+        onChangeText={setCity}
+        placeholder="San Francisco"
+        value={city}
+      />
+      {statusNote ? (
+        <AppText color={statusNote.toLowerCase().includes("updated") ? theme.colors.success : theme.colors.danger}>
+          {statusNote}
+        </AppText>
+      ) : null}
+      <Button label="Save Profile" loading={isSaving} onPress={onSaveProfile} />
+    </Card>
+  );
+
+  const snapshotCard = (
+    <Card>
+      <AppText variant="h3" color={theme.colors.heading}>
+        Impact snapshot
+      </AppText>
+      <View style={styles.badgesRow}>
+        <Badge label={`${myEvents.attending.length} attending`} tone="success" />
+        <Badge label={`${myEvents.hosting.length} hosting`} />
+      </View>
+    </Card>
+  );
+
+  const quickActionsCard = (
+    <Card>
+      <AppText variant="h3" color={theme.colors.heading}>
+        Quick actions
+      </AppText>
+      <View style={[styles.actionsRow, isWideLayout ? styles.actionsRowWide : undefined]}>
+        <View style={styles.actionItem}>
+          <Button label="Discover" onPress={() => router.push("/(tabs)")} variant="secondary" />
+        </View>
+        <View style={styles.actionItem}>
+          <Button label="Create" onPress={() => router.push("/(tabs)/create")} variant="secondary" />
+        </View>
+        <View style={styles.actionItem}>
+          <Button label="My Events" onPress={() => router.push("/(tabs)/my-events")} variant="secondary" />
+        </View>
+      </View>
+    </Card>
+  );
+
+  const hostedEventsCard = (
+    <Card>
+      <AppText variant="h3" color={theme.colors.heading}>
+        Hosted events
+      </AppText>
+      {myEvents.hosting.length === 0 ? (
+        <AppText>You are not hosting any events yet.</AppText>
+      ) : (
+        <View style={styles.hostedList}>
+          {myEvents.hosting.slice(0, 6).map((eventItem) => (
+            <Pressable
+              accessibilityRole="button"
+              key={eventItem.id}
+              onPress={() => router.push(`/events/${eventItem.id}`)}
+              style={({ pressed }) => [
+                styles.hostedItem,
+                pressed ? styles.touchPressed : undefined,
+              ]}>
+              <AppText color={theme.colors.heading} variant="caption" style={{ fontWeight: "700" }}>
+                {eventItem.title}
+              </AppText>
+              <AppText variant="caption" color={theme.colors.muted}>
+                {eventItem.city}
+              </AppText>
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </Card>
+  );
+
+  const signOutButton =
+    showSignOut && onSignOut ? (
+      <Button label="Sign Out" onPress={onSignOut} variant="ghost" />
+    ) : null;
 
   return (
     <Screen>
@@ -124,123 +263,45 @@ export function ProfileScreen() {
         </AppText>
       </View>
 
-      <Card>
-        <View style={styles.identityRow}>
-          <View style={styles.avatar}>
-            <AppText color={theme.colors.primaryText} variant="h3">
-              {initials}
-            </AppText>
+      {isWideLayout ? (
+        <View style={styles.columns}>
+          <View style={styles.primaryColumn}>
+            {identityCard}
+            {editCard}
           </View>
-          <View style={styles.identityMeta}>
-            <AppText variant="h3" color={theme.colors.heading}>
-              {profile.displayName}
-            </AppText>
-            {profile.email ? (
-              <AppText variant="caption" color={theme.colors.muted}>
-                {profile.email}
-              </AppText>
-            ) : null}
-            <AppText variant="caption" color={theme.colors.muted}>
-              @{profile.handle ?? profile.slug}
-            </AppText>
+          <View style={styles.secondaryColumn}>
+            {snapshotCard}
+            {quickActionsCard}
+            {hostedEventsCard}
+            {signOutButton}
           </View>
         </View>
-      </Card>
-
-      <Card>
-        <AppText variant="h3" color={theme.colors.heading}>
-          Edit profile
-        </AppText>
-        <TextField
-          autoCapitalize="words"
-          autoCorrect={false}
-          label="Display name"
-          onChangeText={setDisplayName}
-          placeholder="Your name"
-          value={displayName}
-        />
-        <TextField
-          autoCapitalize="none"
-          autoCorrect={false}
-          label="Handle"
-          onChangeText={(nextHandle) => setHandle(normalizeHandleInput(nextHandle))}
-          placeholder="@makewaves_member"
-          value={handle}
-        />
-        <TextField
-          autoCapitalize="words"
-          label="City"
-          onChangeText={setCity}
-          placeholder="San Francisco"
-          value={city}
-        />
-        {statusNote ? (
-          <AppText color={statusNote.toLowerCase().includes("updated") ? theme.colors.success : theme.colors.danger}>
-            {statusNote}
-          </AppText>
-        ) : null}
-        <Button label="Save Profile" loading={isSaving} onPress={onSaveProfile} />
-      </Card>
-
-      <Card>
-        <AppText variant="h3" color={theme.colors.heading}>
-          Impact snapshot
-        </AppText>
-        <View style={styles.badgesRow}>
-          <Badge label={`${myEvents.attending.length} attending`} tone="success" />
-          <Badge label={`${myEvents.hosting.length} hosting`} />
-        </View>
-      </Card>
-
-      <Card>
-        <AppText variant="h3" color={theme.colors.heading}>
-          Quick actions
-        </AppText>
-        <View style={styles.actionsRow}>
-          <View style={styles.actionItem}>
-            <Button label="Discover" onPress={() => router.push("/(tabs)")} variant="secondary" />
-          </View>
-          <View style={styles.actionItem}>
-            <Button label="Create" onPress={() => router.push("/(tabs)/create")} variant="secondary" />
-          </View>
-          <View style={styles.actionItem}>
-            <Button label="My Events" onPress={() => router.push("/(tabs)/my-events")} variant="secondary" />
-          </View>
-        </View>
-      </Card>
-
-      <Card>
-        <AppText variant="h3" color={theme.colors.heading}>
-          Hosted events
-        </AppText>
-        {myEvents.hosting.length === 0 ? (
-          <AppText>You are not hosting any events yet.</AppText>
-        ) : (
-          <View style={styles.hostedList}>
-            {myEvents.hosting.slice(0, 6).map((eventItem) => (
-              <Pressable
-                accessibilityRole="button"
-                key={eventItem.id}
-                onPress={() => router.push(`/events/${eventItem.id}`)}
-                style={({ pressed }) => [
-                  styles.hostedItem,
-                  pressed ? styles.touchPressed : undefined,
-                ]}>
-                <AppText color={theme.colors.heading} variant="caption" style={{ fontWeight: "700" }}>
-                  {eventItem.title}
-                </AppText>
-                <AppText variant="caption" color={theme.colors.muted}>
-                  {eventItem.city}
-                </AppText>
-              </Pressable>
-            ))}
-          </View>
-        )}
-      </Card>
-
-      <Button label="Sign Out" onPress={() => signOut()} variant="ghost" />
+      ) : (
+        <>
+          {identityCard}
+          {editCard}
+          {snapshotCard}
+          {quickActionsCard}
+          {hostedEventsCard}
+          {signOutButton}
+        </>
+      )}
     </Screen>
   );
+}
+
+function ProfileScreenWithAuth() {
+  const { signOut } = useAuth();
+
+  return <ProfileScreenContent onSignOut={() => void signOut()} showSignOut />;
+}
+
+export function ProfileScreen() {
+  if (localAuthBypassEnabled || !clerkPublishableKey) {
+    return <ProfileScreenContent showSignOut={false} />;
+  }
+
+  return <ProfileScreenWithAuth />;
 }
 
 const styles = StyleSheet.create({
@@ -251,8 +312,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerSection: {
-    gap: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.xs,
+    gap: theme.spacing.xs,
+  },
+  columns: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: theme.spacing.md,
+  },
+  primaryColumn: {
+    flex: 1.05,
+    gap: theme.spacing.md,
+    minWidth: 0,
+  },
+  secondaryColumn: {
+    flex: 1,
+    gap: theme.spacing.md,
+    minWidth: 0,
   },
   identityRow: {
     alignItems: "center",
@@ -278,6 +353,9 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     gap: theme.spacing.sm,
+  },
+  actionsRowWide: {
+    flexDirection: "row",
   },
   actionItem: {
     flex: 1,

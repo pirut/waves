@@ -1,4 +1,4 @@
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { useQuery } from "convex/react";
 
@@ -15,6 +15,8 @@ import { useViewerProfile } from "@/src/modules/events/hooks/useViewerProfile";
 export function MyEventsScreen() {
   const router = useRouter();
   const { viewerProfileId, viewerLoading } = useViewerProfile();
+  const { width } = useWindowDimensions();
+  const isWideLayout = width >= 1024;
 
   const myEventsResult = useQuery(
     api.events.listForViewer,
@@ -35,6 +37,48 @@ export function MyEventsScreen() {
     );
   }
 
+  const calendarSection = (
+    <View style={styles.section}>
+      <AppText variant="h2" color={theme.colors.heading}>
+        Calendar view
+      </AppText>
+      {attending.length === 0 ? (
+        <Card>
+          <AppText variant="h3" color={theme.colors.heading}>
+            No RSVP history yet
+          </AppText>
+          <AppText>Head to Discover and join your first event.</AppText>
+        </Card>
+      ) : (
+        <EventCalendar
+          events={attending}
+          onOpenEvent={(eventId) => router.push(`/events/${eventId}`)}
+        />
+      )}
+    </View>
+  );
+
+  const hostingSection = (
+    <View style={styles.section}>
+      <AppText variant="h2" color={theme.colors.heading}>
+        Events you host
+      </AppText>
+      {hosting.length === 0 ? (
+        <Card>
+          <AppText>No hosted events yet. Create one from the Create tab.</AppText>
+        </Card>
+      ) : (
+        hosting.map((eventItem) => (
+          <EventCard
+            item={eventItem}
+            key={eventItem.id}
+            onOpen={() => router.push(`/events/${eventItem.id}`)}
+          />
+        ))
+      )}
+    </View>
+  );
+
   return (
     <Screen>
       <View style={styles.headerSection}>
@@ -43,43 +87,17 @@ export function MyEventsScreen() {
         </AppText>
       </View>
 
-      <View style={styles.section}>
-        <AppText variant="h2" color={theme.colors.heading}>
-          Calendar view
-        </AppText>
-        {attending.length === 0 ? (
-          <Card>
-            <AppText variant="h3" color={theme.colors.heading}>
-              No RSVP history yet
-            </AppText>
-            <AppText>Head to Discover and join your first event.</AppText>
-          </Card>
-        ) : (
-          <EventCalendar
-            events={attending}
-            onOpenEvent={(eventId) => router.push(`/events/${eventId}`)}
-          />
-        )}
-      </View>
-
-      <View style={styles.section}>
-        <AppText variant="h2" color={theme.colors.heading}>
-          Events you host
-        </AppText>
-        {hosting.length === 0 ? (
-          <Card>
-            <AppText>No hosted events yet. Create one from the Create tab.</AppText>
-          </Card>
-        ) : (
-          hosting.map((eventItem) => (
-            <EventCard
-              item={eventItem}
-              key={eventItem.id}
-              onOpen={() => router.push(`/events/${eventItem.id}`)}
-            />
-          ))
-        )}
-      </View>
+      {isWideLayout ? (
+        <View style={styles.columns}>
+          <View style={styles.primaryColumn}>{calendarSection}</View>
+          <View style={styles.secondaryColumn}>{hostingSection}</View>
+        </View>
+      ) : (
+        <>
+          {calendarSection}
+          {hostingSection}
+        </>
+      )}
     </Screen>
   );
 }
@@ -95,7 +113,19 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
   },
   headerSection: {
-    gap: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.xs,
+    gap: theme.spacing.xs,
+  },
+  columns: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: theme.spacing.md,
+  },
+  primaryColumn: {
+    flex: 1.15,
+    minWidth: 0,
+  },
+  secondaryColumn: {
+    flex: 1,
+    minWidth: 0,
   },
 });

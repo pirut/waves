@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 
@@ -7,7 +7,6 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { theme } from "@/src/core/theme/tokens";
 import { AppText } from "@/src/core/ui/AppText";
-import { Badge } from "@/src/core/ui/Badge";
 import { Button } from "@/src/core/ui/Button";
 import { Card } from "@/src/core/ui/Card";
 import { Screen } from "@/src/core/ui/Screen";
@@ -133,6 +132,13 @@ export function DiscoverScreen() {
 
   const selectedEvent =
     visibleEvents.find((eventItem) => eventItem.id === selectedEventId) ?? visibleEvents[0];
+  const listEvents = useMemo(
+    () =>
+      selectedEvent
+        ? visibleEvents.filter((eventItem) => eventItem.id !== selectedEvent.id)
+        : visibleEvents,
+    [selectedEvent, visibleEvents],
+  );
 
   const onPressRsvp = async (eventId: string) => {
     if (!viewerProfileId) {
@@ -171,12 +177,12 @@ export function DiscoverScreen() {
       setLookupResults(results);
 
       if (results[0]) {
-      setFocusLocation({
-        latitude: results[0].latitude,
-        longitude: results[0].longitude,
-        label: results[0].displayName,
-      });
-      setDistanceRadiusMiles(null);
+        setFocusLocation({
+          latitude: results[0].latitude,
+          longitude: results[0].longitude,
+          label: results[0].displayName,
+        });
+        setDistanceRadiusMiles(null);
       }
 
       if (results.length === 0) {
@@ -241,54 +247,62 @@ export function DiscoverScreen() {
         </AppText>
       </View>
 
-      <View style={styles.filterRow}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => setCategoryFilter(undefined)}
-          style={({ pressed }) => [
-            styles.filterChip,
-            !categoryFilter ? styles.filterChipActive : undefined,
-            pressed ? styles.touchPressed : undefined,
-          ]}>
-          <AppText
-            color={!categoryFilter ? theme.colors.primaryText : theme.colors.primary}
-            variant="caption"
-            style={{ fontWeight: "700" }}>
-            All
-          </AppText>
-        </Pressable>
-        {EVENT_CATEGORIES.map((category) => (
+      <View style={styles.filterGroup}>
+        <AppText variant="caption" color={theme.colors.muted}>
+          Filter by type
+        </AppText>
+        <ScrollView
+          contentContainerStyle={styles.filterScrollContent}
+          horizontal
+          showsHorizontalScrollIndicator={false}>
           <Pressable
             accessibilityRole="button"
-            key={category}
-            onPress={() => setCategoryFilter(category)}
+            onPress={() => setCategoryFilter(undefined)}
             style={({ pressed }) => [
               styles.filterChip,
-              categoryFilter === category ? styles.filterChipActive : undefined,
+              !categoryFilter ? styles.filterChipActive : undefined,
               pressed ? styles.touchPressed : undefined,
             ]}>
             <AppText
-              color={categoryFilter === category ? theme.colors.primaryText : theme.colors.primary}
+              color={!categoryFilter ? theme.colors.primaryText : theme.colors.primary}
               variant="caption"
               style={{ fontWeight: "700" }}>
-              {category}
+              All
             </AppText>
           </Pressable>
-        ))}
+          {EVENT_CATEGORIES.map((category) => (
+            <Pressable
+              accessibilityRole="button"
+              key={category}
+              onPress={() => setCategoryFilter(category)}
+              style={({ pressed }) => [
+                styles.filterChip,
+                categoryFilter === category ? styles.filterChipActive : undefined,
+                pressed ? styles.touchPressed : undefined,
+              ]}>
+              <AppText
+                color={categoryFilter === category ? theme.colors.primaryText : theme.colors.primary}
+                variant="caption"
+                style={{ fontWeight: "700" }}>
+                {category}
+              </AppText>
+            </Pressable>
+          ))}
+        </ScrollView>
       </View>
 
       <Card>
         <AppText variant="h3" color={theme.colors.heading}>
-          Address lookup
+          Find near an address
         </AppText>
         <TextField
-          label="Find an address or landmark"
+          label="Address or landmark"
           onChangeText={setLookupQuery}
           placeholder="1 Ferry Building, San Francisco"
           value={lookupQuery}
         />
         <View style={styles.lookupActionRow}>
-          <View style={styles.lookupAction}>
+          <View style={styles.lookupPrimaryAction}>
             <Button
               label="Look Up Address"
               loading={lookupBusy}
@@ -296,17 +310,26 @@ export function DiscoverScreen() {
               variant="secondary"
             />
           </View>
-          <View style={styles.lookupAction}>
-            <Button label="Clear" onPress={onClearLookup} variant="ghost" />
-          </View>
+          {(lookupQuery.length > 0 || focusLocation) && (
+            <Button fullWidth={false} label="Clear" onPress={onClearLookup} variant="ghost" />
+          )}
         </View>
-        {focusLocation?.label ? <Badge label={`Focused: ${focusLocation.label}`} /> : null}
+
+        {focusLocation?.label ? (
+          <AppText variant="caption" color={theme.colors.muted}>
+            Showing events nearest to {focusLocation.label}
+          </AppText>
+        ) : null}
+
         {focusLocation ? (
           <View style={styles.proximitySection}>
             <AppText variant="caption" color={theme.colors.muted}>
-              Ranked by proximity
+              Distance
             </AppText>
-            <View style={styles.filterRow}>
+            <ScrollView
+              contentContainerStyle={styles.filterScrollContent}
+              horizontal
+              showsHorizontalScrollIndicator={false}>
               <Pressable
                 accessibilityRole="button"
                 onPress={() => setDistanceRadiusMiles(null)}
@@ -322,6 +345,7 @@ export function DiscoverScreen() {
                   Any distance
                 </AppText>
               </Pressable>
+
               {DISTANCE_RADIUS_OPTIONS.map((radiusMiles) => (
                 <Pressable
                   accessibilityRole="button"
@@ -344,10 +368,12 @@ export function DiscoverScreen() {
                   </AppText>
                 </Pressable>
               ))}
-            </View>
+            </ScrollView>
           </View>
         ) : null}
+
         {lookupError ? <AppText color={theme.colors.danger}>{lookupError}</AppText> : null}
+
         {lookupResults.length > 0 ? (
           <View style={styles.lookupResultList}>
             {lookupResults.map((resultItem) => (
@@ -371,9 +397,11 @@ export function DiscoverScreen() {
         ) : null}
       </Card>
 
-      <AppText variant="caption" color={theme.colors.muted} style={styles.sectionLabel}>
-        Live map
-      </AppText>
+      <View style={styles.sectionHeader}>
+        <AppText variant="h3" color={theme.colors.heading}>
+          Live map
+        </AppText>
+      </View>
       <EventMap
         events={visibleEvents}
         focusLocation={focusLocation}
@@ -382,13 +410,18 @@ export function DiscoverScreen() {
       />
 
       {selectedEvent ? (
-        <EventCard
-          distanceMiles={selectedEvent.distanceMiles}
-          item={selectedEvent}
-          onOpen={() => router.push(`/events/${selectedEvent.id}`)}
-          onRsvp={() => onPressRsvp(selectedEvent.id)}
-          rsvpBusy={rsvpPendingId === selectedEvent.id}
-        />
+        <View style={styles.listSection}>
+          <AppText variant="h3" color={theme.colors.heading}>
+            Selected event
+          </AppText>
+          <EventCard
+            distanceMiles={selectedEvent.distanceMiles}
+            item={selectedEvent}
+            onOpen={() => router.push(`/events/${selectedEvent.id}`)}
+            onRsvp={() => onPressRsvp(selectedEvent.id)}
+            rsvpBusy={rsvpPendingId === selectedEvent.id}
+          />
+        </View>
       ) : (
         <Card>
           <AppText variant="h3" color={theme.colors.heading}>
@@ -405,7 +438,7 @@ export function DiscoverScreen() {
 
       <View style={styles.listSection}>
         <AppText variant="h2" color={theme.colors.heading}>
-          Nearby events
+          {selectedEvent ? "More nearby events" : "Nearby events"}
         </AppText>
         {focusLocation ? (
           <AppText variant="caption" color={theme.colors.muted}>
@@ -414,16 +447,24 @@ export function DiscoverScreen() {
               : `Filtered to ${distanceRadiusMiles} miles.`}
           </AppText>
         ) : null}
-        {visibleEvents.map((eventItem) => (
-          <EventCard
-            distanceMiles={eventItem.distanceMiles}
-            item={eventItem}
-            key={eventItem.id}
-            onOpen={() => router.push(`/events/${eventItem.id}`)}
-            onRsvp={() => onPressRsvp(eventItem.id)}
-            rsvpBusy={rsvpPendingId === eventItem.id}
-          />
-        ))}
+        {listEvents.length === 0 ? (
+          <Card>
+            <AppText variant="caption" color={theme.colors.muted}>
+              No additional events in this area yet.
+            </AppText>
+          </Card>
+        ) : (
+          listEvents.map((eventItem) => (
+            <EventCard
+              distanceMiles={eventItem.distanceMiles}
+              item={eventItem}
+              key={eventItem.id}
+              onOpen={() => router.push(`/events/${eventItem.id}`)}
+              onRsvp={() => onPressRsvp(eventItem.id)}
+              rsvpBusy={rsvpPendingId === eventItem.id}
+            />
+          ))
+        )}
       </View>
     </Screen>
   );
@@ -431,8 +472,7 @@ export function DiscoverScreen() {
 
 const styles = StyleSheet.create({
   headerSection: {
-    gap: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.xs,
+    gap: theme.spacing.xs,
   },
   centeredState: {
     alignItems: "center",
@@ -440,31 +480,33 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     justifyContent: "center",
   },
-  filterRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+  filterGroup: {
+    gap: theme.spacing.xs,
+  },
+  filterScrollContent: {
     gap: theme.spacing.xs,
   },
   filterChip: {
     alignItems: "center",
-    backgroundColor: theme.colors.elevatedMuted,
+    backgroundColor: theme.colors.elevated,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.pill,
     borderWidth: 1,
     justifyContent: "center",
     minHeight: theme.control.minTouchSize,
+    minWidth: 44,
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
   },
   filterChipActive: {
-    backgroundColor: theme.colors.primaryDeep,
-    borderColor: theme.colors.primaryDeep,
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   lookupActionRow: {
+    alignItems: "center",
     flexDirection: "row",
-    gap: theme.spacing.sm,
+    gap: theme.spacing.xs,
   },
-  lookupAction: {
+  lookupPrimaryAction: {
     flex: 1,
   },
   lookupResultList: {
@@ -490,7 +532,7 @@ const styles = StyleSheet.create({
   listSection: {
     gap: theme.spacing.md,
   },
-  sectionLabel: {
-    fontWeight: "600",
+  sectionHeader: {
+    gap: theme.spacing.xs,
   },
 });

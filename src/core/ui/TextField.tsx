@@ -52,7 +52,7 @@ export function TextField({
         onBlur={() => setFocused(false)}
         onFocus={() => setFocused(true)}
         placeholder={placeholder}
-        placeholderTextColor={theme.colors.muted}
+        placeholderTextColor={theme.colors.subtle}
         returnKeyType={returnKeyType}
         secureTextEntry={secureTextEntry}
         selectionColor={theme.colors.primary}
@@ -80,18 +80,18 @@ const styles = StyleSheet.create({
     color: theme.colors.heading,
     fontFamily: theme.fonts.body,
     fontSize: theme.typography.body,
-    minHeight: theme.control.minTouchSize + 4,
+    minHeight: theme.control.minTouchSize,
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   inputFocused: {
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.elevated,
-    shadowColor: "#0A84FF",
+    shadowColor: "#007AFF",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.18,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.14,
+    shadowRadius: 3,
+    elevation: 1,
   },
   multiline: {
     minHeight: 132,

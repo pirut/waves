@@ -1,5 +1,5 @@
 import { PropsWithChildren } from "react";
-import { ScrollView, StyleProp, StyleSheet, View, ViewStyle } from "react-native";
+import { ScrollView, StyleProp, StyleSheet, View, ViewStyle, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { theme } from "@/src/core/theme/tokens";
@@ -10,16 +10,29 @@ type Props = PropsWithChildren<{
 }>;
 
 export function Screen({ children, scroll = true, contentContainerStyle }: Props) {
+  const { width } = useWindowDimensions();
+  const horizontalPadding = width >= 1024 ? theme.spacing.xxl : width >= 768 ? theme.spacing.xl : theme.spacing.md;
+  const maxWidth = width >= 1024 ? 960 : width >= 768 ? 860 : 720;
+
   const content = scroll ? (
     <ScrollView
-      contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
+      contentContainerStyle={[
+        styles.contentContainer,
+        { maxWidth, paddingHorizontal: horizontalPadding },
+        contentContainerStyle,
+      ]}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}>
       {children}
     </ScrollView>
   ) : (
-    <View style={[styles.contentContainer, contentContainerStyle]}>
+    <View
+      style={[
+        styles.contentContainer,
+        { maxWidth, paddingHorizontal: horizontalPadding },
+        contentContainerStyle,
+      ]}>
       {children}
     </View>
   );
@@ -45,8 +58,6 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     flexGrow: 1,
     gap: theme.spacing.lg,
-    maxWidth: 1180,
-    paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.xxl,
     width: "100%",

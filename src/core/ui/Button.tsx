@@ -17,7 +17,7 @@ type Props = {
 const styles = StyleSheet.create({
   base: {
     borderRadius: theme.radius.md,
-    minHeight: theme.control.minTouchSize + 4,
+    minHeight: theme.control.minTouchSize,
     overflow: "hidden",
     borderWidth: 1,
   },
@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: theme.spacing.xs,
     justifyContent: "center",
-    minHeight: theme.control.minTouchSize + 4,
+    minHeight: theme.control.minTouchSize,
     paddingHorizontal: theme.spacing.lg,
   },
   primary: {
@@ -34,8 +34,8 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   secondary: {
-    backgroundColor: theme.colors.elevatedMuted,
-    borderColor: theme.colors.elevatedMuted,
+    backgroundColor: theme.colors.elevated,
+    borderColor: theme.colors.border,
   },
   ghost: {
     backgroundColor: "transparent",
@@ -78,7 +78,7 @@ export function Button({
         styles.base,
         variantStyle,
         fullWidth ? { alignSelf: "stretch" } : undefined,
-        pressed ? { opacity: 0.62 } : undefined,
+        pressed ? { opacity: 0.72 } : undefined,
         (disabled || loading) && styles.disabled,
       ]}>
       <View style={styles.fill}>

@@ -58,7 +58,14 @@ npm run convex:seed
 npm run start
 ```
 
-Open web with `w`, iOS with `i`, Android with `a`.
+`npm run start` now starts Expo Go on LAN and shows a QR code for iOS testing.
+Open web with `w`, iOS simulator with `i`, Android emulator with `a`.
+
+If you need a custom dev build instead of Expo Go:
+
+```bash
+npm run start:dev-client
+```
 
 7. Run on a remote dev server (portable scripts, no Homebrew path assumptions):
 
