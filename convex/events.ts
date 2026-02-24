@@ -194,6 +194,52 @@ async function ensureViewerCanParticipateInEventQna(
   }
 }
 
+async function assertViewerOwnsEventMessage(
+  ctx: QueryCtx | MutationCtx,
+  messageId: Id<"eventMessages">,
+  viewerProfileId: Id<"profiles">,
+) {
+  const messageDoc = await ctx.db.get(messageId);
+  if (!messageDoc) {
+    throw new ConvexError({
+      code: "MESSAGE_NOT_FOUND",
+      message: "Message not found.",
+    });
+  }
+
+  if (messageDoc.authorProfileId !== viewerProfileId) {
+    throw new ConvexError({
+      code: "NOT_MESSAGE_AUTHOR",
+      message: "Only the message author can edit or delete this post.",
+    });
+  }
+
+  return messageDoc;
+}
+
+async function assertViewerOwnsEventQuestion(
+  ctx: QueryCtx | MutationCtx,
+  questionId: Id<"eventQuestions">,
+  viewerProfileId: Id<"profiles">,
+) {
+  const questionDoc = await ctx.db.get(questionId);
+  if (!questionDoc) {
+    throw new ConvexError({
+      code: "QUESTION_NOT_FOUND",
+      message: "Question not found.",
+    });
+  }
+
+  if (questionDoc.askerProfileId !== viewerProfileId) {
+    throw new ConvexError({
+      code: "NOT_QUESTION_AUTHOR",
+      message: "Only the attendee who asked this question can edit or delete it.",
+    });
+  }
+
+  return questionDoc;
+}
+
 async function toEventListItem(
   ctx: QueryCtx | MutationCtx,
   eventDoc: Doc<"events">,
@@ -842,6 +888,112 @@ export const sendEventMessage = mutation({
   },
 });
 
+export const editEventMessage = mutation({
+  args: {
+    messageId: v.id("eventMessages"),
+    body: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const viewerProfile = await requireAuthProfile(ctx);
+    const messageDoc = await assertViewerOwnsEventMessage(
+      ctx,
+      args.messageId,
+      viewerProfile._id,
+    );
+
+    const trimmedBody = args.body.trim();
+    if (!trimmedBody) {
+      throw new ConvexError({
+        code: "EMPTY_MESSAGE",
+        message: "Message body is required.",
+      });
+    }
+
+    if (trimmedBody === messageDoc.body) {
+      return null;
+    }
+
+    await ctx.db.patch(messageDoc._id, {
+      body: trimmedBody,
+    });
+
+    return null;
+  },
+});
+
+export const deleteEventMessage = mutation({
+  args: {
+    messageId: v.id("eventMessages"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const viewerProfile = await requireAuthProfile(ctx);
+    const messageDoc = await assertViewerOwnsEventMessage(
+      ctx,
+      args.messageId,
+      viewerProfile._id,
+    );
+
+    const batchSize = 128;
+
+    while (true) {
+      const likes = await ctx.db
+        .query("eventMessageLikes")
+        .withIndex("by_eventMessageId_and_createdAt", (q) =>
+          q.eq("eventMessageId", messageDoc._id),
+        )
+        .order("asc")
+        .take(batchSize);
+
+      if (likes.length === 0) {
+        break;
+      }
+
+      for (const likeDoc of likes) {
+        await ctx.db.delete(likeDoc._id);
+      }
+    }
+
+    while (true) {
+      const comments = await ctx.db
+        .query("eventMessageComments")
+        .withIndex("by_eventMessageId_and_createdAt", (q) =>
+          q.eq("eventMessageId", messageDoc._id),
+        )
+        .order("asc")
+        .take(batchSize);
+
+      if (comments.length === 0) {
+        break;
+      }
+
+      for (const commentDoc of comments) {
+        await ctx.db.delete(commentDoc._id);
+      }
+    }
+
+    while (true) {
+      const deliveries = await ctx.db
+        .query("notificationDeliveries")
+        .withIndex("by_eventMessageId", (q) => q.eq("eventMessageId", messageDoc._id))
+        .take(batchSize);
+
+      if (deliveries.length === 0) {
+        break;
+      }
+
+      for (const deliveryDoc of deliveries) {
+        await ctx.db.delete(deliveryDoc._id);
+      }
+    }
+
+    await ctx.db.delete(messageDoc._id);
+
+    return null;
+  },
+});
+
 export const askQuestionForEvent = mutation({
   args: {
     eventId: v.id("events"),
@@ -882,6 +1034,66 @@ export const askQuestionForEvent = mutation({
       questionBody: trimmedQuestion,
       createdAt: Date.now(),
     });
+  },
+});
+
+export const editEventQuestion = mutation({
+  args: {
+    questionId: v.id("eventQuestions"),
+    questionBody: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const viewerProfile = await requireAuthProfile(ctx);
+    const questionDoc = await assertViewerOwnsEventQuestion(
+      ctx,
+      args.questionId,
+      viewerProfile._id,
+    );
+
+    const trimmedQuestion = args.questionBody.trim();
+    if (!trimmedQuestion) {
+      throw new ConvexError({
+        code: "EMPTY_QUESTION",
+        message: "Question is required.",
+      });
+    }
+
+    if (trimmedQuestion.length > 600) {
+      throw new ConvexError({
+        code: "QUESTION_TOO_LONG",
+        message: "Question is too long. Keep it to 600 characters or less.",
+      });
+    }
+
+    if (trimmedQuestion === questionDoc.questionBody) {
+      return null;
+    }
+
+    await ctx.db.patch(questionDoc._id, {
+      questionBody: trimmedQuestion,
+    });
+
+    return null;
+  },
+});
+
+export const deleteEventQuestion = mutation({
+  args: {
+    questionId: v.id("eventQuestions"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const viewerProfile = await requireAuthProfile(ctx);
+    const questionDoc = await assertViewerOwnsEventQuestion(
+      ctx,
+      args.questionId,
+      viewerProfile._id,
+    );
+
+    await ctx.db.delete(questionDoc._id);
+
+    return null;
   },
 });
 

@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useMutation, usePaginatedQuery } from "convex/react";
 
@@ -39,7 +39,6 @@ function getInitials(displayName: string) {
 }
 
 type FeedActionChipProps = {
-  label: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
   onPress: () => void;
   active?: boolean;
@@ -48,7 +47,6 @@ type FeedActionChipProps = {
 };
 
 function FeedActionChip({
-  label,
   icon,
   onPress,
   active = false,
@@ -73,16 +71,9 @@ function FeedActionChip({
         <Ionicons
           color={active ? theme.colors.primaryText : theme.colors.primary}
           name={icon}
-          size={16}
+          size={20}
         />
       )}
-      <AppText
-        color={active ? theme.colors.primaryText : theme.colors.heading}
-        numberOfLines={1}
-        style={styles.actionChipLabel}
-        variant="caption">
-        {label}
-      </AppText>
     </Pressable>
   );
 }
@@ -90,26 +81,49 @@ function FeedActionChip({
 function FeedUpdateCard({
   update,
   onOpenEvent,
+  viewerProfileId,
 }: {
   update: EventFeedUpdate;
   onOpenEvent: (eventId: string) => void;
+  viewerProfileId: string | null;
 }) {
+  type FeedAction = "like" | "comments" | "question" | null;
+
   const toggleLike = useMutation(api.feed.toggleLikeOnUpdate);
   const addComment = useMutation(api.feed.addCommentToUpdate);
+  const editComment = useMutation(api.feed.editCommentOnUpdate);
+  const deleteComment = useMutation(api.feed.deleteCommentOnUpdate);
+  const editEventMessage = useMutation(api.events.editEventMessage);
+  const deleteEventMessage = useMutation(api.events.deleteEventMessage);
   const askQuestionForEvent = useMutation(api.events.askQuestionForEvent);
 
   const [likeBusy, setLikeBusy] = useState(false);
 
+  const [updateEditMode, setUpdateEditMode] = useState(false);
+  const [updateEditBody, setUpdateEditBody] = useState(update.body);
+  const [updateEditBusy, setUpdateEditBusy] = useState(false);
+  const [updateDeleteBusy, setUpdateDeleteBusy] = useState(false);
+  const [updateActionFeedback, setUpdateActionFeedback] = useState<string | null>(null);
+
   const [commentBody, setCommentBody] = useState("");
   const [commentBusy, setCommentBusy] = useState(false);
   const [commentFeedback, setCommentFeedback] = useState<string | null>(null);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentBody, setEditingCommentBody] = useState("");
+  const [editingCommentBusy, setEditingCommentBusy] = useState(false);
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
+  const [commentActionFeedbackById, setCommentActionFeedbackById] = useState<
+    Record<string, string>
+  >({});
 
   const [questionBody, setQuestionBody] = useState("");
   const [questionBusy, setQuestionBusy] = useState(false);
   const [questionFeedback, setQuestionFeedback] = useState<string | null>(null);
 
-  const [commentsVisible, setCommentsVisible] = useState(false);
-  const [questionComposerVisible, setQuestionComposerVisible] = useState(false);
+  const [activeAction, setActiveAction] = useState<FeedAction>(null);
+
+  const commentsVisible = activeAction === "comments";
+  const questionComposerVisible = activeAction === "question";
 
   const commentsFeed = usePaginatedQuery(
     api.feed.listCommentsPaginated,
@@ -123,13 +137,22 @@ function FeedUpdateCard({
 
   const comments = commentsFeed.results as EventFeedComment[];
 
+  useEffect(() => {
+    if (!updateEditMode) {
+      setUpdateEditBody(update.body);
+    }
+  }, [update.body, updateEditMode]);
+
   const onToggleLike = async () => {
+    const willLike = !update.viewerHasLiked;
     setLikeBusy(true);
 
     try {
       await toggleLike({
         eventMessageId: update.id as Id<"eventMessages">,
       });
+
+      setActiveAction(willLike ? "like" : null);
     } finally {
       setLikeBusy(false);
     }
@@ -151,7 +174,7 @@ function FeedUpdateCard({
       });
 
       setCommentBody("");
-      setCommentsVisible(true);
+      setActiveAction("comments");
       setCommentFeedback("Comment posted.");
     } catch (error) {
       setCommentFeedback(error instanceof Error ? error.message : "Unable to post comment");
@@ -184,10 +207,157 @@ function FeedUpdateCard({
     }
   };
 
+  const onSaveUpdatedPost = async () => {
+    if (!updateEditBody.trim()) {
+      setUpdateActionFeedback("Post body is required.");
+      return;
+    }
+
+    setUpdateEditBusy(true);
+    setUpdateActionFeedback(null);
+
+    try {
+      await editEventMessage({
+        messageId: update.id as Id<"eventMessages">,
+        body: updateEditBody,
+      });
+
+      setUpdateEditMode(false);
+      setUpdateActionFeedback("Post updated.");
+    } catch (error) {
+      setUpdateActionFeedback(error instanceof Error ? error.message : "Unable to update post");
+    } finally {
+      setUpdateEditBusy(false);
+    }
+  };
+
+  const onDeletePost = () => {
+    Alert.alert(
+      "Delete post?",
+      "This removes the post and all comments/likes on it.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              setUpdateDeleteBusy(true);
+              setUpdateActionFeedback(null);
+
+              try {
+                await deleteEventMessage({
+                  messageId: update.id as Id<"eventMessages">,
+                });
+              } catch (error) {
+                setUpdateActionFeedback(
+                  error instanceof Error ? error.message : "Unable to delete post",
+                );
+              } finally {
+                setUpdateDeleteBusy(false);
+              }
+            })();
+          },
+        },
+      ],
+    );
+  };
+
+  const onStartEditingComment = (commentId: string, body: string) => {
+    setEditingCommentId(commentId);
+    setEditingCommentBody(body);
+    setCommentActionFeedbackById((current) => ({ ...current, [commentId]: "" }));
+  };
+
+  const onCancelEditingComment = () => {
+    setEditingCommentId(null);
+    setEditingCommentBody("");
+  };
+
+  const onSaveEditedComment = async () => {
+    if (!editingCommentId) {
+      return;
+    }
+
+    if (!editingCommentBody.trim()) {
+      setCommentActionFeedbackById((current) => ({
+        ...current,
+        [editingCommentId]: "Comment body is required.",
+      }));
+      return;
+    }
+
+    setEditingCommentBusy(true);
+    setCommentActionFeedbackById((current) => ({ ...current, [editingCommentId]: "" }));
+
+    try {
+      await editComment({
+        commentId: editingCommentId as Id<"eventMessageComments">,
+        body: editingCommentBody,
+      });
+
+      setCommentActionFeedbackById((current) => ({
+        ...current,
+        [editingCommentId]: "Comment updated.",
+      }));
+      setEditingCommentId(null);
+      setEditingCommentBody("");
+    } catch (error) {
+      setCommentActionFeedbackById((current) => ({
+        ...current,
+        [editingCommentId]: error instanceof Error ? error.message : "Unable to update comment",
+      }));
+    } finally {
+      setEditingCommentBusy(false);
+    }
+  };
+
+  const onDeleteComment = (commentId: string) => {
+    Alert.alert(
+      "Delete comment?",
+      "This comment will be removed permanently.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              setDeletingCommentId(commentId);
+              setCommentActionFeedbackById((current) => ({ ...current, [commentId]: "" }));
+
+              try {
+                await deleteComment({
+                  commentId: commentId as Id<"eventMessageComments">,
+                });
+              } catch (error) {
+                setCommentActionFeedbackById((current) => ({
+                  ...current,
+                  [commentId]:
+                    error instanceof Error ? error.message : "Unable to delete comment",
+                }));
+              } finally {
+                setDeletingCommentId((current) => (current === commentId ? null : current));
+                setEditingCommentId((current) => (current === commentId ? null : current));
+              }
+            })();
+          },
+        },
+      ],
+    );
+  };
+
   const commentCountLabel = `${update.commentCount} ${
     update.commentCount === 1 ? "comment" : "comments"
   }`;
   const authorInitials = getInitials(update.author.displayName);
+  const isUpdateAuthor = viewerProfileId === update.author.id;
 
   return (
     <Card innerStyle={styles.updateCardInner} style={styles.updateCard}>
@@ -239,13 +409,76 @@ function FeedUpdateCard({
         </Pressable>
       </View>
 
-      <AppText color={theme.colors.heading} style={styles.updateBody}>
-        {update.body}
-      </AppText>
+      {updateEditMode ? (
+        <View style={styles.itemEditor}>
+          <TextField
+            label="Edit post"
+            multiline
+            onChangeText={setUpdateEditBody}
+            value={updateEditBody}
+          />
+          <View style={styles.itemEditorActions}>
+            <Button
+              fullWidth={false}
+              label="Cancel"
+              onPress={() => {
+                setUpdateEditMode(false);
+                setUpdateEditBody(update.body);
+                setUpdateActionFeedback(null);
+              }}
+              variant="ghost"
+            />
+            <Button
+              fullWidth={false}
+              label="Save"
+              loading={updateEditBusy}
+              onPress={() => void onSaveUpdatedPost()}
+              variant="secondary"
+            />
+          </View>
+        </View>
+      ) : (
+        <AppText color={theme.colors.heading} style={styles.updateBody}>
+          {update.body}
+        </AppText>
+      )}
 
       <AppText color={theme.colors.muted} variant="caption">
         Posted {formatDateTimeWithClock(update.createdAt)}
       </AppText>
+
+      {updateActionFeedback ? (
+        <AppText
+          color={
+            updateActionFeedback.toLowerCase().includes("updated")
+              ? theme.colors.success
+              : theme.colors.danger
+          }>
+          {updateActionFeedback}
+        </AppText>
+      ) : null}
+
+      {isUpdateAuthor && !updateEditMode ? (
+        <View style={styles.itemActionRow}>
+          <Button
+            fullWidth={false}
+            label="Edit"
+            onPress={() => {
+              setUpdateEditMode(true);
+              setUpdateEditBody(update.body);
+              setUpdateActionFeedback(null);
+            }}
+            variant="ghost"
+          />
+          <Button
+            fullWidth={false}
+            label="Delete"
+            loading={updateDeleteBusy}
+            onPress={onDeletePost}
+            variant="danger"
+          />
+        </View>
+      ) : null}
 
       {commentsVisible ? (
         <View style={styles.commentsSection}>
@@ -260,30 +493,93 @@ function FeedUpdateCard({
           ) : comments.length === 0 ? (
             <AppText>No comments yet. Ask the first question.</AppText>
           ) : (
-            comments.map((comment) => (
-              <View key={comment.id} style={styles.commentRow}>
-                <View style={styles.commentAvatar}>
-                  <AppText color={theme.colors.primary} style={styles.commentAvatarLabel} variant="caption">
-                    {getInitials(comment.author.displayName)}
-                  </AppText>
-                </View>
-                <View style={styles.commentItem}>
-                  <View style={styles.commentHeader}>
-                    <AppText
-                      color={theme.colors.heading}
-                      numberOfLines={1}
-                      style={styles.commentAuthorName}
-                      variant="caption">
-                      {comment.author.displayName}
-                    </AppText>
-                    <AppText color={theme.colors.muted} style={styles.commentTimeLabel} variant="caption">
-                      {formatRelativeTime(comment.createdAt)}
+            comments.map((comment) => {
+              const isCommentOwner = viewerProfileId === comment.author.id;
+              const isEditingComment = editingCommentId === comment.id;
+              const isDeletingComment = deletingCommentId === comment.id;
+              const commentActionFeedback = commentActionFeedbackById[comment.id];
+
+              return (
+                <View key={comment.id} style={styles.commentRow}>
+                  <View style={styles.commentAvatar}>
+                    <AppText color={theme.colors.primary} style={styles.commentAvatarLabel} variant="caption">
+                      {getInitials(comment.author.displayName)}
                     </AppText>
                   </View>
-                  <AppText>{comment.body}</AppText>
+                  <View style={styles.commentItem}>
+                    <View style={styles.commentHeader}>
+                      <AppText
+                        color={theme.colors.heading}
+                        numberOfLines={1}
+                        style={styles.commentAuthorName}
+                        variant="caption">
+                        {comment.author.displayName}
+                      </AppText>
+                      <AppText color={theme.colors.muted} style={styles.commentTimeLabel} variant="caption">
+                        {formatRelativeTime(comment.createdAt)}
+                      </AppText>
+                    </View>
+
+                    {isEditingComment ? (
+                      <View style={styles.itemEditor}>
+                        <TextField
+                          label="Edit comment"
+                          multiline
+                          onChangeText={setEditingCommentBody}
+                          value={editingCommentBody}
+                        />
+                        <View style={styles.itemEditorActions}>
+                          <Button
+                            fullWidth={false}
+                            label="Cancel"
+                            onPress={onCancelEditingComment}
+                            variant="ghost"
+                          />
+                          <Button
+                            fullWidth={false}
+                            label="Save"
+                            loading={editingCommentBusy}
+                            onPress={() => void onSaveEditedComment()}
+                            variant="secondary"
+                          />
+                        </View>
+                      </View>
+                    ) : (
+                      <AppText>{comment.body}</AppText>
+                    )}
+
+                    {commentActionFeedback ? (
+                      <AppText
+                        color={
+                          commentActionFeedback.toLowerCase().includes("updated")
+                            ? theme.colors.success
+                            : theme.colors.danger
+                        }>
+                        {commentActionFeedback}
+                      </AppText>
+                    ) : null}
+
+                    {isCommentOwner && !isEditingComment ? (
+                      <View style={styles.itemActionRow}>
+                        <Button
+                          fullWidth={false}
+                          label="Edit"
+                          onPress={() => onStartEditingComment(comment.id, comment.body)}
+                          variant="ghost"
+                        />
+                        <Button
+                          fullWidth={false}
+                          label="Delete"
+                          loading={isDeletingComment}
+                          onPress={() => onDeleteComment(comment.id)}
+                          variant="danger"
+                        />
+                      </View>
+                    ) : null}
+                  </View>
                 </View>
-              </View>
-            ))
+              );
+            })
           )}
 
           <View style={styles.sectionComposer}>
@@ -361,26 +657,27 @@ function FeedUpdateCard({
 
       <View style={styles.actionRow}>
         <FeedActionChip
-          accessibilityLabel={`${update.viewerHasLiked ? "Unlike" : "Like"} update`}
-          active={update.viewerHasLiked}
+          accessibilityLabel={`${update.viewerHasLiked ? "Unlike" : "Like"} update. ${update.likeCount} likes.`}
+          active={activeAction === "like"}
           icon={update.viewerHasLiked ? "heart" : "heart-outline"}
-          label={`Like (${update.likeCount})`}
           loading={likeBusy}
           onPress={onToggleLike}
         />
         <FeedActionChip
-          accessibilityLabel={commentsVisible ? "Hide comments" : "Show comments"}
+          accessibilityLabel={`${commentsVisible ? "Hide comments" : "Show comments"}. ${update.commentCount} comments.`}
           active={commentsVisible}
-          icon={commentsVisible ? "chatbubble" : "chatbubble-outline"}
-          label={`Comments (${update.commentCount})`}
-          onPress={() => setCommentsVisible((current) => !current)}
+          icon={commentsVisible ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"}
+          onPress={() =>
+            setActiveAction((current) => (current === "comments" ? null : "comments"))
+          }
         />
         <FeedActionChip
           accessibilityLabel={questionComposerVisible ? "Hide question form" : "Ask a question"}
           active={questionComposerVisible}
           icon={questionComposerVisible ? "help-circle" : "help-circle-outline"}
-          label="Ask a question"
-          onPress={() => setQuestionComposerVisible((current) => !current)}
+          onPress={() =>
+            setActiveAction((current) => (current === "question" ? null : "question"))
+          }
         />
       </View>
     </Card>
@@ -452,6 +749,7 @@ export function FeedScreen() {
             key={update.id}
             onOpenEvent={(eventId) => router.push(`/events/${eventId}`)}
             update={update}
+            viewerProfileId={viewerProfileId}
           />
         ))
       )}
@@ -607,6 +905,20 @@ const styles = StyleSheet.create({
   commentTimeLabel: {
     flexShrink: 0,
   },
+  itemActionRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: theme.spacing.xs,
+  },
+  itemEditor: {
+    gap: theme.spacing.xs,
+  },
+  itemEditorActions: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: theme.spacing.xs,
+    justifyContent: "flex-end",
+  },
   sectionComposer: {
     borderTopColor: theme.colors.border,
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -638,20 +950,14 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.pill,
     borderWidth: 1,
     flex: 1,
-    flexDirection: "row",
-    gap: 5,
     justifyContent: "center",
     minHeight: theme.control.minTouchSize,
-    minWidth: 0,
-    paddingHorizontal: theme.spacing.xs,
-    paddingVertical: 8,
+    minWidth: theme.control.minTouchSize,
+    paddingVertical: theme.spacing.xs,
   },
   actionChipActive: {
     backgroundColor: theme.colors.primaryDeep,
     borderColor: theme.colors.primaryDeep,
-  },
-  actionChipLabel: {
-    fontWeight: "600",
   },
   touchPressed: {
     opacity: 0.72,

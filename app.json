@@ -21,6 +21,7 @@
       }
     },
     "android": {
+      "package": "com.anonymous.makewaves",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#F2F2F7"

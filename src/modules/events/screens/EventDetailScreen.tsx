@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import { ActivityIndicator, Linking, Platform, StyleSheet, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Alert, Animated, Linking, Platform, Pressable, StyleSheet, View } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 
@@ -14,10 +15,12 @@ import { Screen } from "@/src/core/ui/Screen";
 import { TextField } from "@/src/core/ui/TextField";
 import { EventMap } from "@/src/modules/events/components/EventMap";
 import {
+  RSVP_STATUS_OPTIONS,
   getRsvpStatusLabel,
   getRsvpStatusTone,
   type EventListItem,
   type EventQuestion,
+  type RSVPStatus,
 } from "@/src/modules/events/domain/types";
 import { useViewerProfile } from "@/src/modules/events/hooks/useViewerProfile";
 import {
@@ -29,6 +32,22 @@ import {
 type Props = {
   eventId: string;
 };
+
+const RSVP_PANEL_HEIGHT = 228;
+
+function getToneColor(status: RSVPStatus) {
+  const tone = getRsvpStatusTone(status);
+
+  if (tone === "success") {
+    return theme.colors.success;
+  }
+
+  if (tone === "warning") {
+    return theme.colors.warning;
+  }
+
+  return theme.colors.subtle;
+}
 
 export function EventDetailScreen({ eventId }: Props) {
   const { viewerProfileId, viewerLoading } = useViewerProfile();
@@ -59,12 +78,25 @@ export function EventDetailScreen({ eventId }: Props) {
 
   const rsvpToEvent = useMutation(api.events.rsvpToEvent);
   const sendEventMessage = useMutation(api.events.sendEventMessage);
+  const editEventMessage = useMutation(api.events.editEventMessage);
+  const deleteEventMessage = useMutation(api.events.deleteEventMessage);
   const answerEventQuestion = useMutation(api.events.answerEventQuestion);
+  const editEventQuestion = useMutation(api.events.editEventQuestion);
+  const deleteEventQuestion = useMutation(api.events.deleteEventQuestion);
 
   const [rsvpBusy, setRsvpBusy] = useState(false);
+  const [rsvpMenuOpen, setRsvpMenuOpen] = useState(false);
+  const rsvpMenuProgress = useRef(new Animated.Value(0)).current;
   const [messageBody, setMessageBody] = useState("");
   const [messageBusy, setMessageBusy] = useState(false);
   const [messageFeedback, setMessageFeedback] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingMessageBody, setEditingMessageBody] = useState("");
+  const [editingMessageBusy, setEditingMessageBusy] = useState(false);
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
+  const [messageActionFeedbackById, setMessageActionFeedbackById] = useState<
+    Record<string, string>
+  >({});
   const [answerDraftByQuestionId, setAnswerDraftByQuestionId] = useState<Record<string, string>>(
     {},
   );
@@ -72,6 +104,27 @@ export function EventDetailScreen({ eventId }: Props) {
   const [answerFeedbackByQuestionId, setAnswerFeedbackByQuestionId] = useState<
     Record<string, string>
   >({});
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [editingQuestionBody, setEditingQuestionBody] = useState("");
+  const [editingQuestionBusy, setEditingQuestionBusy] = useState(false);
+  const [deletingQuestionId, setDeletingQuestionId] = useState<string | null>(null);
+  const [questionActionFeedbackById, setQuestionActionFeedbackById] = useState<
+    Record<string, string>
+  >({});
+
+  useEffect(() => {
+    Animated.timing(rsvpMenuProgress, {
+      toValue: rsvpMenuOpen ? 1 : 0,
+      duration: 180,
+      useNativeDriver: false,
+    }).start();
+  }, [rsvpMenuOpen, rsvpMenuProgress]);
+
+  useEffect(() => {
+    if (rsvpBusy) {
+      setRsvpMenuOpen(false);
+    }
+  }, [rsvpBusy]);
 
   const onOpenInMaps = async () => {
     if (!eventResult) {
@@ -119,17 +172,23 @@ export function EventDetailScreen({ eventId }: Props) {
     ];
   }, [eventResult]);
 
-  const onRsvp = async () => {
+  const onRsvp = async (status: RSVPStatus) => {
     if (!viewerProfileId || !eventResult) {
       return;
     }
 
+    if (eventResult.viewerRsvp === status) {
+      setRsvpMenuOpen(false);
+      return;
+    }
+
     setRsvpBusy(true);
+    setRsvpMenuOpen(false);
 
     try {
       await rsvpToEvent({
         eventId: eventResult.event.id,
-        status: eventResult.viewerRsvp === "going" ? "interested" : "going",
+        status,
       });
     } finally {
       setRsvpBusy(false);
@@ -158,6 +217,91 @@ export function EventDetailScreen({ eventId }: Props) {
     } finally {
       setMessageBusy(false);
     }
+  };
+
+  const onStartEditingMessage = (messageId: string, body: string) => {
+    setEditingMessageId(messageId);
+    setEditingMessageBody(body);
+    setMessageActionFeedbackById((current) => ({ ...current, [messageId]: "" }));
+  };
+
+  const onCancelEditingMessage = () => {
+    setEditingMessageId(null);
+    setEditingMessageBody("");
+  };
+
+  const onSaveEditedMessage = async () => {
+    if (!editingMessageId) {
+      return;
+    }
+
+    if (!editingMessageBody.trim()) {
+      setMessageActionFeedbackById((current) => ({
+        ...current,
+        [editingMessageId]: "Message body is required.",
+      }));
+      return;
+    }
+
+    setEditingMessageBusy(true);
+    setMessageActionFeedbackById((current) => ({ ...current, [editingMessageId]: "" }));
+
+    try {
+      await editEventMessage({
+        messageId: editingMessageId as Id<"eventMessages">,
+        body: editingMessageBody,
+      });
+
+      setMessageActionFeedbackById((current) => ({
+        ...current,
+        [editingMessageId]: "Post updated.",
+      }));
+      setEditingMessageId(null);
+      setEditingMessageBody("");
+    } catch (error) {
+      setMessageActionFeedbackById((current) => ({
+        ...current,
+        [editingMessageId]: error instanceof Error ? error.message : "Unable to update post",
+      }));
+    } finally {
+      setEditingMessageBusy(false);
+    }
+  };
+
+  const onDeleteMessage = (messageId: string) => {
+    Alert.alert(
+      "Delete post?",
+      "This will remove the post and all likes/comments on it.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              setDeletingMessageId(messageId);
+              setMessageActionFeedbackById((current) => ({ ...current, [messageId]: "" }));
+              try {
+                await deleteEventMessage({
+                  messageId: messageId as Id<"eventMessages">,
+                });
+              } catch (error) {
+                setMessageActionFeedbackById((current) => ({
+                  ...current,
+                  [messageId]: error instanceof Error ? error.message : "Unable to delete post",
+                }));
+              } finally {
+                setDeletingMessageId((current) => (current === messageId ? null : current));
+                setEditingMessageId((current) => (current === messageId ? null : current));
+              }
+            })();
+          },
+        },
+      ],
+    );
   };
 
   const onAnswerQuestion = async (questionId: string) => {
@@ -200,6 +344,93 @@ export function EventDetailScreen({ eventId }: Props) {
     }
   };
 
+  const onStartEditingQuestion = (questionId: string, questionBody: string) => {
+    setEditingQuestionId(questionId);
+    setEditingQuestionBody(questionBody);
+    setQuestionActionFeedbackById((current) => ({ ...current, [questionId]: "" }));
+  };
+
+  const onCancelEditingQuestion = () => {
+    setEditingQuestionId(null);
+    setEditingQuestionBody("");
+  };
+
+  const onSaveEditedQuestion = async () => {
+    if (!editingQuestionId) {
+      return;
+    }
+
+    if (!editingQuestionBody.trim()) {
+      setQuestionActionFeedbackById((current) => ({
+        ...current,
+        [editingQuestionId]: "Question is required.",
+      }));
+      return;
+    }
+
+    setEditingQuestionBusy(true);
+    setQuestionActionFeedbackById((current) => ({ ...current, [editingQuestionId]: "" }));
+
+    try {
+      await editEventQuestion({
+        questionId: editingQuestionId as Id<"eventQuestions">,
+        questionBody: editingQuestionBody,
+      });
+
+      setQuestionActionFeedbackById((current) => ({
+        ...current,
+        [editingQuestionId]: "Question updated.",
+      }));
+      setEditingQuestionId(null);
+      setEditingQuestionBody("");
+    } catch (error) {
+      setQuestionActionFeedbackById((current) => ({
+        ...current,
+        [editingQuestionId]:
+          error instanceof Error ? error.message : "Unable to update question",
+      }));
+    } finally {
+      setEditingQuestionBusy(false);
+    }
+  };
+
+  const onDeleteQuestion = (questionId: string) => {
+    Alert.alert(
+      "Delete question?",
+      "This will remove the question and any host answer.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              setDeletingQuestionId(questionId);
+              setQuestionActionFeedbackById((current) => ({ ...current, [questionId]: "" }));
+              try {
+                await deleteEventQuestion({
+                  questionId: questionId as Id<"eventQuestions">,
+                });
+              } catch (error) {
+                setQuestionActionFeedbackById((current) => ({
+                  ...current,
+                  [questionId]:
+                    error instanceof Error ? error.message : "Unable to delete question",
+                }));
+              } finally {
+                setDeletingQuestionId((current) => (current === questionId ? null : current));
+                setEditingQuestionId((current) => (current === questionId ? null : current));
+              }
+            })();
+          },
+        },
+      ],
+    );
+  };
+
   if (viewerLoading || eventResult === undefined) {
     return (
       <Screen scroll={false}>
@@ -226,6 +457,19 @@ export function EventDetailScreen({ eventId }: Props) {
 
   const isOrganizer = viewerProfileId === eventResult.organizer.id;
   const questions = questionsFeed.results as EventQuestion[];
+  const rsvpLabel = eventResult.viewerRsvp ? getRsvpStatusLabel(eventResult.viewerRsvp) : "RSVP";
+  const menuMaxHeight = rsvpMenuProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, RSVP_PANEL_HEIGHT],
+  });
+  const menuOpacity = rsvpMenuProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+  const menuTranslateY = rsvpMenuProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-4, 0],
+  });
 
   return (
     <Screen>
@@ -308,10 +552,69 @@ export function EventDetailScreen({ eventId }: Props) {
           RSVP
         </AppText>
         <Button
-          label={eventResult.viewerRsvp === "going" ? "Switch to Interested" : "Join This Event"}
+          disabled={rsvpBusy}
+          label={`${rsvpLabel} ▾`}
           loading={rsvpBusy}
-          onPress={onRsvp}
+          onPress={() => setRsvpMenuOpen((current) => !current)}
         />
+        <Animated.View
+          pointerEvents={rsvpMenuOpen ? "auto" : "none"}
+          style={[
+            styles.rsvpMenuShell,
+            {
+              maxHeight: menuMaxHeight,
+              opacity: menuOpacity,
+              transform: [{ translateY: menuTranslateY }],
+            },
+          ]}>
+          <View style={styles.rsvpMenu}>
+            {RSVP_STATUS_OPTIONS.map((option) => {
+              const active = eventResult.viewerRsvp === option.value;
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  key={option.value}
+                  onPress={() => void onRsvp(option.value)}
+                  style={({ pressed }) => [
+                    styles.rsvpOption,
+                    active ? styles.rsvpOptionActive : undefined,
+                    pressed ? styles.touchPressed : undefined,
+                  ]}>
+                  <View style={styles.rsvpOptionText}>
+                    <View style={styles.rsvpOptionTitleRow}>
+                      <View
+                        style={[
+                          styles.rsvpOptionDot,
+                          { backgroundColor: getToneColor(option.value) },
+                        ]}
+                      />
+                      <AppText
+                        color={active ? theme.colors.primaryDeep : theme.colors.heading}
+                        variant="caption"
+                        style={styles.rsvpOptionTitle}>
+                        {option.label}
+                      </AppText>
+                    </View>
+                    <AppText
+                      color={active ? theme.colors.primaryDeep : theme.colors.muted}
+                      variant="caption">
+                      {option.helper}
+                    </AppText>
+                  </View>
+                  {active ? (
+                    <MaterialIcons color={theme.colors.primary} name="check-circle" size={18} />
+                  ) : (
+                    <MaterialIcons
+                      color={theme.colors.subtle}
+                      name="radio-button-unchecked"
+                      size={18}
+                    />
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+        </Animated.View>
       </Card>
 
       <Card>
@@ -396,17 +699,80 @@ export function EventDetailScreen({ eventId }: Props) {
           Latest messages
         </AppText>
         <View style={styles.messageList}>
-          {messagesFeed.results.map((message) => (
-            <View key={message.id} style={styles.messageItem}>
-              <View style={styles.messageHeader}>
-                <AppText variant="caption" color={theme.colors.heading}>
-                  {message.author.displayName}
-                </AppText>
-                <Badge label={message.kind} />
+          {messagesFeed.results.map((message) => {
+            const isMessageOwner = viewerProfileId === message.author.id;
+            const isEditingMessage = editingMessageId === message.id;
+            const isDeletingMessage = deletingMessageId === message.id;
+            const messageActionFeedback = messageActionFeedbackById[message.id];
+
+            return (
+              <View key={message.id} style={styles.messageItem}>
+                <View style={styles.messageHeader}>
+                  <AppText variant="caption" color={theme.colors.heading}>
+                    {message.author.displayName}
+                  </AppText>
+                  <Badge label={message.kind} />
+                </View>
+
+                {isEditingMessage ? (
+                  <View style={styles.itemEditor}>
+                    <TextField
+                      label="Edit post"
+                      multiline
+                      onChangeText={setEditingMessageBody}
+                      value={editingMessageBody}
+                    />
+                    <View style={styles.itemEditorActions}>
+                      <Button
+                        fullWidth={false}
+                        label="Cancel"
+                        onPress={onCancelEditingMessage}
+                        variant="ghost"
+                      />
+                      <Button
+                        fullWidth={false}
+                        label="Save"
+                        loading={editingMessageBusy}
+                        onPress={() => void onSaveEditedMessage()}
+                        variant="secondary"
+                      />
+                    </View>
+                  </View>
+                ) : (
+                  <AppText>{message.body}</AppText>
+                )}
+
+                {messageActionFeedback ? (
+                  <AppText
+                    color={
+                      messageActionFeedback.toLowerCase().includes("updated")
+                        ? theme.colors.success
+                        : theme.colors.danger
+                    }>
+                    {messageActionFeedback}
+                  </AppText>
+                ) : null}
+
+                {isMessageOwner && !isEditingMessage ? (
+                  <View style={styles.itemActionRow}>
+                    <Button
+                      fullWidth={false}
+                      label="Edit"
+                      onPress={() => onStartEditingMessage(message.id, message.body)}
+                      variant="ghost"
+                    />
+                    <Button
+                      fullWidth={false}
+                      label="Delete"
+                      loading={isDeletingMessage}
+                      onPress={() => onDeleteMessage(message.id)}
+                      variant="danger"
+                    />
+                  </View>
+                ) : null}
               </View>
-              <AppText>{message.body}</AppText>
-            </View>
-          ))}
+            );
+          })}
           {messagesFeed.results.length === 0 ? (
             <AppText>
               {messagesFeed.status === "LoadingFirstPage"
@@ -440,6 +806,10 @@ export function EventDetailScreen({ eventId }: Props) {
               const answerFeedback = answerFeedbackByQuestionId[question.id];
               const answerBusy = answerBusyQuestionId === question.id;
               const hasAnswer = Boolean(question.answer);
+              const isQuestionOwner = viewerProfileId === question.asker.id;
+              const isEditingQuestion = editingQuestionId === question.id;
+              const isDeletingQuestion = deletingQuestionId === question.id;
+              const questionActionFeedback = questionActionFeedbackById[question.id];
 
               return (
                 <View key={question.id} style={styles.questionItem}>
@@ -451,7 +821,63 @@ export function EventDetailScreen({ eventId }: Props) {
                       {formatRelativeTime(question.createdAt)}
                     </AppText>
                   </View>
-                  <AppText>{question.questionBody}</AppText>
+
+                  {isEditingQuestion ? (
+                    <View style={styles.itemEditor}>
+                      <TextField
+                        label="Edit question"
+                        multiline
+                        onChangeText={setEditingQuestionBody}
+                        value={editingQuestionBody}
+                      />
+                      <View style={styles.itemEditorActions}>
+                        <Button
+                          fullWidth={false}
+                          label="Cancel"
+                          onPress={onCancelEditingQuestion}
+                          variant="ghost"
+                        />
+                        <Button
+                          fullWidth={false}
+                          label="Save"
+                          loading={editingQuestionBusy}
+                          onPress={() => void onSaveEditedQuestion()}
+                          variant="secondary"
+                        />
+                      </View>
+                    </View>
+                  ) : (
+                    <AppText>{question.questionBody}</AppText>
+                  )}
+
+                  {questionActionFeedback ? (
+                    <AppText
+                      color={
+                        questionActionFeedback.toLowerCase().includes("updated")
+                          ? theme.colors.success
+                          : theme.colors.danger
+                      }>
+                      {questionActionFeedback}
+                    </AppText>
+                  ) : null}
+
+                  {isQuestionOwner && !isEditingQuestion ? (
+                    <View style={styles.itemActionRow}>
+                      <Button
+                        fullWidth={false}
+                        label="Edit"
+                        onPress={() => onStartEditingQuestion(question.id, question.questionBody)}
+                        variant="ghost"
+                      />
+                      <Button
+                        fullWidth={false}
+                        label="Delete"
+                        loading={isDeletingQuestion}
+                        onPress={() => onDeleteQuestion(question.id)}
+                        variant="danger"
+                      />
+                    </View>
+                  ) : null}
 
                   {hasAnswer ? (
                     <View style={styles.answerItem}>
@@ -565,6 +991,49 @@ const styles = StyleSheet.create({
   attendeeIdentity: {
     gap: 2,
   },
+  rsvpMenuShell: {
+    overflow: "hidden",
+  },
+  rsvpMenu: {
+    backgroundColor: theme.colors.elevatedMuted,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    gap: 6,
+    padding: 6,
+  },
+  rsvpOption: {
+    alignItems: "center",
+    borderColor: "transparent",
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+    minHeight: theme.control.minTouchSize,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+  },
+  rsvpOptionActive: {
+    backgroundColor: theme.colors.sky,
+    borderColor: theme.colors.primary,
+  },
+  rsvpOptionText: {
+    flex: 1,
+    gap: 2,
+  },
+  rsvpOptionTitleRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 6,
+  },
+  rsvpOptionDot: {
+    borderRadius: theme.radius.pill,
+    height: 8,
+    width: 8,
+  },
+  rsvpOptionTitle: {
+    fontWeight: "700",
+  },
   messageList: {
     gap: theme.spacing.sm,
   },
@@ -575,6 +1044,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: theme.spacing.xs,
     padding: theme.spacing.md,
+  },
+  itemActionRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: theme.spacing.xs,
+  },
+  itemEditor: {
+    gap: theme.spacing.xs,
+  },
+  itemEditorActions: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: theme.spacing.xs,
+    justifyContent: "flex-end",
   },
   messageHeader: {
     alignItems: "center",
@@ -620,5 +1103,8 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontWeight: "600",
+  },
+  touchPressed: {
+    opacity: 0.82,
   },
 });

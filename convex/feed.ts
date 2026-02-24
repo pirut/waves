@@ -137,6 +137,29 @@ async function assertViewerCanAccessEventMessage(
   return messageDoc;
 }
 
+async function assertViewerOwnsComment(
+  ctx: DbContext,
+  commentId: Id<"eventMessageComments">,
+  viewerProfileId: Id<"profiles">,
+) {
+  const commentDoc = await ctx.db.get(commentId);
+  if (!commentDoc) {
+    throw new ConvexError({
+      code: "COMMENT_NOT_FOUND",
+      message: "Comment not found.",
+    });
+  }
+
+  if (commentDoc.authorProfileId !== viewerProfileId) {
+    throw new ConvexError({
+      code: "NOT_COMMENT_AUTHOR",
+      message: "Only the comment author can edit or delete this comment.",
+    });
+  }
+
+  return commentDoc;
+}
+
 export const listUpdatesPaginated = query({
   args: {
     paginationOpts: paginationOptsValidator,
@@ -350,5 +373,64 @@ export const addCommentToUpdate = mutation({
     });
 
     return commentId;
+  },
+});
+
+export const editCommentOnUpdate = mutation({
+  args: {
+    commentId: v.id("eventMessageComments"),
+    body: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const viewerProfile = await requireAuthProfile(ctx);
+    const commentDoc = await assertViewerOwnsComment(ctx, args.commentId, viewerProfile._id);
+
+    const trimmedBody = args.body.trim();
+    if (!trimmedBody) {
+      throw new ConvexError({
+        code: "EMPTY_COMMENT",
+        message: "Comment body is required.",
+      });
+    }
+
+    if (trimmedBody.length > 800) {
+      throw new ConvexError({
+        code: "COMMENT_TOO_LONG",
+        message: "Comment is too long. Keep it to 800 characters or less.",
+      });
+    }
+
+    if (trimmedBody === commentDoc.body) {
+      return null;
+    }
+
+    await ctx.db.patch(commentDoc._id, {
+      body: trimmedBody,
+    });
+
+    return null;
+  },
+});
+
+export const deleteCommentOnUpdate = mutation({
+  args: {
+    commentId: v.id("eventMessageComments"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const viewerProfile = await requireAuthProfile(ctx);
+    const commentDoc = await assertViewerOwnsComment(ctx, args.commentId, viewerProfile._id);
+
+    await ctx.db.delete(commentDoc._id);
+
+    const messageDoc = await ctx.db.get(commentDoc.eventMessageId);
+    if (messageDoc) {
+      await ctx.db.patch(messageDoc._id, {
+        commentCount: Math.max(0, (messageDoc.commentCount ?? 0) - 1),
+      });
+    }
+
+    return null;
   },
 });
