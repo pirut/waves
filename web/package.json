@@ -1,0 +1,25 @@
+{
+  "name": "waves-web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "next typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "^6.17.0",
+    "convex": "^1.31.7",
+    "date-fns": "^4.1.0",
+    "next": "^15.3.4",
+    "react": "19.1.4",
+    "react-dom": "19.1.4"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.2",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.1",
+    "typescript": "~5.9.2"
+  }
+}
