@@ -84,6 +84,9 @@ export type EventMessage = {
   kind: "announcement" | "update";
   createdAt: number;
   author: ProfilePreview;
+  likeCount: number;
+  commentCount: number;
+  viewerHasLiked: boolean;
 };
 
 export type EventFeedUpdate = {

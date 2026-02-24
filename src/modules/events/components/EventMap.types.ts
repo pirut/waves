@@ -11,4 +11,8 @@ export type EventMapProps = {
   selectedEventId?: string;
   onSelectEvent: (eventId: string) => void;
   focusLocation?: FocusLocation;
+  height?: number;
+  variant?: "embedded" | "fullscreen";
+  markerLabelMode?: "compact" | "detailed";
+  followSelection?: boolean;
 };

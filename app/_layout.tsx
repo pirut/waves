@@ -30,8 +30,8 @@ const navigationTheme = {
   colors: {
     ...(theme.mode === "dark" ? DarkTheme.colors : DefaultTheme.colors),
     background: theme.colors.background,
-    border: theme.colors.border,
-    card: theme.colors.elevated,
+    border: theme.colors.glassBorderStrong,
+    card: theme.colors.surfaceGlassStrong,
     primary: theme.colors.primary,
     text: theme.colors.heading,
   },
@@ -93,17 +93,24 @@ export default function RootLayout() {
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
+            name="discover-map"
+            options={{
+              animation: "slide_from_bottom",
+              headerShown: false,
+              presentation: Platform.OS === "ios" ? "fullScreenModal" : "card",
+            }}
+          />
+          <Stack.Screen
             name="events/[eventId]"
             options={{
               title: "Event Details",
-              headerLargeTitle: Platform.OS === "ios",
               headerShadowVisible: false,
               headerTintColor: theme.colors.primary,
-              headerStyle: { backgroundColor: theme.colors.background },
+              headerStyle: { backgroundColor: theme.colors.surfaceGlassStrong },
               headerTitleStyle: {
                 color: theme.colors.heading,
                 fontFamily: theme.fonts.body,
-                fontWeight: "600",
+                fontWeight: "700",
               },
               headerBackTitle: "",
               headerBackButtonDisplayMode: "minimal",

@@ -89,11 +89,14 @@ export function HostDashboardScreen() {
   return (
     <Screen>
       <View style={styles.headerSection}>
+        <AppText variant="h2" color={theme.colors.heading}>
+          Host Dashboard
+        </AppText>
         <AppText color={theme.colors.body}>
           Manage hosted events, attendee activity, and organizer updates.
         </AppText>
         <View style={styles.headerAction}>
-          <Button fullWidth={false} label="Sign Out" onPress={() => signOut()} variant="ghost" />
+          <Button fullWidth={false} label="Sign Out" onPress={() => signOut()} variant="secondary" />
         </View>
       </View>
 

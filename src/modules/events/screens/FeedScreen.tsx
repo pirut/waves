@@ -11,8 +11,11 @@ import { AppText } from "@/src/core/ui/AppText";
 import { Badge } from "@/src/core/ui/Badge";
 import { Button } from "@/src/core/ui/Button";
 import { Card } from "@/src/core/ui/Card";
+import { IconActionButton } from "@/src/core/ui/IconActionButton";
+import { animateLayoutTransition } from "@/src/core/ui/layoutMotion";
 import { Screen } from "@/src/core/ui/Screen";
 import { TextField } from "@/src/core/ui/TextField";
+import { UpdateActionBar } from "@/src/modules/events/components/UpdateActionBar";
 import type { EventFeedComment, EventFeedUpdate } from "@/src/modules/events/domain/types";
 import { useViewerProfile } from "@/src/modules/events/hooks/useViewerProfile";
 import {
@@ -38,46 +41,6 @@ function getInitials(displayName: string) {
   return `${parts[0].slice(0, 1)}${parts[parts.length - 1].slice(0, 1)}`.toUpperCase();
 }
 
-type FeedActionChipProps = {
-  icon: React.ComponentProps<typeof Ionicons>["name"];
-  onPress: () => void;
-  active?: boolean;
-  loading?: boolean;
-  accessibilityLabel: string;
-};
-
-function FeedActionChip({
-  icon,
-  onPress,
-  active = false,
-  loading = false,
-  accessibilityLabel,
-}: FeedActionChipProps) {
-  return (
-    <Pressable
-      accessibilityLabel={accessibilityLabel}
-      accessibilityRole="button"
-      accessibilityState={{ busy: loading, disabled: loading, selected: active }}
-      disabled={loading}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.actionChip,
-        active ? styles.actionChipActive : undefined,
-        pressed ? styles.touchPressed : undefined,
-      ]}>
-      {loading ? (
-        <ActivityIndicator color={active ? theme.colors.primaryText : theme.colors.primary} size="small" />
-      ) : (
-        <Ionicons
-          color={active ? theme.colors.primaryText : theme.colors.primary}
-          name={icon}
-          size={20}
-        />
-      )}
-    </Pressable>
-  );
-}
-
 function FeedUpdateCard({
   update,
   onOpenEvent,
@@ -87,7 +50,7 @@ function FeedUpdateCard({
   onOpenEvent: (eventId: string) => void;
   viewerProfileId: string | null;
 }) {
-  type FeedAction = "like" | "comments" | "question" | null;
+  type FeedAction = "comments" | "question" | null;
 
   const toggleLike = useMutation(api.feed.toggleLikeOnUpdate);
   const addComment = useMutation(api.feed.addCommentToUpdate);
@@ -144,15 +107,12 @@ function FeedUpdateCard({
   }, [update.body, updateEditMode]);
 
   const onToggleLike = async () => {
-    const willLike = !update.viewerHasLiked;
     setLikeBusy(true);
 
     try {
       await toggleLike({
         eventMessageId: update.id as Id<"eventMessages">,
       });
-
-      setActiveAction(willLike ? "like" : null);
     } finally {
       setLikeBusy(false);
     }
@@ -174,6 +134,7 @@ function FeedUpdateCard({
       });
 
       setCommentBody("");
+      animateLayoutTransition(170);
       setActiveAction("comments");
       setCommentFeedback("Comment posted.");
     } catch (error) {
@@ -267,12 +228,14 @@ function FeedUpdateCard({
   };
 
   const onStartEditingComment = (commentId: string, body: string) => {
+    animateLayoutTransition();
     setEditingCommentId(commentId);
     setEditingCommentBody(body);
     setCommentActionFeedbackById((current) => ({ ...current, [commentId]: "" }));
   };
 
   const onCancelEditingComment = () => {
+    animateLayoutTransition();
     setEditingCommentId(null);
     setEditingCommentBody("");
   };
@@ -408,6 +371,7 @@ function FeedUpdateCard({
           <Ionicons color={theme.colors.primary} name="chevron-forward" size={16} />
         </Pressable>
       </View>
+      <View style={styles.updateDivider} />
 
       {updateEditMode ? (
         <View style={styles.itemEditor}>
@@ -422,6 +386,7 @@ function FeedUpdateCard({
               fullWidth={false}
               label="Cancel"
               onPress={() => {
+                animateLayoutTransition();
                 setUpdateEditMode(false);
                 setUpdateEditBody(update.body);
                 setUpdateActionFeedback(null);
@@ -443,9 +408,36 @@ function FeedUpdateCard({
         </AppText>
       )}
 
-      <AppText color={theme.colors.muted} variant="caption">
-        Posted {formatDateTimeWithClock(update.createdAt)}
-      </AppText>
+      <View style={styles.updateMetaRow}>
+        <View style={styles.postedMetaRow}>
+          <Ionicons color={theme.colors.muted} name="time-outline" size={14} />
+          <AppText color={theme.colors.muted} style={styles.postedMetaText} variant="caption">
+            Posted {formatDateTimeWithClock(update.createdAt)}
+          </AppText>
+        </View>
+        {isUpdateAuthor && !updateEditMode ? (
+          <View style={styles.itemActionRow}>
+            <IconActionButton
+              accessibilityLabel="Edit this update"
+              icon="create-outline"
+              onPress={() => {
+                animateLayoutTransition();
+                setUpdateEditMode(true);
+                setUpdateEditBody(update.body);
+                setUpdateActionFeedback(null);
+              }}
+              tone="primary"
+            />
+            <IconActionButton
+              accessibilityLabel="Delete this update"
+              icon="trash-outline"
+              loading={updateDeleteBusy}
+              onPress={onDeletePost}
+              tone="danger"
+            />
+          </View>
+        ) : null}
+      </View>
 
       {updateActionFeedback ? (
         <AppText
@@ -458,34 +450,15 @@ function FeedUpdateCard({
         </AppText>
       ) : null}
 
-      {isUpdateAuthor && !updateEditMode ? (
-        <View style={styles.itemActionRow}>
-          <Button
-            fullWidth={false}
-            label="Edit"
-            onPress={() => {
-              setUpdateEditMode(true);
-              setUpdateEditBody(update.body);
-              setUpdateActionFeedback(null);
-            }}
-            variant="ghost"
-          />
-          <Button
-            fullWidth={false}
-            label="Delete"
-            loading={updateDeleteBusy}
-            onPress={onDeletePost}
-            variant="danger"
-          />
-        </View>
-      ) : null}
-
       {commentsVisible ? (
         <View style={styles.commentsSection}>
           <View style={styles.commentsSectionHeader}>
-            <AppText color={theme.colors.muted} style={styles.commentsSectionTitle} variant="caption">
-              {commentCountLabel}
-            </AppText>
+            <View style={styles.commentsSectionMeta}>
+              <Ionicons color={theme.colors.primary} name="chatbubble-ellipses-outline" size={14} />
+              <AppText color={theme.colors.muted} style={styles.commentsSectionTitle} variant="caption">
+                {commentCountLabel}
+              </AppText>
+            </View>
           </View>
 
           {commentsFeed.status === "LoadingFirstPage" ? (
@@ -561,18 +534,18 @@ function FeedUpdateCard({
 
                     {isCommentOwner && !isEditingComment ? (
                       <View style={styles.itemActionRow}>
-                        <Button
-                          fullWidth={false}
-                          label="Edit"
+                        <IconActionButton
+                          accessibilityLabel="Edit this comment"
+                          icon="create-outline"
                           onPress={() => onStartEditingComment(comment.id, comment.body)}
-                          variant="ghost"
+                          tone="primary"
                         />
-                        <Button
-                          fullWidth={false}
-                          label="Delete"
+                        <IconActionButton
+                          accessibilityLabel="Delete this comment"
+                          icon="trash-outline"
                           loading={isDeletingComment}
                           onPress={() => onDeleteComment(comment.id)}
-                          variant="danger"
+                          tone="danger"
                         />
                       </View>
                     ) : null}
@@ -624,9 +597,12 @@ function FeedUpdateCard({
 
       {questionComposerVisible ? (
         <View style={styles.questionSection}>
-          <AppText color={theme.colors.heading} style={styles.questionSectionTitle} variant="caption">
-            Ask the event host a question
-          </AppText>
+          <View style={styles.questionHeaderRow}>
+            <Ionicons color={theme.colors.primary} name="help-circle-outline" size={16} />
+            <AppText color={theme.colors.heading} style={styles.questionSectionTitle} variant="caption">
+              Ask the event host a question
+            </AppText>
+          </View>
           <TextField
             label="Question"
             onChangeText={setQuestionBody}
@@ -655,31 +631,41 @@ function FeedUpdateCard({
         </View>
       ) : null}
 
-      <View style={styles.actionRow}>
-        <FeedActionChip
-          accessibilityLabel={`${update.viewerHasLiked ? "Unlike" : "Like"} update. ${update.likeCount} likes.`}
-          active={activeAction === "like"}
-          icon={update.viewerHasLiked ? "heart" : "heart-outline"}
-          loading={likeBusy}
-          onPress={onToggleLike}
-        />
-        <FeedActionChip
-          accessibilityLabel={`${commentsVisible ? "Hide comments" : "Show comments"}. ${update.commentCount} comments.`}
-          active={commentsVisible}
-          icon={commentsVisible ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"}
-          onPress={() =>
-            setActiveAction((current) => (current === "comments" ? null : "comments"))
-          }
-        />
-        <FeedActionChip
-          accessibilityLabel={questionComposerVisible ? "Hide question form" : "Ask a question"}
-          active={questionComposerVisible}
-          icon={questionComposerVisible ? "help-circle" : "help-circle-outline"}
-          onPress={() =>
-            setActiveAction((current) => (current === "question" ? null : "question"))
-          }
-        />
-      </View>
+      <UpdateActionBar
+        items={[
+          {
+            key: "like",
+            accessibilityLabel: `${update.viewerHasLiked ? "Unlike" : "Like"} update. ${update.likeCount} likes.`,
+            active: update.viewerHasLiked,
+            count: update.likeCount,
+            icon: update.viewerHasLiked ? "heart" : "heart-outline",
+            loading: likeBusy,
+            onPress: onToggleLike,
+          },
+          {
+            key: "comments",
+            accessibilityLabel: `${commentsVisible ? "Hide comments" : "Show comments"}. ${update.commentCount} comments.`,
+            active: commentsVisible,
+            count: update.commentCount,
+            icon: commentsVisible ? "chatbubble-ellipses" : "chatbubble-ellipses-outline",
+            onPress: () => {
+              animateLayoutTransition();
+              setActiveAction((current) => (current === "comments" ? null : "comments"));
+            },
+          },
+          {
+            key: "question",
+            accessibilityLabel: questionComposerVisible ? "Hide question form" : "Ask a question",
+            active: questionComposerVisible,
+            icon: questionComposerVisible ? "help-circle" : "help-circle-outline",
+            onPress: () => {
+              animateLayoutTransition();
+              setActiveAction((current) => (current === "question" ? null : "question"));
+            },
+          },
+        ]}
+        style={styles.actionBar}
+      />
     </Card>
   );
 }
@@ -728,11 +714,14 @@ export function FeedScreen() {
   return (
     <Screen>
       <View style={styles.headerSection}>
-        <AppText color={theme.colors.heading} variant="h2">
-          Feed
-        </AppText>
+        <View style={styles.feedHeaderRow}>
+          <AppText color={theme.colors.heading} variant="h2">
+            Feed
+          </AppText>
+          <Badge label={`${updates.length} updates`} />
+        </View>
         <AppText color={theme.colors.body}>
-          See every organizer update from your events and ask clarifying questions in one place.
+          Organizer updates, comments, and attendee questions in one stream.
         </AppText>
       </View>
 
@@ -774,7 +763,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerSection: {
-    gap: 6,
+    gap: theme.spacing.sm,
+  },
+  feedHeaderRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   updateCard: {
     borderColor: theme.colors.borderStrong,
@@ -783,14 +777,14 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
   },
   updateTopRow: {
-    alignItems: "flex-start",
+    alignItems: "center",
     flexDirection: "row",
     gap: theme.spacing.sm,
     justifyContent: "space-between",
   },
   datePill: {
     alignItems: "center",
-    backgroundColor: theme.colors.elevatedMuted,
+    backgroundColor: theme.colors.elevated,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.pill,
     borderWidth: 1,
@@ -839,19 +833,43 @@ const styles = StyleSheet.create({
   },
   openEventButton: {
     alignItems: "center",
+    backgroundColor: "transparent",
+    borderColor: "transparent",
     borderRadius: theme.radius.md,
+    borderWidth: 0,
     flexDirection: "row",
     gap: 4,
     minHeight: theme.control.minTouchSize,
-    paddingHorizontal: theme.spacing.xs,
+    paddingHorizontal: 0,
   },
   openEventLabel: {
     fontWeight: "600",
   },
+  updateDivider: {
+    backgroundColor: theme.colors.border,
+    height: StyleSheet.hairlineWidth,
+  },
   updateBody: {
     color: theme.colors.heading,
+    lineHeight: 22,
+  },
+  postedMetaRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 6,
+    minHeight: theme.control.minTouchSize,
+  },
+  updateMetaRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    minWidth: 0,
+  },
+  postedMetaText: {
+    fontWeight: "500",
   },
   commentsSection: {
+    backgroundColor: theme.colors.elevated,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
@@ -862,6 +880,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  commentsSectionMeta: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 6,
   },
   commentsSectionTitle: {
     fontWeight: "600",
@@ -908,7 +931,7 @@ const styles = StyleSheet.create({
   itemActionRow: {
     alignItems: "center",
     flexDirection: "row",
-    gap: theme.spacing.xs,
+    gap: 2,
   },
   itemEditor: {
     gap: theme.spacing.xs,
@@ -927,11 +950,17 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.sm,
   },
   questionSection: {
+    backgroundColor: theme.colors.elevated,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     gap: theme.spacing.sm,
     padding: theme.spacing.sm,
+  },
+  questionHeaderRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 6,
   },
   questionSectionTitle: {
     fontWeight: "600",
@@ -939,27 +968,15 @@ const styles = StyleSheet.create({
   sectionComposerButtonRow: {
     alignItems: "flex-end",
   },
-  actionRow: {
-    flexDirection: "row",
-    gap: theme.spacing.xs,
-  },
-  actionChip: {
-    alignItems: "center",
-    backgroundColor: theme.colors.elevatedMuted,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.pill,
-    borderWidth: 1,
-    flex: 1,
-    justifyContent: "center",
-    minHeight: theme.control.minTouchSize,
-    minWidth: theme.control.minTouchSize,
-    paddingVertical: theme.spacing.xs,
-  },
-  actionChipActive: {
-    backgroundColor: theme.colors.primaryDeep,
-    borderColor: theme.colors.primaryDeep,
+  actionBar: {
+    borderBottomLeftRadius: theme.radius.xl,
+    borderBottomRightRadius: theme.radius.xl,
+    marginBottom: -theme.spacing.lg,
+    marginHorizontal: -theme.spacing.lg,
+    marginTop: theme.spacing.sm,
   },
   touchPressed: {
-    opacity: 0.72,
+    opacity: 0.84,
+    transform: [{ scale: 0.992 }],
   },
 });

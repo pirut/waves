@@ -48,16 +48,16 @@ export function Badge({ label, tone = 'default' }: Props) {
 const styles = StyleSheet.create({
   badge: {
     alignSelf: 'flex-start',
-    borderWidth: 1.2,
+    borderWidth: 1,
     borderRadius: theme.radius.pill,
-    minHeight: theme.control.minTouchSize - 8,
+    minHeight: 30,
     justifyContent: "center",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 6,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 4,
   },
   label: {
     fontFamily: theme.fonts.body,
     fontWeight: "600",
-    letterSpacing: 0.1,
+    letterSpacing: 0,
   },
 });

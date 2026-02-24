@@ -46,6 +46,7 @@ export function TextField({
         autoCapitalize={autoCapitalize}
         autoComplete={autoComplete}
         autoCorrect={autoCorrect}
+        clearButtonMode="while-editing"
         keyboardType={keyboardType ?? "default"}
         keyboardAppearance={theme.mode === "dark" ? "dark" : "light"}
         multiline={multiline}
@@ -67,35 +68,35 @@ export function TextField({
 
 const styles = StyleSheet.create({
   wrapper: {
-    gap: 6,
+    gap: theme.spacing.xs,
   },
   label: {
-    marginLeft: 1,
+    marginLeft: 2,
     opacity: 0.95,
   },
   input: {
-    backgroundColor: theme.colors.elevatedMuted,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.surfaceGlassStrong,
+    borderColor: theme.colors.glassBorderStrong,
+    borderRadius: theme.radius.lg + 2,
     borderWidth: 1,
     color: theme.colors.heading,
     fontFamily: theme.fonts.body,
     fontSize: theme.typography.body,
-    minHeight: theme.control.minTouchSize,
+    minHeight: theme.control.minTouchSize + 6,
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   inputFocused: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.elevated,
-    shadowColor: "#007AFF",
+    borderColor: theme.colors.focusRing,
+    backgroundColor: theme.colors.surfaceGlass,
+    shadowColor: theme.colors.primaryDeep,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.14,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowOpacity: theme.mode === "dark" ? 0.28 : 0.16,
+    shadowRadius: 8,
+    elevation: 3,
   },
   multiline: {
-    minHeight: 132,
+    minHeight: 148,
     textAlignVertical: "top",
   },
 });

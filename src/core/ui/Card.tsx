@@ -1,5 +1,6 @@
 import { PropsWithChildren } from "react";
 import { StyleProp, StyleSheet, View, ViewStyle } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 
 import { theme } from "@/src/core/theme/tokens";
 
@@ -11,6 +12,16 @@ type Props = PropsWithChildren<{
 export function Card({ children, style, innerStyle }: Props) {
   return (
     <View style={[styles.card, style]}>
+      <LinearGradient
+        colors={[
+          theme.colors.surfaceGlassStrong,
+          theme.colors.surfaceGlass,
+        ]}
+        end={{ x: 1, y: 1 }}
+        pointerEvents="none"
+        start={{ x: 0, y: 0 }}
+        style={StyleSheet.absoluteFillObject}
+      />
       <View style={[styles.inner, innerStyle]}>{children}</View>
     </View>
   );
@@ -18,19 +29,15 @@ export function Card({ children, style, innerStyle }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.colors.elevated,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: theme.colors.surfaceGlass,
+    borderColor: theme.colors.glassBorderStrong,
+    borderRadius: theme.radius.xl + 2,
+    borderWidth: 1,
     overflow: "hidden",
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: theme.mode === "dark" ? 0.24 : 0.05,
-    shadowRadius: 6,
-    elevation: theme.mode === "dark" ? 0 : 1,
+    ...theme.elevation.soft,
   },
   inner: {
     gap: theme.spacing.md,
-    padding: theme.spacing.md,
+    padding: theme.spacing.lg,
   },
 });

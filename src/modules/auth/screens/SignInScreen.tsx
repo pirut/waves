@@ -784,7 +784,7 @@ export function SignInScreen() {
 const styles = StyleSheet.create({
   screenContent: {
     justifyContent: "center",
-    paddingBottom: theme.spacing.xl,
+    paddingBottom: theme.spacing.xxl,
   },
   centeredState: {
     alignItems: "center",
@@ -794,39 +794,41 @@ const styles = StyleSheet.create({
   },
   layout: {
     alignSelf: "center",
-    maxWidth: 470,
+    maxWidth: 520,
     width: "100%",
   },
   formCard: {
     alignSelf: "center",
-    maxWidth: 500,
+    borderColor: theme.colors.glassBorderStrong,
+    maxWidth: 520,
     width: "100%",
   },
   formHeader: {
-    gap: 4,
+    gap: 6,
   },
   logoMark: {
-    height: 34,
-    width: 34,
+    borderRadius: 8,
+    height: 40,
+    width: 40,
   },
   formStack: {
     gap: theme.spacing.sm,
-    marginTop: theme.spacing.xs,
+    marginTop: theme.spacing.sm,
   },
   messageBox: {
-    borderRadius: theme.radius.sm,
+    borderRadius: theme.radius.md,
     borderWidth: 1,
     marginTop: theme.spacing.sm,
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 7,
+    paddingVertical: theme.spacing.xs,
   },
   infoBox: {
-    backgroundColor: theme.colors.elevatedMuted,
-    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceGlassStrong,
+    borderColor: theme.colors.glassBorderStrong,
   },
   errorBox: {
-    backgroundColor: "rgba(184, 90, 74, 0.08)",
-    borderColor: "rgba(184, 90, 74, 0.22)",
+    backgroundColor: theme.mode === "dark" ? "rgba(255, 106, 97, 0.18)" : "rgba(255, 69, 58, 0.12)",
+    borderColor: theme.mode === "dark" ? "rgba(255, 163, 158, 0.36)" : "rgba(255, 69, 58, 0.28)",
   },
   actionStack: {
     gap: theme.spacing.xs,

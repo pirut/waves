@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { theme } from "@/src/core/theme/tokens";
 import { AppText } from "@/src/core/ui/AppText";
-import { Button } from "@/src/core/ui/Button";
 import { Card } from "@/src/core/ui/Card";
 import type { EventListItem } from "@/src/modules/events/domain/types";
 import { formatEventWindow } from "@/src/modules/events/utils/formatters";
@@ -120,23 +120,35 @@ export function EventCalendar({ events, onOpenEvent }: Props) {
   return (
     <Card>
       <View style={styles.headerRow}>
-        <Button
+        <Pressable
+          accessibilityLabel="Previous month"
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !previousMonth }}
           disabled={!previousMonth}
-          fullWidth={false}
-          label="Prev"
           onPress={() => previousMonth && setSelectedMonthKey(previousMonth.key)}
-          variant="ghost"
-        />
-        <AppText variant="h3" color={theme.colors.heading}>
+          style={({ pressed }) => [
+            styles.monthNavButton,
+            !previousMonth ? styles.monthNavButtonDisabled : undefined,
+            pressed ? styles.touchPressed : undefined,
+          ]}>
+          <Ionicons color={theme.colors.primary} name="chevron-back" size={18} />
+        </Pressable>
+        <AppText numberOfLines={1} style={styles.monthLabel} variant="h3" color={theme.colors.heading}>
           {selectedMonth.label}
         </AppText>
-        <Button
+        <Pressable
+          accessibilityLabel="Next month"
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !nextMonth }}
           disabled={!nextMonth}
-          fullWidth={false}
-          label="Next"
           onPress={() => nextMonth && setSelectedMonthKey(nextMonth.key)}
-          variant="ghost"
-        />
+          style={({ pressed }) => [
+            styles.monthNavButton,
+            !nextMonth ? styles.monthNavButtonDisabled : undefined,
+            pressed ? styles.touchPressed : undefined,
+          ]}>
+          <Ionicons color={theme.colors.primary} name="chevron-forward" size={18} />
+        </Pressable>
       </View>
 
       <View style={styles.weekdayRow}>
@@ -226,13 +238,30 @@ export function EventCalendar({ events, onOpenEvent }: Props) {
 const styles = StyleSheet.create({
   headerRow: {
     alignItems: "center",
-    backgroundColor: theme.colors.elevatedMuted,
-    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceGlassStrong,
+    borderColor: theme.colors.glassBorderStrong,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     flexDirection: "row",
+    gap: theme.spacing.xs,
     justifyContent: "space-between",
     padding: theme.spacing.xs,
+  },
+  monthNavButton: {
+    alignItems: "center",
+    borderColor: theme.colors.glassBorderStrong,
+    borderRadius: theme.radius.pill,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: theme.control.minTouchSize,
+    minWidth: theme.control.minTouchSize,
+  },
+  monthNavButtonDisabled: {
+    opacity: 0.35,
+  },
+  monthLabel: {
+    flex: 1,
+    textAlign: "center",
   },
   weekdayRow: {
     flexDirection: "row",
@@ -259,8 +288,8 @@ const styles = StyleSheet.create({
   },
   dayCell: {
     alignItems: "center",
-    backgroundColor: theme.colors.elevated,
-    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceGlassStrong,
+    borderColor: theme.colors.glassBorder,
     borderRadius: theme.radius.md,
     borderWidth: 1,
     justifyContent: "flex-start",
@@ -290,8 +319,8 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
   },
   selectedEventCard: {
-    backgroundColor: theme.colors.elevatedMuted,
-    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceGlassStrong,
+    borderColor: theme.colors.glassBorderStrong,
     borderRadius: theme.radius.md,
     borderWidth: 1,
     gap: 2,

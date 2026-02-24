@@ -86,12 +86,12 @@ const containerStyle: CSSProperties = {
 
 const controlShellStyle: CSSProperties = {
   alignItems: "center",
-  backgroundColor: theme.colors.elevatedMuted,
-  border: `1px solid ${theme.colors.borderStrong}`,
-  borderRadius: theme.radius.md,
+  backgroundColor: theme.colors.surfaceGlassStrong,
+  border: `1px solid ${theme.colors.glassBorderStrong}`,
+  borderRadius: theme.radius.lg,
   display: "flex",
   gap: 10,
-  minHeight: 48,
+  minHeight: 52,
   paddingLeft: 12,
   paddingRight: 10,
   width: "100%",

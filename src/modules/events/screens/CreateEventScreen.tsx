@@ -724,6 +724,9 @@ export function CreateEventScreen() {
   return (
     <Screen>
       <View style={styles.headerSection}>
+        <AppText variant="h2" color={theme.colors.heading}>
+          Create Event
+        </AppText>
         <AppText color={theme.colors.body}>
           Add details, schedule, location, and photos to publish a new event.
         </AppText>
@@ -873,7 +876,7 @@ const styles = StyleSheet.create({
   },
   galleryRemoveBadgeText: {
     fontFamily: theme.fonts.body,
-    fontSize: 11,
+    fontSize: theme.typography.overline,
     fontWeight: "700",
     letterSpacing: 0,
   },

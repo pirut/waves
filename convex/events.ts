@@ -58,6 +58,9 @@ const eventMessageValidator = v.object({
   kind: messageKindValidator,
   createdAt: v.number(),
   author: profilePreviewValidator,
+  likeCount: v.number(),
+  commentCount: v.number(),
+  viewerHasLiked: v.boolean(),
 });
 
 const eventQuestionValidator = v.object({
@@ -384,7 +387,18 @@ export const getById = query({
 
     const messages = await Promise.all(
       messageDocs.map(async (messageDoc) => {
-        const author = await ctx.db.get(messageDoc.authorProfileId);
+        const [author, viewerLike] = await Promise.all([
+          ctx.db.get(messageDoc.authorProfileId),
+          ctx.db
+            .query("eventMessageLikes")
+            .withIndex("by_eventMessageId_and_likerProfileId", (q) =>
+              q
+                .eq("eventMessageId", messageDoc._id)
+                .eq("likerProfileId", viewerProfile._id),
+            )
+            .unique(),
+        ]);
+
         if (!author) {
           return null;
         }
@@ -395,6 +409,9 @@ export const getById = query({
           kind: messageDoc.kind,
           createdAt: messageDoc.createdAt,
           author: toProfilePreview(author),
+          likeCount: messageDoc.likeCount ?? 0,
+          commentCount: messageDoc.commentCount ?? 0,
+          viewerHasLiked: viewerLike !== null,
         };
       }),
     );
@@ -506,7 +523,7 @@ export const listMessagesPaginated = query({
   },
   returns: paginatedEventMessagesValidator,
   handler: async (ctx, args) => {
-    await requireAuthenticatedIdentity(ctx);
+    const viewerProfile = await requireAuthProfile(ctx);
 
     const paginatedMessages = await ctx.db
       .query("eventMessages")
@@ -517,7 +534,18 @@ export const listMessagesPaginated = query({
     const messages = (
       await Promise.all(
         paginatedMessages.page.map(async (messageDoc) => {
-          const author = await ctx.db.get(messageDoc.authorProfileId);
+          const [author, viewerLike] = await Promise.all([
+            ctx.db.get(messageDoc.authorProfileId),
+            ctx.db
+              .query("eventMessageLikes")
+              .withIndex("by_eventMessageId_and_likerProfileId", (q) =>
+                q
+                  .eq("eventMessageId", messageDoc._id)
+                  .eq("likerProfileId", viewerProfile._id),
+              )
+              .unique(),
+          ]);
+
           if (!author) {
             return null;
           }
@@ -528,6 +556,9 @@ export const listMessagesPaginated = query({
             kind: messageDoc.kind,
             createdAt: messageDoc.createdAt,
             author: toProfilePreview(author),
+            likeCount: messageDoc.likeCount ?? 0,
+            commentCount: messageDoc.commentCount ?? 0,
+            viewerHasLiked: viewerLike !== null,
           };
         }),
       )

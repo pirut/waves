@@ -10,6 +10,8 @@ type Props = PropsWithChildren<{
   color?: string;
   style?: StyleProp<TextStyle>;
   numberOfLines?: number;
+  allowFontScaling?: boolean;
+  maxFontSizeMultiplier?: number;
 }>;
 
 const variantStyles = StyleSheet.create({
@@ -17,7 +19,7 @@ const variantStyles = StyleSheet.create({
     fontFamily: theme.fonts.display,
     fontSize: theme.typography.hero,
     fontWeight: "700",
-    lineHeight: 44,
+    lineHeight: 46,
     letterSpacing: -0.45,
   },
   h1: {
@@ -31,28 +33,28 @@ const variantStyles = StyleSheet.create({
     fontFamily: theme.fonts.display,
     fontSize: theme.typography.h2,
     fontWeight: "600",
-    lineHeight: 34,
+    lineHeight: 36,
     letterSpacing: -0.3,
   },
   h3: {
     fontFamily: theme.fonts.display,
     fontSize: theme.typography.h3,
     fontWeight: "600",
-    lineHeight: 28,
+    lineHeight: 30,
     letterSpacing: -0.2,
   },
   body: {
     fontFamily: theme.fonts.body,
     fontSize: theme.typography.body,
     fontWeight: "400",
-    lineHeight: 24,
+    lineHeight: 25,
     letterSpacing: 0,
   },
   caption: {
     fontFamily: theme.fonts.body,
     fontSize: theme.typography.caption,
     fontWeight: "400",
-    lineHeight: 18,
+    lineHeight: 19,
     letterSpacing: 0,
   },
   overline: {
@@ -70,9 +72,15 @@ export function AppText({
   color = theme.colors.body,
   style,
   numberOfLines,
+  allowFontScaling = true,
+  maxFontSizeMultiplier = 2,
 }: Props) {
   return (
-    <Text numberOfLines={numberOfLines} style={[variantStyles[variant], { color }, style]}>
+    <Text
+      allowFontScaling={allowFontScaling}
+      maxFontSizeMultiplier={maxFontSizeMultiplier}
+      numberOfLines={numberOfLines}
+      style={[variantStyles[variant], { color }, style]}>
       {children}
     </Text>
   );

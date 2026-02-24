@@ -1,5 +1,6 @@
 import { PropsWithChildren } from "react";
 import { ScrollView, StyleProp, StyleSheet, View, ViewStyle, useWindowDimensions } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { Edge, SafeAreaView } from "react-native-safe-area-context";
 
 import { theme } from "@/src/core/theme/tokens";
@@ -24,7 +25,7 @@ export function Screen({
 
   const content = scroll ? (
     <ScrollView
-      contentInsetAdjustmentBehavior="automatic"
+      contentInsetAdjustmentBehavior="never"
       contentContainerStyle={[
         styles.contentContainer,
         { maxWidth, paddingHorizontal: horizontalPadding },
@@ -48,6 +49,16 @@ export function Screen({
 
   return (
     <View style={styles.background}>
+      <LinearGradient
+        colors={[
+          theme.colors.glowA,
+          theme.colors.glowB,
+          theme.colors.background,
+        ]}
+        end={{ x: 1, y: 1 }}
+        start={{ x: 0, y: 0 }}
+        style={StyleSheet.absoluteFillObject}
+      />
       <SafeAreaView edges={safeAreaEdges} style={styles.safeArea}>
         {content}
       </SafeAreaView>
@@ -67,8 +78,8 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     flexGrow: 1,
     gap: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.xxl,
+    paddingTop: theme.spacing.sm,
+    paddingBottom: theme.spacing.lg,
     width: "100%",
   },
 });

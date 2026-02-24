@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   StyleSheet,
   View,
-  useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
@@ -37,9 +35,6 @@ type ProfileContentProps = {
 function ProfileScreenContent({ showSignOut, onSignOut }: ProfileContentProps) {
   const router = useRouter();
   const { viewerProfileId, viewerLoading } = useViewerProfile();
-  const { width } = useWindowDimensions();
-  const isWideLayout = (Platform.OS === "ios" && Platform.isPad) || width >= 1024;
-  const useInlineQuickActions = width >= 1320;
 
   const profile = useQuery(api.viewer.getCurrent, viewerProfileId ? {} : "skip");
   const myEvents = useQuery(api.events.listForViewer, viewerProfileId ? {} : "skip");
@@ -213,16 +208,10 @@ function ProfileScreenContent({ showSignOut, onSignOut }: ProfileContentProps) {
       <AppText variant="h3" color={theme.colors.heading}>
         Quick actions
       </AppText>
-      <View style={[styles.actionsRow, useInlineQuickActions ? styles.actionsRowWide : undefined]}>
-        <View style={styles.actionItem}>
-          <Button label="Discover" onPress={() => router.push("/(tabs)")} variant="secondary" />
-        </View>
-        <View style={styles.actionItem}>
-          <Button label="Create" onPress={() => router.push("/(tabs)/create")} variant="secondary" />
-        </View>
-        <View style={styles.actionItem}>
-          <Button label="My Events" onPress={() => router.push("/(tabs)/my-events")} variant="secondary" />
-        </View>
+      <View style={styles.actionsStack}>
+        <Button label="Discover" onPress={() => router.push("/(tabs)")} variant="secondary" />
+        <Button label="Create" onPress={() => router.push("/(tabs)/create")} variant="secondary" />
+        <Button label="My Events" onPress={() => router.push("/(tabs)/my-events")} variant="secondary" />
       </View>
     </Card>
   );
@@ -266,34 +255,19 @@ function ProfileScreenContent({ showSignOut, onSignOut }: ProfileContentProps) {
   return (
     <Screen>
       <View style={styles.headerSection}>
+        <AppText variant="h2" color={theme.colors.heading}>
+          Profile
+        </AppText>
         <AppText color={theme.colors.body}>
           Manage account details and track your participation.
         </AppText>
       </View>
-
-      {isWideLayout ? (
-        <View style={styles.columns}>
-          <View style={styles.primaryColumn}>
-            {identityCard}
-            {editCard}
-          </View>
-          <View style={styles.secondaryColumn}>
-            {snapshotCard}
-            {quickActionsCard}
-            {hostedEventsCard}
-            {signOutButton}
-          </View>
-        </View>
-      ) : (
-        <>
-          {identityCard}
-          {editCard}
-          {snapshotCard}
-          {quickActionsCard}
-          {hostedEventsCard}
-          {signOutButton}
-        </>
-      )}
+      {identityCard}
+      {editCard}
+      {snapshotCard}
+      {quickActionsCard}
+      {hostedEventsCard}
+      {signOutButton}
     </Screen>
   );
 }
@@ -322,21 +296,6 @@ const styles = StyleSheet.create({
   headerSection: {
     gap: theme.spacing.xs,
   },
-  columns: {
-    alignItems: "flex-start",
-    flexDirection: "row",
-    gap: theme.spacing.md,
-  },
-  primaryColumn: {
-    flex: 1.05,
-    gap: theme.spacing.md,
-    minWidth: 0,
-  },
-  secondaryColumn: {
-    flex: 1,
-    gap: theme.spacing.md,
-    minWidth: 0,
-  },
   identityRow: {
     alignItems: "center",
     flexDirection: "row",
@@ -359,14 +318,8 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: theme.spacing.xs,
   },
-  actionsRow: {
+  actionsStack: {
     gap: theme.spacing.sm,
-  },
-  actionsRowWide: {
-    flexDirection: "row",
-  },
-  actionItem: {
-    flex: 1,
   },
   hostedList: {
     gap: theme.spacing.xs,

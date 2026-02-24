@@ -219,6 +219,37 @@ export function DiscoverScreen() {
     setDistanceRadiusMiles(null);
   };
 
+  const onOpenFullScreenMap = () => {
+    const params: Record<string, string> = {};
+
+    if (categoryFilter) {
+      params.category = categoryFilter;
+    }
+
+    if (selectedEvent?.id) {
+      params.eventId = selectedEvent.id;
+    }
+
+    if (focusLocation) {
+      params.focusLatitude = `${focusLocation.latitude}`;
+      params.focusLongitude = `${focusLocation.longitude}`;
+      if (focusLocation.label) {
+        params.focusLabel = focusLocation.label;
+      }
+    }
+
+    if (distanceRadiusMiles !== null) {
+      params.radiusMiles = `${distanceRadiusMiles}`;
+    }
+
+    params.source = "discover";
+
+    router.push({
+      pathname: "/discover-map",
+      params,
+    });
+  };
+
   if (viewerLoading || (viewerProfileId && eventsResult === undefined && !hasLoadedEvents)) {
     return (
       <Screen scroll={false}>
@@ -246,6 +277,9 @@ export function DiscoverScreen() {
   return (
     <Screen>
       <View style={styles.headerSection}>
+        <AppText variant="h2" color={theme.colors.heading}>
+          Discover
+        </AppText>
         <AppText color={theme.colors.body}>
           Find local impact events, RSVP quickly, and build your volunteer calendar.
         </AppText>
@@ -401,16 +435,23 @@ export function DiscoverScreen() {
         ) : null}
       </Card>
 
-      <View style={styles.sectionHeader}>
+      <View style={styles.sectionHeaderRow}>
         <AppText variant="h3" color={theme.colors.heading}>
           Live map
         </AppText>
+        <Button
+          fullWidth={false}
+          label="Full Screen"
+          onPress={onOpenFullScreenMap}
+          variant="secondary"
+        />
       </View>
       <EventMap
         events={visibleEvents}
         focusLocation={focusLocation}
+        markerLabelMode="compact"
         onSelectEvent={setSelectedEventId}
-        selectedEventId={selectedEvent?.id}
+        selectedEventId={selectedEventId}
       />
 
       {selectedEvent ? (
@@ -536,7 +577,9 @@ const styles = StyleSheet.create({
   listSection: {
     gap: theme.spacing.md,
   },
-  sectionHeader: {
-    gap: theme.spacing.xs,
+  sectionHeaderRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
 });
