@@ -1,12 +1,8 @@
 import { useMemo, useState } from "react";
-import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  View,
-  type ViewStyle,
-} from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
 import DateTimePicker, {
+  DateTimePickerAndroid,
   type DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import { format } from "date-fns";
@@ -25,6 +21,16 @@ type Props = {
   maximumDate?: number;
   minuteInterval?: 1 | 5 | 10 | 15 | 20 | 30;
 };
+
+function clampTimestamp(value: number, minimumDate?: number, maximumDate?: number) {
+  if (minimumDate !== undefined && value < minimumDate) {
+    return minimumDate;
+  }
+  if (maximumDate !== undefined && value > maximumDate) {
+    return maximumDate;
+  }
+  return value;
+}
 
 function mergeDate(currentTimestamp: number, selectedDate: Date) {
   const next = new Date(currentTimestamp);
@@ -51,100 +57,164 @@ export function DateTimeField({
   maximumDate,
   minuteInterval = 5,
 }: Props) {
-  const [activeMode, setActiveMode] = useState<DateTimePickerMode | null>(null);
-  const [focusedControl, setFocusedControl] = useState<DateTimePickerMode | null>(null);
+  const [iosPickerOpen, setIosPickerOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
 
   const selectedDate = useMemo(() => new Date(value), [value]);
 
-  const onPickerChange = (event: DateTimePickerEvent, pickedDate?: Date) => {
-    if (event.type === "dismissed" || !pickedDate || !activeMode) {
-      setActiveMode(null);
+  const formattedValue = useMemo(() => {
+    if (picker === "date") {
+      return format(selectedDate, "EEEE, MMMM d, yyyy");
+    }
+
+    if (picker === "time") {
+      return format(selectedDate, "h:mm a");
+    }
+
+    return format(selectedDate, "EEEE, MMMM d • h:mm a");
+  }, [picker, selectedDate]);
+
+  const onApplyTimestamp = (nextTimestamp: number) => {
+    onChange(clampTimestamp(nextTimestamp, minimumDate, maximumDate));
+  };
+
+  const onIosChange = (event: DateTimePickerEvent, pickedDate?: Date) => {
+    if (event.type === "dismissed" || !pickedDate) {
       return;
     }
 
-    if (activeMode === "date") {
-      onChange(mergeDate(value, pickedDate));
-    } else {
-      onChange(mergeTime(value, pickedDate));
+    if (picker === "date") {
+      onApplyTimestamp(mergeDate(value, pickedDate));
+      return;
     }
 
-    setActiveMode(null);
+    if (picker === "time") {
+      onApplyTimestamp(mergeTime(value, pickedDate));
+    } else {
+      onApplyTimestamp(pickedDate.getTime());
+    }
   };
 
-  const controlBase: ViewStyle = {
-    alignItems: "center",
-    backgroundColor: theme.colors.elevatedMuted,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    flex: 1,
-    minHeight: theme.control.minTouchSize + 4,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
+  const openAndroidDatePicker = (onSet: (pickedDate: Date) => void) => {
+    DateTimePickerAndroid.open({
+      mode: "date",
+      value: selectedDate,
+      minimumDate: minimumDate ? new Date(minimumDate) : undefined,
+      maximumDate: maximumDate ? new Date(maximumDate) : undefined,
+      design: "material",
+      initialInputMode: "default",
+      onChange: (event, pickedDate) => {
+        if (event.type !== "set" || !pickedDate) {
+          return;
+        }
+        onSet(pickedDate);
+      },
+    });
   };
 
-  const openPicker = (nextMode: DateTimePickerMode) => {
-    setActiveMode(nextMode);
+  const openAndroidTimePicker = (baseTimestamp: number, onSet: (pickedTime: Date) => void) => {
+    DateTimePickerAndroid.open({
+      mode: "time",
+      value: new Date(baseTimestamp),
+      minuteInterval,
+      design: "material",
+      initialInputMode: "default",
+      onChange: (event, pickedDate) => {
+        if (event.type !== "set" || !pickedDate) {
+          return;
+        }
+        onSet(pickedDate);
+      },
+    });
   };
 
-  const renderSingleControl = (
-    mode: DateTimePickerMode,
-    heading: string,
-    valueText: string,
-  ) => (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${label} ${heading}`}
-      onBlur={() => setFocusedControl(null)}
-      onFocus={() => setFocusedControl(mode)}
-      onPress={() => openPicker(mode)}
-      style={({ pressed }) => [
-        controlBase,
-        focusedControl === mode ? styles.controlFocused : undefined,
-        pressed ? styles.controlPressed : undefined,
-      ]}>
-      <AppText variant="caption" color={theme.colors.muted}>
-        {heading}
-      </AppText>
-      <AppText color={theme.colors.heading} style={styles.valueText}>
-        {valueText}
-      </AppText>
-    </Pressable>
-  );
+  const openAndroidPicker = () => {
+    if (picker === "date") {
+      openAndroidDatePicker((pickedDate) => {
+        onApplyTimestamp(mergeDate(value, pickedDate));
+      });
+      return;
+    }
+
+    if (picker === "time") {
+      openAndroidTimePicker(value, (pickedTime) => {
+        onApplyTimestamp(mergeTime(value, pickedTime));
+      });
+      return;
+    }
+
+    openAndroidDatePicker((pickedDate) => {
+      const mergedDateTimestamp = mergeDate(value, pickedDate);
+      openAndroidTimePicker(mergedDateTimestamp, (pickedTime) => {
+        onApplyTimestamp(mergeTime(mergedDateTimestamp, pickedTime));
+      });
+    });
+  };
+
+  const openPicker = () => {
+    if (Platform.OS === "android") {
+      openAndroidPicker();
+      return;
+    }
+
+    setIosPickerOpen((current) => !current);
+  };
+
+  const iosPickerMode: "datetime" | DateTimePickerMode = picker === "datetime" ? "datetime" : picker;
+  const iOSDisplayStyle = picker === "time" ? "spinner" : "inline";
+  const iconName = picker === "time" ? "schedule" : "event";
 
   return (
     <View style={styles.wrapper}>
       <AppText variant="caption" color={theme.colors.muted} style={styles.label}>
         {label}
       </AppText>
-
-      {picker === "datetime" ? (
-        <View style={styles.controlsRow}>
-          {renderSingleControl("date", "Date", format(selectedDate, "EEE, MMM d, yyyy"))}
-          {renderSingleControl("time", "Time", format(selectedDate, "h:mm a"))}
+      <Pressable
+        accessibilityLabel={label}
+        accessibilityRole="button"
+        onBlur={() => setFocused(false)}
+        onFocus={() => setFocused(true)}
+        onPress={openPicker}
+        style={({ pressed }) => [
+          styles.control,
+          focused ? styles.controlFocused : undefined,
+          pressed ? styles.controlPressed : undefined,
+        ]}>
+        <View style={styles.controlText}>
+          <AppText variant="caption" color={theme.colors.muted}>
+            {picker === "datetime" ? "Date and time" : picker === "date" ? "Date" : "Time"}
+          </AppText>
+          <AppText color={theme.colors.heading} style={styles.valueText}>
+            {formattedValue}
+          </AppText>
         </View>
-      ) : (
-        <View style={styles.singleControlRow}>
-          {picker === "date"
-            ? renderSingleControl("date", "Date", format(selectedDate, "EEE, MMM d, yyyy"))
-            : renderSingleControl("time", "Time", format(selectedDate, "h:mm a"))}
-        </View>
-      )}
+        <MaterialIcons color={theme.colors.primary} name={iconName} size={20} />
+      </Pressable>
 
-      {activeMode ? (
-        <DateTimePicker
-          display={Platform.OS === "ios" ? "spinner" : "default"}
-          maximumDate={
-            activeMode === "date" && maximumDate ? new Date(maximumDate) : undefined
-          }
-          minimumDate={
-            activeMode === "date" && minimumDate ? new Date(minimumDate) : undefined
-          }
-          minuteInterval={minuteInterval}
-          mode={activeMode}
-          onChange={onPickerChange}
-          value={selectedDate}
-        />
+      {Platform.OS === "ios" && iosPickerOpen ? (
+        <View style={styles.iosPickerShell}>
+          <DateTimePicker
+            display={iOSDisplayStyle}
+            maximumDate={maximumDate ? new Date(maximumDate) : undefined}
+            minimumDate={minimumDate ? new Date(minimumDate) : undefined}
+            minuteInterval={minuteInterval}
+            mode={iosPickerMode}
+            onChange={onIosChange}
+            themeVariant={theme.mode === "dark" ? "dark" : "light"}
+            value={selectedDate}
+          />
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setIosPickerOpen(false)}
+            style={({ pressed }) => [
+              styles.doneButton,
+              pressed ? styles.controlPressed : undefined,
+            ]}>
+            <AppText color={theme.colors.primary} style={styles.doneButtonText}>
+              Done
+            </AppText>
+          </Pressable>
+        </View>
       ) : null}
     </View>
   );
@@ -158,17 +228,26 @@ const styles = StyleSheet.create({
     marginLeft: 1,
     opacity: 0.92,
   },
-  controlsRow: {
+  control: {
+    alignItems: "center",
+    backgroundColor: theme.colors.elevatedMuted,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
     flexDirection: "row",
-    gap: theme.spacing.sm,
+    justifyContent: "space-between",
+    minHeight: theme.control.minTouchSize + 6,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
-  singleControlRow: {
-    flexDirection: "row",
+  controlText: {
+    flex: 1,
+    gap: 2,
   },
   controlFocused: {
     backgroundColor: theme.colors.elevated,
     borderColor: theme.colors.primaryDeep,
-    shadowColor: "#26414f",
+    shadowColor: theme.colors.primaryDeep,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
@@ -180,5 +259,22 @@ const styles = StyleSheet.create({
   valueText: {
     fontWeight: "600",
     letterSpacing: 0.18,
+  },
+  iosPickerShell: {
+    backgroundColor: theme.colors.elevated,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  doneButton: {
+    alignItems: "center",
+    borderTopColor: theme.colors.border,
+    borderTopWidth: 1,
+    minHeight: theme.control.minTouchSize,
+    justifyContent: "center",
+  },
+  doneButtonText: {
+    fontWeight: "700",
   },
 });

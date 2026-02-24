@@ -61,7 +61,7 @@ export default defineSchema({
   rsvps: defineTable({
     eventId: v.id("events"),
     attendeeProfileId: v.id("profiles"),
-    status: v.union(v.literal("going"), v.literal("interested")),
+    status: v.union(v.literal("going"), v.literal("interested"), v.literal("not_going")),
     createdAt: v.number(),
     note: v.optional(v.string()),
   })
@@ -74,8 +74,43 @@ export default defineSchema({
     authorProfileId: v.id("profiles"),
     body: v.string(),
     kind: v.union(v.literal("announcement"), v.literal("update")),
+    likeCount: v.optional(v.number()),
+    commentCount: v.optional(v.number()),
     createdAt: v.number(),
-  }).index("by_eventId_and_createdAt", ["eventId", "createdAt"]),
+  })
+    .index("by_eventId_and_createdAt", ["eventId", "createdAt"])
+    .index("by_createdAt", ["createdAt"]),
+
+  eventMessageLikes: defineTable({
+    eventId: v.id("events"),
+    eventMessageId: v.id("eventMessages"),
+    likerProfileId: v.id("profiles"),
+    createdAt: v.number(),
+  })
+    .index("by_eventMessageId_and_likerProfileId", ["eventMessageId", "likerProfileId"])
+    .index("by_eventMessageId_and_createdAt", ["eventMessageId", "createdAt"]),
+
+  eventMessageComments: defineTable({
+    eventId: v.id("events"),
+    eventMessageId: v.id("eventMessages"),
+    authorProfileId: v.id("profiles"),
+    body: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_eventMessageId_and_createdAt", ["eventMessageId", "createdAt"])
+    .index("by_eventId_and_createdAt", ["eventId", "createdAt"]),
+
+  eventQuestions: defineTable({
+    eventId: v.id("events"),
+    askerProfileId: v.id("profiles"),
+    questionBody: v.string(),
+    answerBody: v.optional(v.string()),
+    answeredByProfileId: v.optional(v.id("profiles")),
+    answeredAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_eventId_and_createdAt", ["eventId", "createdAt"])
+    .index("by_eventId_and_answeredAt", ["eventId", "answeredAt"]),
 
   notificationDeliveries: defineTable({
     eventId: v.id("events"),

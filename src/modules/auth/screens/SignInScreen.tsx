@@ -520,7 +520,7 @@ export function SignInScreen() {
 
   if (!isReady) {
     return (
-      <Screen scroll={false}>
+      <Screen safeAreaEdges={["top", "left", "right", "bottom"]} scroll={false}>
         <View style={styles.centeredState}>
           <ActivityIndicator color={theme.colors.primary} size="large" />
           <AppText>Loading authentication...</AppText>
@@ -542,7 +542,7 @@ export function SignInScreen() {
   const isSecondFactorView = view === "verify-second-factor";
 
   return (
-    <Screen contentContainerStyle={styles.screenContent}>
+    <Screen safeAreaEdges={["top", "left", "right", "bottom"]} contentContainerStyle={styles.screenContent}>
       <View style={styles.layout}>
         <Card style={styles.formCard}>
           <View style={styles.formHeader}>

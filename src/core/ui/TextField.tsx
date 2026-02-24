@@ -47,6 +47,7 @@ export function TextField({
         autoComplete={autoComplete}
         autoCorrect={autoCorrect}
         keyboardType={keyboardType ?? "default"}
+        keyboardAppearance={theme.mode === "dark" ? "dark" : "light"}
         multiline={multiline}
         onChangeText={onChangeText}
         onBlur={() => setFocused(false)}

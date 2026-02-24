@@ -1,21 +1,30 @@
 import { PropsWithChildren } from "react";
 import { ScrollView, StyleProp, StyleSheet, View, ViewStyle, useWindowDimensions } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Edge, SafeAreaView } from "react-native-safe-area-context";
 
 import { theme } from "@/src/core/theme/tokens";
 
 type Props = PropsWithChildren<{
   scroll?: boolean;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  safeAreaEdges?: Edge[];
 }>;
 
-export function Screen({ children, scroll = true, contentContainerStyle }: Props) {
+const DEFAULT_EDGES: Edge[] = ["left", "right"];
+
+export function Screen({
+  children,
+  scroll = true,
+  contentContainerStyle,
+  safeAreaEdges = DEFAULT_EDGES,
+}: Props) {
   const { width } = useWindowDimensions();
   const horizontalPadding = width >= 1024 ? theme.spacing.xxl : width >= 768 ? theme.spacing.xl : theme.spacing.md;
   const maxWidth = width >= 1024 ? 960 : width >= 768 ? 860 : 720;
 
   const content = scroll ? (
     <ScrollView
+      contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={[
         styles.contentContainer,
         { maxWidth, paddingHorizontal: horizontalPadding },
@@ -39,7 +48,7 @@ export function Screen({ children, scroll = true, contentContainerStyle }: Props
 
   return (
     <View style={styles.background}>
-      <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.safeArea}>
+      <SafeAreaView edges={safeAreaEdges} style={styles.safeArea}>
         {content}
       </SafeAreaView>
     </View>

@@ -1,9 +1,10 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 
@@ -25,9 +26,9 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 const navigationTheme = {
-  ...DefaultTheme,
+  ...(theme.mode === "dark" ? DarkTheme : DefaultTheme),
   colors: {
-    ...DefaultTheme.colors,
+    ...(theme.mode === "dark" ? DarkTheme.colors : DefaultTheme.colors),
     background: theme.colors.background,
     border: theme.colors.border,
     card: theme.colors.elevated,
@@ -87,6 +88,7 @@ export default function RootLayout() {
   return (
     <AppProviders>
       <ThemeProvider value={navigationTheme}>
+        <StatusBar style={theme.mode === "dark" ? "light" : "dark"} />
         <Stack>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -96,8 +98,15 @@ export default function RootLayout() {
               title: "Event Details",
               headerLargeTitle: Platform.OS === "ios",
               headerShadowVisible: false,
-              headerTintColor: theme.colors.heading,
+              headerTintColor: theme.colors.primary,
               headerStyle: { backgroundColor: theme.colors.background },
+              headerTitleStyle: {
+                color: theme.colors.heading,
+                fontFamily: theme.fonts.body,
+                fontWeight: "600",
+              },
+              headerBackTitle: "",
+              headerBackButtonDisplayMode: "minimal",
             }}
           />
           <Stack.Screen name="+not-found" options={{ title: "Not Found" }} />

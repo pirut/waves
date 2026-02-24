@@ -9,7 +9,41 @@ export const EVENT_CATEGORIES = [
 ] as const;
 
 export type EventCategory = (typeof EVENT_CATEGORIES)[number];
-export type RSVPStatus = "going" | "interested";
+export type RSVPStatus = "going" | "interested" | "not_going";
+
+export const RSVP_STATUS_OPTIONS: ReadonlyArray<{
+  value: RSVPStatus;
+  label: string;
+  helper: string;
+}> = [
+  { value: "going", label: "Going", helper: "You plan to attend." },
+  { value: "interested", label: "Interested", helper: "You might attend." },
+  { value: "not_going", label: "Not Going", helper: "You cannot attend." },
+] as const;
+
+export function getRsvpStatusLabel(status: RSVPStatus): string {
+  if (status === "going") {
+    return "Going";
+  }
+
+  if (status === "interested") {
+    return "Interested";
+  }
+
+  return "Not Going";
+}
+
+export function getRsvpStatusTone(status: RSVPStatus): "default" | "success" | "warning" {
+  if (status === "going") {
+    return "success";
+  }
+
+  if (status === "interested") {
+    return "warning";
+  }
+
+  return "default";
+}
 
 export type ProfilePreview = {
   id: string;
@@ -52,6 +86,42 @@ export type EventMessage = {
   author: ProfilePreview;
 };
 
+export type EventFeedUpdate = {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  eventSlug: string;
+  eventStartAt: number;
+  body: string;
+  kind: "announcement" | "update";
+  createdAt: number;
+  author: ProfilePreview;
+  likeCount: number;
+  commentCount: number;
+  viewerHasLiked: boolean;
+};
+
+export type EventFeedComment = {
+  id: string;
+  eventMessageId: string;
+  body: string;
+  createdAt: number;
+  author: ProfilePreview;
+};
+
+export type EventQuestion = {
+  id: string;
+  eventId: string;
+  questionBody: string;
+  createdAt: number;
+  asker: ProfilePreview;
+  answer?: {
+    body: string;
+    answeredAt: number;
+    answeredBy: ProfilePreview;
+  };
+};
+
 export type EventDetail = {
   event: {
     id: string;
@@ -81,6 +151,7 @@ export type EventDetail = {
   attendeeBreakdown: {
     going: number;
     interested: number;
+    notGoing: number;
     total: number;
   };
   attendees: Array<{

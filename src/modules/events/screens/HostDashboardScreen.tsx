@@ -13,7 +13,11 @@ import { Button } from "@/src/core/ui/Button";
 import { Card } from "@/src/core/ui/Card";
 import { Screen } from "@/src/core/ui/Screen";
 import { TextField } from "@/src/core/ui/TextField";
-import type { EventListItem } from "@/src/modules/events/domain/types";
+import {
+  getRsvpStatusLabel,
+  getRsvpStatusTone,
+  type EventListItem,
+} from "@/src/modules/events/domain/types";
 import { useViewerProfile } from "@/src/modules/events/hooks/useViewerProfile";
 
 export function HostDashboardScreen() {
@@ -178,6 +182,9 @@ export function HostDashboardScreen() {
                     label={`${selectedEventDetail.attendeeBreakdown.interested} interested`}
                     tone="warning"
                   />
+                  {selectedEventDetail.attendeeBreakdown.notGoing > 0 ? (
+                    <Badge label={`${selectedEventDetail.attendeeBreakdown.notGoing} not going`} />
+                  ) : null}
                 </View>
                 <View style={styles.attendeeList}>
                   {selectedEventDetail.attendees.length === 0 ? (
@@ -196,8 +203,8 @@ export function HostDashboardScreen() {
                           ) : null}
                         </View>
                         <Badge
-                          label={attendee.status}
-                          tone={attendee.status === "going" ? "success" : "warning"}
+                          label={getRsvpStatusLabel(attendee.status)}
+                          tone={getRsvpStatusTone(attendee.status)}
                         />
                       </View>
                     ))

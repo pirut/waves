@@ -6,7 +6,11 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { requireAuthenticatedIdentity, requireAuthProfile } from "./lib/auth";
 
-const rsvpStatusValidator = v.union(v.literal("going"), v.literal("interested"));
+const rsvpStatusValidator = v.union(
+  v.literal("going"),
+  v.literal("interested"),
+  v.literal("not_going"),
+);
 const messageKindValidator = v.union(v.literal("announcement"), v.literal("update"));
 
 const profilePreviewValidator = v.object({
@@ -56,6 +60,21 @@ const eventMessageValidator = v.object({
   author: profilePreviewValidator,
 });
 
+const eventQuestionValidator = v.object({
+  id: v.id("eventQuestions"),
+  eventId: v.id("events"),
+  questionBody: v.string(),
+  createdAt: v.number(),
+  asker: profilePreviewValidator,
+  answer: v.optional(
+    v.object({
+      body: v.string(),
+      answeredAt: v.number(),
+      answeredBy: profilePreviewValidator,
+    }),
+  ),
+});
+
 const eventDetailValidator = v.object({
   event: v.object({
     id: v.id("events"),
@@ -85,6 +104,7 @@ const eventDetailValidator = v.object({
   attendeeBreakdown: v.object({
     going: v.number(),
     interested: v.number(),
+    notGoing: v.number(),
     total: v.number(),
   }),
   attendees: v.array(eventAttendeeValidator),
@@ -100,6 +120,12 @@ const paginatedEventAttendeesValidator = v.object({
 
 const paginatedEventMessagesValidator = v.object({
   page: v.array(eventMessageValidator),
+  isDone: v.boolean(),
+  continueCursor: v.string(),
+});
+
+const paginatedEventQuestionsValidator = v.object({
+  page: v.array(eventQuestionValidator),
   isDone: v.boolean(),
   continueCursor: v.string(),
 });
@@ -150,11 +176,29 @@ async function getViewerRsvpStatus(
   return viewerRsvp?.status;
 }
 
+async function ensureViewerCanParticipateInEventQna(
+  ctx: QueryCtx | MutationCtx,
+  eventDoc: Doc<"events">,
+  viewerProfileId: Id<"profiles">,
+) {
+  if (eventDoc.organizerProfileId === viewerProfileId) {
+    return;
+  }
+
+  const viewerRsvpStatus = await getViewerRsvpStatus(ctx, eventDoc._id, viewerProfileId);
+  if (!viewerRsvpStatus || viewerRsvpStatus === "not_going") {
+    throw new ConvexError({
+      code: "NOT_EVENT_ATTENDEE",
+      message: "Only attendees and organizers can ask event questions.",
+    });
+  }
+}
+
 async function toEventListItem(
   ctx: QueryCtx | MutationCtx,
   eventDoc: Doc<"events">,
   viewerProfileId: Id<"profiles">,
-  explicitViewerRsvp?: "going" | "interested",
+  explicitViewerRsvp?: Doc<"rsvps">["status"],
 ) {
   const organizer = await ctx.db.get(eventDoc.organizerProfileId);
   if (!organizer) {
@@ -283,7 +327,8 @@ export const getById = query({
       .sort((a, b) => b.respondedAt - a.respondedAt);
 
     const goingCount = attendees.filter((attendee) => attendee.status === "going").length;
-    const interestedCount = attendees.length - goingCount;
+    const interestedCount = attendees.filter((attendee) => attendee.status === "interested").length;
+    const notGoingCount = attendees.filter((attendee) => attendee.status === "not_going").length;
 
     const messageDocs = await ctx.db
       .query("eventMessages")
@@ -339,6 +384,7 @@ export const getById = query({
       attendeeBreakdown: {
         going: goingCount,
         interested: interestedCount,
+        notGoing: notGoingCount,
         total: attendees.length,
       },
       attendees,
@@ -449,6 +495,80 @@ export const listMessagesPaginated = query({
   },
 });
 
+export const listQuestionsPaginated = query({
+  args: {
+    eventId: v.id("events"),
+    paginationOpts: paginationOptsValidator,
+  },
+  returns: paginatedEventQuestionsValidator,
+  handler: async (ctx, args) => {
+    await requireAuthenticatedIdentity(ctx);
+
+    const eventDoc = await ctx.db.get(args.eventId);
+    if (!eventDoc) {
+      throw new ConvexError({
+        code: "EVENT_NOT_FOUND",
+        message: "Event not found.",
+      });
+    }
+
+    const paginatedQuestions = await ctx.db
+      .query("eventQuestions")
+      .withIndex("by_eventId_and_createdAt", (q) => q.eq("eventId", args.eventId))
+      .order("desc")
+      .paginate(args.paginationOpts);
+
+    const questions = (
+      await Promise.all(
+        paginatedQuestions.page.map(async (questionDoc) => {
+          const askerProfile = await ctx.db.get(questionDoc.askerProfileId);
+          if (!askerProfile) {
+            return null;
+          }
+
+          let answer:
+            | {
+                body: string;
+                answeredAt: number;
+                answeredBy: ReturnType<typeof toProfilePreview>;
+              }
+            | undefined;
+
+          if (
+            questionDoc.answerBody &&
+            questionDoc.answeredAt &&
+            questionDoc.answeredByProfileId
+          ) {
+            const answeredByProfile = await ctx.db.get(questionDoc.answeredByProfileId);
+            if (answeredByProfile) {
+              answer = {
+                body: questionDoc.answerBody,
+                answeredAt: questionDoc.answeredAt,
+                answeredBy: toProfilePreview(answeredByProfile),
+              };
+            }
+          }
+
+          return {
+            id: questionDoc._id,
+            eventId: questionDoc.eventId,
+            questionBody: questionDoc.questionBody,
+            createdAt: questionDoc.createdAt,
+            asker: toProfilePreview(askerProfile),
+            ...(answer ? { answer } : {}),
+          };
+        }),
+      )
+    ).filter((question): question is NonNullable<typeof question> => question !== null);
+
+    return {
+      page: questions,
+      isDone: paginatedQuestions.isDone,
+      continueCursor: paginatedQuestions.continueCursor,
+    };
+  },
+});
+
 export const listForViewer = query({
   args: {},
   returns: v.object({
@@ -474,9 +594,16 @@ export const listForViewer = query({
       .order("desc")
       .take(400);
 
-    const attendingEventById = new Map<Id<"events">, { event: Doc<"events">; status: "going" | "interested" }>();
+    const attendingEventById = new Map<
+      Id<"events">,
+      { event: Doc<"events">; status: Doc<"rsvps">["status"] }
+    >();
 
     for (const rsvp of attendingRsvps) {
+      if (rsvp.status === "not_going") {
+        continue;
+      }
+
       if (attendingEventById.has(rsvp.eventId)) {
         continue;
       }
@@ -697,6 +824,8 @@ export const sendEventMessage = mutation({
       authorProfileId: authorProfile._id,
       body: trimmedBody,
       kind: args.kind ?? "announcement",
+      likeCount: 0,
+      commentCount: 0,
       createdAt: Date.now(),
     });
 
@@ -710,5 +839,104 @@ export const sendEventMessage = mutation({
     });
 
     return messageId;
+  },
+});
+
+export const askQuestionForEvent = mutation({
+  args: {
+    eventId: v.id("events"),
+    questionBody: v.string(),
+  },
+  returns: v.id("eventQuestions"),
+  handler: async (ctx, args) => {
+    const askerProfile = await requireAuthProfile(ctx);
+
+    const eventDoc = await ctx.db.get(args.eventId);
+    if (!eventDoc) {
+      throw new ConvexError({
+        code: "EVENT_NOT_FOUND",
+        message: "Event not found.",
+      });
+    }
+
+    await ensureViewerCanParticipateInEventQna(ctx, eventDoc, askerProfile._id);
+
+    const trimmedQuestion = args.questionBody.trim();
+    if (!trimmedQuestion) {
+      throw new ConvexError({
+        code: "EMPTY_QUESTION",
+        message: "Question is required.",
+      });
+    }
+
+    if (trimmedQuestion.length > 600) {
+      throw new ConvexError({
+        code: "QUESTION_TOO_LONG",
+        message: "Question is too long. Keep it to 600 characters or less.",
+      });
+    }
+
+    return await ctx.db.insert("eventQuestions", {
+      eventId: args.eventId,
+      askerProfileId: askerProfile._id,
+      questionBody: trimmedQuestion,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const answerEventQuestion = mutation({
+  args: {
+    questionId: v.id("eventQuestions"),
+    answerBody: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const responderProfile = await requireAuthProfile(ctx);
+    const questionDoc = await ctx.db.get(args.questionId);
+    if (!questionDoc) {
+      throw new ConvexError({
+        code: "QUESTION_NOT_FOUND",
+        message: "Question not found.",
+      });
+    }
+
+    const eventDoc = await ctx.db.get(questionDoc.eventId);
+    if (!eventDoc) {
+      throw new ConvexError({
+        code: "EVENT_NOT_FOUND",
+        message: "Event not found.",
+      });
+    }
+
+    if (eventDoc.organizerProfileId !== responderProfile._id) {
+      throw new ConvexError({
+        code: "NOT_EVENT_ORGANIZER",
+        message: "Only the event host can answer event questions.",
+      });
+    }
+
+    const trimmedAnswer = args.answerBody.trim();
+    if (!trimmedAnswer) {
+      throw new ConvexError({
+        code: "EMPTY_ANSWER",
+        message: "Answer is required.",
+      });
+    }
+
+    if (trimmedAnswer.length > 800) {
+      throw new ConvexError({
+        code: "ANSWER_TOO_LONG",
+        message: "Answer is too long. Keep it to 800 characters or less.",
+      });
+    }
+
+    await ctx.db.patch(questionDoc._id, {
+      answerBody: trimmedAnswer,
+      answeredAt: Date.now(),
+      answeredByProfileId: responderProfile._id,
+    });
+
+    return null;
   },
 });

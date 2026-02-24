@@ -10,19 +10,19 @@ type Props = {
 
 const toneStyles = {
   default: {
-    backgroundColor: "#EEF0F5",
-    color: theme.colors.body,
-    borderColor: "#E5E5EA",
+    backgroundColor: theme.colors.badgeNeutralBg,
+    color: theme.colors.badgeNeutralText,
+    borderColor: theme.colors.badgeNeutralBorder,
   },
   success: {
-    backgroundColor: "#EAF9EF",
-    color: "#1D7A3A",
-    borderColor: "#D4F0DE",
+    backgroundColor: theme.colors.badgeSuccessBg,
+    color: theme.colors.badgeSuccessText,
+    borderColor: theme.colors.badgeSuccessBorder,
   },
   warning: {
-    backgroundColor: "#FFF4E5",
-    color: "#8A5300",
-    borderColor: "#FFE5C2",
+    backgroundColor: theme.colors.badgeWarningBg,
+    color: theme.colors.badgeWarningText,
+    borderColor: theme.colors.badgeWarningBorder,
   },
 } as const;
 

@@ -13,11 +13,17 @@ import { Card } from "@/src/core/ui/Card";
 import { Screen } from "@/src/core/ui/Screen";
 import { TextField } from "@/src/core/ui/TextField";
 import { EventMap } from "@/src/modules/events/components/EventMap";
-import type { EventListItem } from "@/src/modules/events/domain/types";
+import {
+  getRsvpStatusLabel,
+  getRsvpStatusTone,
+  type EventListItem,
+  type EventQuestion,
+} from "@/src/modules/events/domain/types";
 import { useViewerProfile } from "@/src/modules/events/hooks/useViewerProfile";
 import {
   formatEventDateLabel,
   formatEventWindow,
+  formatRelativeTime,
 } from "@/src/modules/events/utils/formatters";
 
 type Props = {
@@ -45,14 +51,27 @@ export function EventDetailScreen({ eventId }: Props) {
     { eventId: eventId as Id<"events"> },
     { initialNumItems: 20 },
   );
+  const questionsFeed = usePaginatedQuery(
+    api.events.listQuestionsPaginated,
+    { eventId: eventId as Id<"events"> },
+    { initialNumItems: 20 },
+  );
 
   const rsvpToEvent = useMutation(api.events.rsvpToEvent);
   const sendEventMessage = useMutation(api.events.sendEventMessage);
+  const answerEventQuestion = useMutation(api.events.answerEventQuestion);
 
   const [rsvpBusy, setRsvpBusy] = useState(false);
   const [messageBody, setMessageBody] = useState("");
   const [messageBusy, setMessageBusy] = useState(false);
   const [messageFeedback, setMessageFeedback] = useState<string | null>(null);
+  const [answerDraftByQuestionId, setAnswerDraftByQuestionId] = useState<Record<string, string>>(
+    {},
+  );
+  const [answerBusyQuestionId, setAnswerBusyQuestionId] = useState<string | null>(null);
+  const [answerFeedbackByQuestionId, setAnswerFeedbackByQuestionId] = useState<
+    Record<string, string>
+  >({});
 
   const onOpenInMaps = async () => {
     if (!eventResult) {
@@ -141,6 +160,46 @@ export function EventDetailScreen({ eventId }: Props) {
     }
   };
 
+  const onAnswerQuestion = async (questionId: string) => {
+    const draft = answerDraftByQuestionId[questionId]?.trim() ?? "";
+    if (!draft) {
+      setAnswerFeedbackByQuestionId((current) => ({
+        ...current,
+        [questionId]: "Write an answer before sending.",
+      }));
+      return;
+    }
+
+    setAnswerBusyQuestionId(questionId);
+    setAnswerFeedbackByQuestionId((current) => ({
+      ...current,
+      [questionId]: "",
+    }));
+
+    try {
+      await answerEventQuestion({
+        questionId: questionId as Id<"eventQuestions">,
+        answerBody: draft,
+      });
+
+      setAnswerDraftByQuestionId((current) => ({
+        ...current,
+        [questionId]: "",
+      }));
+      setAnswerFeedbackByQuestionId((current) => ({
+        ...current,
+        [questionId]: "Answer sent.",
+      }));
+    } catch (error) {
+      setAnswerFeedbackByQuestionId((current) => ({
+        ...current,
+        [questionId]: error instanceof Error ? error.message : "Unable to send answer",
+      }));
+    } finally {
+      setAnswerBusyQuestionId(null);
+    }
+  };
+
   if (viewerLoading || eventResult === undefined) {
     return (
       <Screen scroll={false}>
@@ -166,6 +225,7 @@ export function EventDetailScreen({ eventId }: Props) {
   }
 
   const isOrganizer = viewerProfileId === eventResult.organizer.id;
+  const questions = questionsFeed.results as EventQuestion[];
 
   return (
     <Screen>
@@ -177,6 +237,9 @@ export function EventDetailScreen({ eventId }: Props) {
           <Badge label={eventResult.event.category} />
           <Badge label={`${eventResult.attendeeBreakdown.going} going`} tone="success" />
           <Badge label={`${eventResult.attendeeBreakdown.interested} interested`} tone="warning" />
+          {eventResult.attendeeBreakdown.notGoing > 0 ? (
+            <Badge label={`${eventResult.attendeeBreakdown.notGoing} not going`} />
+          ) : null}
         </View>
       </View>
 
@@ -262,6 +325,9 @@ export function EventDetailScreen({ eventId }: Props) {
             label={`${eventResult.attendeeBreakdown.interested} interested`}
             tone="warning"
           />
+          {eventResult.attendeeBreakdown.notGoing > 0 ? (
+            <Badge label={`${eventResult.attendeeBreakdown.notGoing} not going`} />
+          ) : null}
         </View>
         <View style={styles.attendeeList}>
           {attendeesFeed.status === "LoadingFirstPage" ? (
@@ -282,8 +348,8 @@ export function EventDetailScreen({ eventId }: Props) {
                   ) : null}
                 </View>
                 <Badge
-                  label={attendee.status}
-                  tone={attendee.status === "going" ? "success" : "warning"}
+                  label={getRsvpStatusLabel(attendee.status)}
+                  tone={getRsvpStatusTone(attendee.status)}
                 />
               </View>
             ))
@@ -358,6 +424,100 @@ export function EventDetailScreen({ eventId }: Props) {
           />
         ) : null}
       </Card>
+
+      <Card>
+        <AppText variant="h3" color={theme.colors.heading}>
+          Questions & answers
+        </AppText>
+        <View style={styles.questionList}>
+          {questionsFeed.status === "LoadingFirstPage" && questions.length === 0 ? (
+            <AppText>Loading event questions...</AppText>
+          ) : questions.length === 0 ? (
+            <AppText>No questions yet. Ask one from the Feed tab.</AppText>
+          ) : (
+            questions.map((question) => {
+              const answerDraft = answerDraftByQuestionId[question.id] ?? "";
+              const answerFeedback = answerFeedbackByQuestionId[question.id];
+              const answerBusy = answerBusyQuestionId === question.id;
+              const hasAnswer = Boolean(question.answer);
+
+              return (
+                <View key={question.id} style={styles.questionItem}>
+                  <View style={styles.questionHeader}>
+                    <AppText variant="caption" color={theme.colors.heading}>
+                      {question.asker.displayName}
+                    </AppText>
+                    <AppText variant="caption" color={theme.colors.muted}>
+                      {formatRelativeTime(question.createdAt)}
+                    </AppText>
+                  </View>
+                  <AppText>{question.questionBody}</AppText>
+
+                  {hasAnswer ? (
+                    <View style={styles.answerItem}>
+                      <View style={styles.questionHeader}>
+                        <AppText variant="caption" color={theme.colors.heading}>
+                          {question.answer?.answeredBy.displayName}
+                        </AppText>
+                        <AppText variant="caption" color={theme.colors.muted}>
+                          {formatRelativeTime(question.answer?.answeredAt ?? question.createdAt)}
+                        </AppText>
+                      </View>
+                      <AppText>{question.answer?.body}</AppText>
+                    </View>
+                  ) : (
+                    <AppText variant="caption" color={theme.colors.muted}>
+                      Awaiting host response.
+                    </AppText>
+                  )}
+
+                  {isOrganizer ? (
+                    <View style={styles.answerComposer}>
+                      <TextField
+                        label={hasAnswer ? "Update host answer" : "Host answer"}
+                        multiline
+                        onChangeText={(next) =>
+                          setAnswerDraftByQuestionId((current) => ({
+                            ...current,
+                            [question.id]: next,
+                          }))
+                        }
+                        placeholder="Post a clear response for attendees"
+                        value={answerDraft}
+                      />
+                      {answerFeedback ? (
+                        <AppText
+                          color={
+                            answerFeedback.toLowerCase().includes("sent")
+                              ? theme.colors.success
+                              : theme.colors.danger
+                          }>
+                          {answerFeedback}
+                        </AppText>
+                      ) : null}
+                      <Button
+                        fullWidth={false}
+                        label={hasAnswer ? "Update Answer" : "Send Answer"}
+                        loading={answerBusy}
+                        onPress={() => onAnswerQuestion(question.id)}
+                        variant="secondary"
+                      />
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })
+          )}
+        </View>
+        {questionsFeed.status === "CanLoadMore" || questionsFeed.status === "LoadingMore" ? (
+          <Button
+            label={questionsFeed.status === "LoadingMore" ? "Loading..." : "Load More Questions"}
+            loading={questionsFeed.status === "LoadingMore"}
+            onPress={() => questionsFeed.loadMore(20)}
+            variant="secondary"
+          />
+        ) : null}
+      </Card>
     </Screen>
   );
 }
@@ -420,6 +580,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  questionList: {
+    gap: theme.spacing.sm,
+  },
+  questionItem: {
+    backgroundColor: theme.colors.elevatedMuted,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    gap: theme.spacing.xs,
+    padding: theme.spacing.md,
+  },
+  questionHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  answerItem: {
+    backgroundColor: theme.colors.elevated,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    gap: theme.spacing.xs,
+    padding: theme.spacing.sm,
+  },
+  answerComposer: {
+    gap: theme.spacing.xs,
   },
   mediaGrid: {
     flexDirection: "row",

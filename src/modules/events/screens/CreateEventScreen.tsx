@@ -26,9 +26,13 @@ import { TextField } from "@/src/core/ui/TextField";
 import { EventMap } from "@/src/modules/events/components/EventMap";
 import type { FocusLocation } from "@/src/modules/events/components/EventMap.types";
 import { EVENT_CATEGORIES } from "@/src/modules/events/domain/types";
-import { createEventInputSchema } from "@/src/modules/events/domain/validation";
+import {
+  CREATE_EVENT_MIN_DESCRIPTION_CHARS,
+  createEventInputSchema,
+} from "@/src/modules/events/domain/validation";
 import { useFileUpload } from "@/src/modules/events/hooks/useFileUpload";
 import { useViewerProfile } from "@/src/modules/events/hooks/useViewerProfile";
+import { formatEventWindow } from "@/src/modules/events/utils/formatters";
 
 type GeocodeResult = {
   displayName: string;
@@ -40,6 +44,11 @@ type GeocodeResult = {
   country: string;
   postalCode?: string;
 };
+
+const HOUR_MS = 1000 * 60 * 60;
+const MIN_EVENT_DURATION_MS = 1000 * 60 * 30;
+const DEFAULT_EVENT_DURATION_MS = HOUR_MS * 3;
+const QUICK_DURATION_OPTIONS = [60, 90, 120, 180, 240] as const;
 
 export function CreateEventScreen() {
   const router = useRouter();
@@ -55,6 +64,7 @@ export function CreateEventScreen() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<string>(EVENT_CATEGORIES[0]);
   const [impactSummary, setImpactSummary] = useState("");
+  const [hasCapacityLimit, setHasCapacityLimit] = useState(false);
   const [capacity, setCapacity] = useState("");
 
   const [coverStorageId, setCoverStorageId] = useState<Id<"_storage"> | null>(null);
@@ -68,8 +78,8 @@ export function CreateEventScreen() {
   const [locationResults, setLocationResults] = useState<GeocodeResult[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<GeocodeResult | null>(null);
 
-  const [startAt, setStartAt] = useState(Date.now() + 1000 * 60 * 60 * 48);
-  const [endAt, setEndAt] = useState(Date.now() + 1000 * 60 * 60 * 51);
+  const [startAt, setStartAt] = useState(Date.now() + HOUR_MS * 48);
+  const [endAt, setEndAt] = useState(Date.now() + HOUR_MS * 48 + DEFAULT_EVENT_DURATION_MS);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -87,6 +97,30 @@ export function CreateEventScreen() {
         label: selectedLocation.displayName,
       }
     : undefined;
+
+  const durationMinutes = Math.max(30, Math.round((endAt - startAt) / (1000 * 60)));
+  const scheduleLabel = useMemo(() => formatEventWindow(startAt, endAt), [endAt, startAt]);
+  const descriptionLength = description.trim().length;
+  const descriptionRemaining = Math.max(0, CREATE_EVENT_MIN_DESCRIPTION_CHARS - descriptionLength);
+
+  const resetForm = () => {
+    const nextStartAt = Date.now() + HOUR_MS * 48;
+    setTitle("");
+    setDescription("");
+    setCategory(EVENT_CATEGORIES[0]);
+    setImpactSummary("");
+    setHasCapacityLimit(false);
+    setCapacity("");
+    setCoverStorageId(null);
+    setCoverPreviewUri(null);
+    setGalleryUploads([]);
+    setLocationQuery("");
+    setLocationResults([]);
+    setSelectedLocation(null);
+    setStartAt(nextStartAt);
+    setEndAt(nextStartAt + DEFAULT_EVENT_DURATION_MS);
+    setErrorMessage(null);
+  };
 
   const pickImages = async (allowsMultipleSelection: boolean) => {
     if (Platform.OS !== "web") {
@@ -224,6 +258,25 @@ export function CreateEventScreen() {
       selectedLocation.region?.trim() ||
       selectedLocation.country.trim();
 
+    const normalizedImpactSummary = impactSummary.trim();
+    const normalizedCapacity = capacity.trim();
+
+    let parsedCapacity: number | undefined = undefined;
+    if (hasCapacityLimit) {
+      if (!normalizedCapacity) {
+        setErrorMessage("Set a capacity value or choose no capacity limit.");
+        return;
+      }
+
+      const maybeCapacity = Number(normalizedCapacity);
+      if (!Number.isInteger(maybeCapacity) || maybeCapacity <= 0) {
+        setErrorMessage("Capacity must be a whole number greater than 0.");
+        return;
+      }
+
+      parsedCapacity = maybeCapacity;
+    }
+
     const validationResult = createEventInputSchema.safeParse({
       title,
       description,
@@ -238,8 +291,8 @@ export function CreateEventScreen() {
       region: selectedLocation.region || undefined,
       country: selectedLocation.country,
       postalCode: selectedLocation.postalCode || undefined,
-      impactSummary: impactSummary || undefined,
-      capacity: capacity ? Number(capacity) : undefined,
+      impactSummary: normalizedImpactSummary || undefined,
+      capacity: parsedCapacity,
     });
 
     if (!validationResult.success) {
@@ -273,7 +326,8 @@ export function CreateEventScreen() {
             : undefined,
       });
 
-      router.push(`/events/${eventId}`);
+      resetForm();
+      router.push(`/events/${eventId}?origin=create`);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Unable to create event");
     } finally {
@@ -282,14 +336,24 @@ export function CreateEventScreen() {
   };
 
   const onChangeStartAt = (nextStartAt: number) => {
+    const currentDuration = Math.max(MIN_EVENT_DURATION_MS, endAt - startAt);
     setStartAt(nextStartAt);
     if (endAt <= nextStartAt) {
-      setEndAt(nextStartAt + 1000 * 60 * 60);
+      setEndAt(nextStartAt + currentDuration);
     }
   };
 
   const onChangeEndAt = (nextEndAt: number) => {
+    if (nextEndAt <= startAt) {
+      setEndAt(startAt + MIN_EVENT_DURATION_MS);
+      return;
+    }
+
     setEndAt(nextEndAt);
+  };
+
+  const onApplyDuration = (minutes: number) => {
+    setEndAt(startAt + minutes * 60 * 1000);
   };
 
   const basicsCard = (
@@ -340,6 +404,15 @@ export function CreateEventScreen() {
         placeholder="What will happen, what to bring, and who should join?"
         value={description}
       />
+      <View style={styles.descriptionHintRow}>
+        <AppText
+          variant="caption"
+          color={descriptionRemaining > 0 ? theme.colors.danger : theme.colors.success}>
+          {descriptionRemaining > 0
+            ? `${descriptionRemaining} more characters needed (${descriptionLength}/${CREATE_EVENT_MIN_DESCRIPTION_CHARS})`
+            : `Description length looks good (${descriptionLength}/${CREATE_EVENT_MIN_DESCRIPTION_CHARS})`}
+        </AppText>
+      </View>
     </Card>
   );
 
@@ -348,55 +421,67 @@ export function CreateEventScreen() {
       <AppText variant="h3" color={theme.colors.heading}>
         Schedule
       </AppText>
-      <View style={styles.scheduleGroup}>
-        <AppText variant="caption" color={theme.colors.muted}>
-          Date range
-        </AppText>
-        <View style={styles.scheduleRow}>
-          <View style={styles.scheduleField}>
-            <DateTimeField
-              label="Start date"
-              minimumDate={Date.now()}
-              onChange={onChangeStartAt}
-              picker="date"
-              value={startAt}
-            />
-          </View>
-          <View style={styles.scheduleField}>
-            <DateTimeField
-              label="End date"
-              minimumDate={startAt}
-              onChange={onChangeEndAt}
-              picker="date"
-              value={endAt}
-            />
-          </View>
+      <AppText variant="caption" color={theme.colors.muted}>
+        Choose start and end date/time. You can also tap a quick duration.
+      </AppText>
+      <View style={styles.scheduleRow}>
+        <View style={styles.scheduleField}>
+          <DateTimeField
+            label="Starts"
+            minimumDate={Date.now()}
+            minuteInterval={5}
+            onChange={onChangeStartAt}
+            picker="datetime"
+            value={startAt}
+          />
+        </View>
+        <View style={styles.scheduleField}>
+          <DateTimeField
+            label="Ends"
+            minimumDate={startAt + MIN_EVENT_DURATION_MS}
+            minuteInterval={5}
+            onChange={onChangeEndAt}
+            picker="datetime"
+            value={endAt}
+          />
         </View>
       </View>
-      <View style={styles.scheduleGroup}>
+      <View style={styles.durationGroup}>
         <AppText variant="caption" color={theme.colors.muted}>
-          Times
+          Quick duration
         </AppText>
-        <View style={styles.scheduleRow}>
-          <View style={styles.scheduleField}>
-            <DateTimeField
-              label="Start time"
-              minuteInterval={5}
-              onChange={onChangeStartAt}
-              picker="time"
-              value={startAt}
-            />
-          </View>
-          <View style={styles.scheduleField}>
-            <DateTimeField
-              label="End time"
-              minuteInterval={5}
-              onChange={onChangeEndAt}
-              picker="time"
-              value={endAt}
-            />
-          </View>
-        </View>
+        <ScrollView
+          contentContainerStyle={styles.durationOptions}
+          horizontal
+          showsHorizontalScrollIndicator={false}>
+          {QUICK_DURATION_OPTIONS.map((minutes) => {
+            const isActive = durationMinutes === minutes;
+            return (
+              <Pressable
+                accessibilityRole="button"
+                key={minutes}
+                onPress={() => onApplyDuration(minutes)}
+                style={({ pressed }) => [
+                  styles.durationChip,
+                  isActive ? styles.durationChipActive : undefined,
+                  pressed ? styles.touchPressed : undefined,
+                ]}>
+                <AppText
+                  color={isActive ? theme.colors.primaryText : theme.colors.primary}
+                  style={styles.durationChipLabel}
+                  variant="caption">
+                  {minutes < 120 ? `${minutes} min` : `${minutes / 60} hr`}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+      <View style={styles.scheduleSummary}>
+        <Badge label={scheduleLabel} />
+        <AppText variant="caption" color={theme.colors.muted}>
+          Timezone: {timezone}
+        </AppText>
       </View>
     </Card>
   );
@@ -532,24 +617,92 @@ export function CreateEventScreen() {
     </Card>
   );
 
-  const publishCard = (
+  const optionalDetailsCard = (
     <Card>
       <AppText variant="h3" color={theme.colors.heading}>
         Optional details
       </AppText>
+      <AppText variant="caption" color={theme.colors.muted}>
+        Skip this section if you do not need it.
+      </AppText>
       <TextField
-        label="Impact summary"
+        label="Impact summary (optional)"
         onChangeText={setImpactSummary}
         placeholder="Target: package 5,000 meals"
         value={impactSummary}
       />
-      <TextField
-        keyboardType="number-pad"
-        label="Capacity (optional)"
-        onChangeText={setCapacity}
-        placeholder="120"
-        value={capacity}
-      />
+      <View style={styles.capacitySection}>
+        <AppText variant="caption" color={theme.colors.muted}>
+          Attendance limit
+        </AppText>
+        <View style={styles.capacityChips}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              setHasCapacityLimit(false);
+              setCapacity("");
+            }}
+            style={({ pressed }) => [
+              styles.capacityChip,
+              !hasCapacityLimit ? styles.capacityChipActive : undefined,
+              pressed ? styles.touchPressed : undefined,
+            ]}>
+            <AppText
+              color={!hasCapacityLimit ? theme.colors.primaryText : theme.colors.primary}
+              style={styles.capacityChipLabel}
+              variant="caption">
+              No limit
+            </AppText>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setHasCapacityLimit(true)}
+            style={({ pressed }) => [
+              styles.capacityChip,
+              hasCapacityLimit ? styles.capacityChipActive : undefined,
+              pressed ? styles.touchPressed : undefined,
+            ]}>
+            <AppText
+              color={hasCapacityLimit ? theme.colors.primaryText : theme.colors.primary}
+              style={styles.capacityChipLabel}
+              variant="caption">
+              Set limit
+            </AppText>
+          </Pressable>
+        </View>
+      </View>
+
+      {hasCapacityLimit ? (
+        <TextField
+          keyboardType="number-pad"
+          label="Capacity"
+          onChangeText={(nextValue) => setCapacity(nextValue.replace(/[^0-9]/g, ""))}
+          placeholder="120"
+          value={capacity}
+        />
+      ) : (
+        <AppText variant="caption" color={theme.colors.subtle}>
+          Guests can RSVP without a fixed cap.
+        </AppText>
+      )}
+    </Card>
+  );
+
+  const publishCard = (
+    <Card>
+      <AppText variant="h3" color={theme.colors.heading}>
+        Review & publish
+      </AppText>
+      <View style={styles.publishBadges}>
+        <Badge label={category} />
+        <Badge label={selectedLocation ? "Location selected" : "Location needed"} />
+      </View>
+      <AppText variant="caption" color={theme.colors.muted}>
+        {scheduleLabel}
+      </AppText>
+      <AppText variant="caption" color={theme.colors.muted}>
+        {timezone}
+      </AppText>
 
       {errorMessage ? <AppText color={theme.colors.danger}>{errorMessage}</AppText> : null}
 
@@ -584,6 +737,7 @@ export function CreateEventScreen() {
           </View>
           <View style={styles.secondaryColumn}>
             {photosCard}
+            {optionalDetailsCard}
             {publishCard}
           </View>
         </View>
@@ -593,6 +747,7 @@ export function CreateEventScreen() {
           {scheduleCard}
           {locationCard}
           {photosCard}
+          {optionalDetailsCard}
           {publishCard}
         </>
       )}
@@ -649,8 +804,8 @@ const styles = StyleSheet.create({
   categoryChipLabel: {
     fontWeight: "700",
   },
-  scheduleGroup: {
-    gap: theme.spacing.xs,
+  descriptionHintRow: {
+    alignItems: "flex-start",
   },
   scheduleRow: {
     flexDirection: "row",
@@ -660,6 +815,34 @@ const styles = StyleSheet.create({
   scheduleField: {
     flex: 1,
     minWidth: 240,
+  },
+  durationGroup: {
+    gap: theme.spacing.xs,
+  },
+  durationOptions: {
+    gap: theme.spacing.xs,
+  },
+  durationChip: {
+    alignItems: "center",
+    backgroundColor: theme.colors.elevated,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.pill,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: theme.control.minTouchSize,
+    minWidth: 88,
+    paddingHorizontal: theme.spacing.md,
+  },
+  durationChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  durationChipLabel: {
+    fontWeight: "700",
+  },
+  scheduleSummary: {
+    alignItems: "flex-start",
+    gap: theme.spacing.xs,
   },
   previewImage: {
     borderRadius: theme.radius.lg,
@@ -726,5 +909,36 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     padding: theme.spacing.md,
+  },
+  capacitySection: {
+    gap: theme.spacing.xs,
+  },
+  capacityChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.xs,
+  },
+  capacityChip: {
+    alignItems: "center",
+    backgroundColor: theme.colors.elevated,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.pill,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: theme.control.minTouchSize,
+    minWidth: 88,
+    paddingHorizontal: theme.spacing.md,
+  },
+  capacityChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  capacityChipLabel: {
+    fontWeight: "700",
+  },
+  publishBadges: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.xs,
   },
 });

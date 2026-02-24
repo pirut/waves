@@ -10,6 +10,7 @@
 
 import type * as crons from "../crons.js";
 import type * as events from "../events.js";
+import type * as feed from "../feed.js";
 import type * as files from "../files.js";
 import type * as geocoding from "../geocoding.js";
 import type * as lib_auth from "../lib/auth.js";
@@ -27,6 +28,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   events: typeof events;
+  feed: typeof feed;
   files: typeof files;
   geocoding: typeof geocoding;
   "lib/auth": typeof lib_auth;

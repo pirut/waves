@@ -14,7 +14,11 @@ import { TextField } from "@/src/core/ui/TextField";
 import { EventCard } from "@/src/modules/events/components/EventCard";
 import { EventMap } from "@/src/modules/events/components/EventMap";
 import type { FocusLocation } from "@/src/modules/events/components/EventMap.types";
-import { EVENT_CATEGORIES, type EventListItem } from "@/src/modules/events/domain/types";
+import {
+  EVENT_CATEGORIES,
+  type EventListItem,
+  type RSVPStatus,
+} from "@/src/modules/events/domain/types";
 import { useViewerProfile } from "@/src/modules/events/hooks/useViewerProfile";
 
 type GeocodeResult = {
@@ -140,7 +144,7 @@ export function DiscoverScreen() {
     [selectedEvent, visibleEvents],
   );
 
-  const onPressRsvp = async (eventId: string) => {
+  const onPressRsvp = async (eventId: string, status: RSVPStatus) => {
     if (!viewerProfileId) {
       return;
     }
@@ -150,7 +154,7 @@ export function DiscoverScreen() {
     try {
       await rsvpToEvent({
         eventId: eventId as Id<"events">,
-        status: "going",
+        status,
       });
     } finally {
       setRsvpPendingId(null);
@@ -418,7 +422,7 @@ export function DiscoverScreen() {
             distanceMiles={selectedEvent.distanceMiles}
             item={selectedEvent}
             onOpen={() => router.push(`/events/${selectedEvent.id}`)}
-            onRsvp={() => onPressRsvp(selectedEvent.id)}
+            onRsvp={(status) => onPressRsvp(selectedEvent.id, status)}
             rsvpBusy={rsvpPendingId === selectedEvent.id}
           />
         </View>
@@ -460,7 +464,7 @@ export function DiscoverScreen() {
               item={eventItem}
               key={eventItem.id}
               onOpen={() => router.push(`/events/${eventItem.id}`)}
-              onRsvp={() => onPressRsvp(eventItem.id)}
+              onRsvp={(status) => onPressRsvp(eventItem.id, status)}
               rsvpBusy={rsvpPendingId === eventItem.id}
             />
           ))

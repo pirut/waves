@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 
 export function formatEventWindow(startAt: number, endAt: number) {
   const start = new Date(startAt);
@@ -28,4 +28,14 @@ export function parseDateTimeInput(value: string) {
   const normalized = value.trim().replace(" ", "T");
   const parsed = new Date(normalized);
   return parsed.getTime();
+}
+
+export function formatRelativeTime(timestamp: number) {
+  return formatDistanceToNow(new Date(timestamp), {
+    addSuffix: true,
+  });
+}
+
+export function formatDateTimeWithClock(timestamp: number) {
+  return format(new Date(timestamp), "MMM d, yyyy • h:mm a");
 }

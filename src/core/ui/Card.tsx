@@ -25,9 +25,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     shadowColor: "#000000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: theme.mode === "dark" ? 0.24 : 0.05,
     shadowRadius: 6,
-    elevation: 1,
+    elevation: theme.mode === "dark" ? 0 : 1,
   },
   inner: {
     gap: theme.spacing.md,

@@ -40,6 +40,10 @@ function toTimeInputValue(value: Date) {
   return `${hours}:${minutes}`;
 }
 
+function toDateTimeInputValue(value: Date) {
+  return `${toDateInputValue(value)}T${toTimeInputValue(value)}`;
+}
+
 function parseDateInput(value: string) {
   const [yearPart, monthPart, dayPart] = value.split("-");
   const year = Number(yearPart);
@@ -65,16 +69,18 @@ function parseTimeInput(value: string) {
   return { hours, minutes };
 }
 
+function parseDateTimeInput(value: string) {
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return null;
+  }
+
+  return parsedDate.getTime();
+}
+
 const containerStyle: CSSProperties = {
   display: "grid",
   gap: 6,
-  width: "100%",
-};
-
-const rowStyle: CSSProperties = {
-  display: "grid",
-  gap: 12,
-  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
   width: "100%",
 };
 
@@ -105,32 +111,48 @@ const inputStyle: CSSProperties = {
 };
 
 type ControlProps = {
-  kind: "date" | "time";
+  kind: "date" | "time" | "datetime";
   value: Date;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   minDate?: string;
   maxDate?: string;
+  minDateTime?: string;
+  maxDateTime?: string;
   minuteInterval: number;
 };
 
-function Control({ kind, value, onChange, minDate, maxDate, minuteInterval }: ControlProps) {
+function Control({
+  kind,
+  value,
+  onChange,
+  minDate,
+  maxDate,
+  minDateTime,
+  maxDateTime,
+  minuteInterval,
+}: ControlProps) {
   const isDate = kind === "date";
-  const valueText = isDate ? toDateInputValue(value) : toTimeInputValue(value);
+  const isTime = kind === "time";
+  const valueText = isDate
+    ? toDateInputValue(value)
+    : isTime
+      ? toTimeInputValue(value)
+      : toDateTimeInputValue(value);
 
   return (
     <label style={controlShellStyle}>
       <FontAwesome
         color={theme.colors.muted}
-        name={isDate ? "calendar-o" : "clock-o"}
+        name={isDate ? "calendar-o" : isTime ? "clock-o" : "calendar"}
         size={16}
       />
       <input
-        max={isDate ? maxDate : undefined}
-        min={isDate ? minDate : undefined}
+        max={isDate ? maxDate : isTime ? undefined : maxDateTime}
+        min={isDate ? minDate : isTime ? undefined : minDateTime}
         onChange={onChange}
         step={isDate ? undefined : minuteInterval * 60}
         style={inputStyle}
-        type={isDate ? "date" : "time"}
+        type={isDate ? "date" : isTime ? "time" : "datetime-local"}
         value={valueText}
       />
     </label>
@@ -149,6 +171,8 @@ export function DateTimeField({
   const selectedDate = useMemo(() => new Date(value), [value]);
   const minDate = minimumDate ? toDateInputValue(new Date(minimumDate)) : undefined;
   const maxDate = maximumDate ? toDateInputValue(new Date(maximumDate)) : undefined;
+  const minDateTime = minimumDate ? toDateTimeInputValue(new Date(minimumDate)) : undefined;
+  const maxDateTime = maximumDate ? toDateTimeInputValue(new Date(maximumDate)) : undefined;
 
   const onChangeDate = (event: ChangeEvent<HTMLInputElement>) => {
     const parsed = parseDateInput(event.target.value);
@@ -174,6 +198,16 @@ export function DateTimeField({
     onChange(nextTimestamp);
   };
 
+  const onChangeDateTime = (event: ChangeEvent<HTMLInputElement>) => {
+    const parsedTimestamp = parseDateTimeInput(event.target.value);
+    if (parsedTimestamp === null) {
+      return;
+    }
+
+    const nextTimestamp = clampTimestamp(parsedTimestamp, minimumDate, maximumDate);
+    onChange(nextTimestamp);
+  };
+
   const previewText =
     picker === "date"
       ? format(selectedDate, "EEEE, MMMM d, yyyy")
@@ -188,22 +222,14 @@ export function DateTimeField({
       </AppText>
 
       {picker === "datetime" ? (
-        <div style={rowStyle}>
-          <Control
-            kind="date"
-            maxDate={maxDate}
-            minDate={minDate}
-            minuteInterval={minuteInterval}
-            onChange={onChangeDate}
-            value={selectedDate}
-          />
-          <Control
-            kind="time"
-            minuteInterval={minuteInterval}
-            onChange={onChangeTime}
-            value={selectedDate}
-          />
-        </div>
+        <Control
+          kind="datetime"
+          maxDateTime={maxDateTime}
+          minDateTime={minDateTime}
+          minuteInterval={minuteInterval}
+          onChange={onChangeDateTime}
+          value={selectedDate}
+        />
       ) : picker === "date" ? (
         <Control
           kind="date"

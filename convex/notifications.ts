@@ -105,6 +105,10 @@ export const enqueueForMessage = internalMutation({
     let queued = 0;
 
     for (const rsvp of rsvps) {
+      if (rsvp.status === "not_going") {
+        continue;
+      }
+
       if (rsvp.attendeeProfileId === messageDoc.authorProfileId) {
         continue;
       }
