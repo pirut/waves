@@ -5,8 +5,7 @@ import { useMutation } from "convex/react";
 import type { PropsWithChildren } from "react";
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-import { api } from "@convex/api";
-import type { Id } from "@convex/dataModel";
+import { api, type Id } from "@/lib/convex-api";
 
 type ViewerContextValue = {
   viewerProfileId: Id<"profiles"> | null;

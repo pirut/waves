@@ -4,8 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 
-import { api } from "@convex/api";
-import type { Id } from "@convex/dataModel";
+import { api, type Id } from "@/lib/convex-api";
 
 import { useViewer } from "@/components/viewer-context";
 import { EVENT_CATEGORIES, formatRsvpLabel, RSVP_OPTIONS, type RsvpStatus } from "@/lib/events";

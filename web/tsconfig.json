@@ -26,9 +26,6 @@
     "paths": {
       "@/*": [
         "./*"
-      ],
-      "@convex/*": [
-        "../convex/_generated/*"
       ]
     }
   },
