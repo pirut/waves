@@ -1,44 +1,40 @@
+"use client";
+
 import Link from "next/link";
-import { SignedIn, SignedOut, SignInButton, SignUpButton } from "@clerk/nextjs";
+import { SignInButton, SignUpButton, useAuth } from "@clerk/nextjs";
 
 import { isClerkConfigured } from "@/lib/env";
 
 export default function LandingPage() {
-  const hasClerkServerEnv = Boolean(
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY,
-  );
+  const { isLoaded, isSignedIn } = useAuth();
+  const showClerkActions = isClerkConfigured && isLoaded && !isSignedIn;
+  const showOpenApp = !isClerkConfigured || !isLoaded || isSignedIn;
 
   return (
     <div className="landing-page">
       <header className="landing-topbar">
         <p className="wordmark">Make Waves</p>
-        {isClerkConfigured && hasClerkServerEnv ? (
+        {showClerkActions ? (
           <>
-            <SignedOut>
-              <div className="hero-actions">
-                <SignInButton mode="modal">
-                  <button className="btn btn-ghost" type="button">
-                    Sign in
-                  </button>
-                </SignInButton>
-                <SignUpButton mode="modal">
-                  <button className="btn btn-secondary" type="button">
-                    Create account
-                  </button>
-                </SignUpButton>
-              </div>
-            </SignedOut>
-            <SignedIn>
-              <Link className="btn btn-secondary" href="/discover">
-                Open app
-              </Link>
-            </SignedIn>
+            <div className="hero-actions">
+              <SignInButton mode="modal">
+                <button className="btn btn-ghost" type="button">
+                  Sign in
+                </button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <button className="btn btn-secondary" type="button">
+                  Create account
+                </button>
+              </SignUpButton>
+            </div>
           </>
-        ) : (
+        ) : null}
+        {showOpenApp ? (
           <Link className="btn btn-secondary" href="/discover">
             Open app
           </Link>
-        )}
+        ) : null}
       </header>
 
       <main className="landing-main">

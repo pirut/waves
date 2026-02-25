@@ -1,18 +1,15 @@
+"use client";
+
 import { SignIn } from "@clerk/nextjs";
 
 import { isClerkConfigured } from "@/lib/env";
 
 export default function SignInPage() {
-  const hasClerkServerEnv = Boolean(
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY,
-  );
-
-  if (!isClerkConfigured || !hasClerkServerEnv) {
+  if (!isClerkConfigured) {
     return (
       <div className="landing-page">
         <div className="viewer-state viewer-error">
-          Clerk is not configured. Set `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and
-          `CLERK_SECRET_KEY` in `web/.env.local`.
+          Clerk is not configured. Set `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`.
         </div>
       </div>
     );
