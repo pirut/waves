@@ -3,7 +3,11 @@ import { SignUp } from "@clerk/nextjs";
 import { isClerkConfigured } from "@/lib/env";
 
 export default function SignUpPage() {
-  if (!isClerkConfigured) {
+  const hasClerkServerEnv = Boolean(
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY,
+  );
+
+  if (!isClerkConfigured || !hasClerkServerEnv) {
     return (
       <div className="landing-page">
         <div className="viewer-state viewer-error">

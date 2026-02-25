@@ -4,11 +4,15 @@ import { SignedIn, SignedOut, SignInButton, SignUpButton } from "@clerk/nextjs";
 import { isClerkConfigured } from "@/lib/env";
 
 export default function LandingPage() {
+  const hasClerkServerEnv = Boolean(
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY,
+  );
+
   return (
     <div className="landing-page">
       <header className="landing-topbar">
         <p className="wordmark">Make Waves</p>
-        {isClerkConfigured ? (
+        {isClerkConfigured && hasClerkServerEnv ? (
           <>
             <SignedOut>
               <div className="hero-actions">
