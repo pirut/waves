@@ -5,6 +5,7 @@ node_modules/
 
 # Expo
 .expo/
+.expo-shared/
 dist/
 web-build/
 expo-env.d.ts
@@ -25,6 +26,14 @@ expo-env.d.ts
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+
+# local build/runtime output
+.next/
+.turbo/
+coverage/
+.vercel/
+output/
+web/
 
 # macOS
 .DS_Store
