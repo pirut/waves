@@ -3,60 +3,58 @@
     "name": "Make Waves",
     "slug": "make-waves",
     "version": "1.0.0",
-    "orientation": "default",
-    "icon": "./assets/images/icon.png",
+    "orientation": "portrait",
     "scheme": "waves",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#F2F2F7"
+      "backgroundColor": "#F6F3EC"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.make-waves",
+      "usesAppleSignIn": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "Make Waves uses your location to show events near you on the map."
       }
     },
     "android": {
       "package": "com.anonymous.makewaves",
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#F2F2F7"
-      },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.RECORD_AUDIO"
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "output": "single"
     },
     "plugins": [
       "expo-router",
+      "expo-font",
+      "expo-secure-store",
+      "expo-apple-authentication",
       [
-        "expo-image-picker",
+        "expo-location",
         {
-          "photosPermission": "Make Waves needs access to your photos so you can upload event images.",
-          "cameraPermission": "Make Waves needs camera access if you want to capture event photos."
+          "locationAlwaysAndWhenInUsePermission": "Make Waves uses your location to show events near you on the map."
         }
       ],
-      "expo-secure-store",
-      "@react-native-community/datetimepicker"
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsDownloadToken": "MAPBOX_DOWNLOAD_TOKEN_PLACEHOLDER"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "3f3bc605-1324-4132-9230-42d723b158df"
-      }
+      "router": {}
     }
   }
 }

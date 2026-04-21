@@ -1,16 +1,17 @@
-import { Redirect, Stack } from "expo-router";
+// app/(auth)/_layout.tsx — sign-in / sign-up stack.
 
-import { localAuthBypassEnabled } from "@/src/lib/auth/devBypass";
+import { Stack } from 'expo-router';
+import { useTheme } from '@/src/theme/ThemeProvider';
 
 export default function AuthLayout() {
-  if (localAuthBypassEnabled) {
-    return <Redirect href="/(tabs)" />;
-  }
-
+  const { palette } = useTheme();
   return (
-    <Stack>
-      <Stack.Screen name="sign-in" options={{ headerShown: false }} />
-      <Stack.Screen name="sign-up" options={{ headerShown: false }} />
-    </Stack>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: palette.bg },
+        animation: 'fade',
+      }}
+    />
   );
 }

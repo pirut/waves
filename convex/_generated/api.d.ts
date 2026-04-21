@@ -8,16 +8,19 @@
  * @module
  */
 
-import type * as crons from "../crons.js";
+import type * as auth from "../auth.js";
+import type * as badges from "../badges.js";
+import type * as checkIns from "../checkIns.js";
+import type * as comments from "../comments.js";
 import type * as events from "../events.js";
-import type * as feed from "../feed.js";
-import type * as files from "../files.js";
-import type * as geocoding from "../geocoding.js";
-import type * as lib_auth from "../lib/auth.js";
+import type * as lib_authz from "../lib/authz.js";
+import type * as lib_tones from "../lib/tones.js";
 import type * as notifications from "../notifications.js";
-import type * as notificationsActions from "../notificationsActions.js";
+import type * as rsvps from "../rsvps.js";
+import type * as savedEvents from "../savedEvents.js";
 import type * as seed from "../seed.js";
-import type * as viewer from "../viewer.js";
+import type * as updates from "../updates.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -26,16 +29,19 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  crons: typeof crons;
+  auth: typeof auth;
+  badges: typeof badges;
+  checkIns: typeof checkIns;
+  comments: typeof comments;
   events: typeof events;
-  feed: typeof feed;
-  files: typeof files;
-  geocoding: typeof geocoding;
-  "lib/auth": typeof lib_auth;
+  "lib/authz": typeof lib_authz;
+  "lib/tones": typeof lib_tones;
   notifications: typeof notifications;
-  notificationsActions: typeof notificationsActions;
+  rsvps: typeof rsvps;
+  savedEvents: typeof savedEvents;
   seed: typeof seed;
-  viewer: typeof viewer;
+  updates: typeof updates;
+  users: typeof users;
 }>;
 
 /**

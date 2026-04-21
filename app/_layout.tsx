@@ -1,135 +1,143 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
-import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+// app/_layout.tsx — root layout.
+//
+// Wraps:
+//   - ConvexAuthProvider (token storage: expo-secure-store on native, localStorage on web)
+//   - ThemeProvider (palette + font loading)
+//   - SafeAreaProvider
+//   - GestureHandlerRootView + BottomSheetModalProvider (for sheets)
+//
+// Routes to (auth) or (tabs) based on auth state, with a splash screen while
+// fonts + auth-state are resolving.
 
-import { theme } from "@/src/core/theme/tokens";
-import { AppText } from "@/src/core/ui/AppText";
-import { clerkPublishableKey } from "@/src/lib/auth/config";
-import { localAuthBypassEnabled } from "@/src/lib/auth/devBypass";
-import { AppProviders } from "@/src/lib/providers/AppProviders";
-import { convexUrl } from "@/src/lib/convexClient";
+import { ConvexAuthProvider } from '@convex-dev/auth/react';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { useFonts } from 'expo-font';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
+import { useCallback, useEffect } from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Authenticated, AuthLoading, Unauthenticated } from 'convex/react';
+import { useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { convex } from '@/src/lib/convex';
+import { getAuthStorage } from '@/src/lib/authStorage';
+import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
 
-export {
-  ErrorBoundary,
-} from "expo-router";
-
-export const unstable_settings = {
-  initialRouteName: "(tabs)",
-};
-
-SplashScreen.preventAutoHideAsync();
-
-const navigationTheme = {
-  ...(theme.mode === "dark" ? DarkTheme : DefaultTheme),
-  colors: {
-    ...(theme.mode === "dark" ? DarkTheme.colors : DefaultTheme.colors),
-    background: theme.colors.background,
-    border: theme.colors.glassBorderStrong,
-    card: theme.colors.surfaceGlassStrong,
-    primary: theme.colors.primary,
-    text: theme.colors.heading,
-  },
-};
+void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    ...FontAwesome.font,
-    ...Ionicons.font,
-  });
+  return (
+    <ConvexAuthProvider client={convex} storage={getAuthStorage()}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <BottomSheetModalProvider>
+              <StatusBar style="auto" />
+              <AuthGate />
+            </BottomSheetModalProvider>
+          </GestureHandlerRootView>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </ConvexAuthProvider>
+  );
+}
+
+/**
+ * Gates the app to the (auth) or (tabs) route group based on auth state.
+ * Lives inside ThemeProvider so useTheme() works here.
+ */
+function AuthGate() {
+  const { fontsLoaded, palette } = useTheme();
+  const router = useRouter();
+  const segments = useSegments();
+
+  // Hide splash once fonts are loaded.
+  const onReady = useCallback(async () => {
+    if (fontsLoaded) {
+      await SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
 
   useEffect(() => {
-    if (error) {
-      throw error;
-    }
-  }, [error]);
+    void onReady();
+  }, [onReady]);
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
-
-  if (!convexUrl) {
+  if (!fontsLoaded) {
     return (
-      <View style={styles.missingConfigShell}>
-        <AppText variant="h1" color={theme.colors.heading}>
-          Convex URL missing
-        </AppText>
-        <AppText>
-          Add `EXPO_PUBLIC_CONVEX_URL` to your local env and run `npx convex dev`.
-        </AppText>
-      </View>
-    );
-  }
-
-  if (!clerkPublishableKey && !localAuthBypassEnabled) {
-    return (
-      <View style={styles.missingConfigShell}>
-        <AppText variant="h1" color={theme.colors.heading}>
-          Clerk key missing
-        </AppText>
-        <AppText>
-          Add `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` to your local env to enable authentication.
-        </AppText>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.bg }}>
+        <ActivityIndicator color={palette.primary} />
       </View>
     );
   }
 
   return (
-    <AppProviders>
-      <ThemeProvider value={navigationTheme}>
-        <StatusBar style={theme.mode === "dark" ? "light" : "dark"} />
-        <Stack>
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="discover-map"
-            options={{
-              animation: "slide_from_bottom",
-              headerShown: false,
-              presentation: Platform.OS === "ios" ? "fullScreenModal" : "card",
-            }}
-          />
-          <Stack.Screen
-            name="events/[eventId]"
-            options={{
-              title: "Event Details",
-              headerShadowVisible: false,
-              headerTintColor: theme.colors.primary,
-              headerStyle: { backgroundColor: theme.colors.surfaceGlassStrong },
-              headerTitleStyle: {
-                color: theme.colors.heading,
-                fontFamily: theme.fonts.body,
-                fontWeight: "700",
-              },
-              headerBackTitle: "",
-              headerBackButtonDisplayMode: "minimal",
-            }}
-          />
-          <Stack.Screen name="+not-found" options={{ title: "Not Found" }} />
+    <>
+      <AuthLoading>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.bg }}>
+          <ActivityIndicator color={palette.primary} />
+        </View>
+      </AuthLoading>
+      <Authenticated>
+        <BootstrapOnFirstAuth />
+        <RedirectIfNotInTabs segments={segments} router={router} />
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: palette.bg } }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="event/[id]" options={{ presentation: 'card', animation: 'slide_from_right' }} />
+          <Stack.Screen name="create" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         </Stack>
-      </ThemeProvider>
-    </AppProviders>
+      </Authenticated>
+      <Unauthenticated>
+        <RedirectIfNotInAuth segments={segments} router={router} />
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: palette.bg } }}>
+          <Stack.Screen name="(auth)" />
+        </Stack>
+      </Unauthenticated>
+    </>
   );
 }
 
-const styles = StyleSheet.create({
-  missingConfigShell: {
-    alignItems: "center",
-    backgroundColor: theme.colors.background,
-    flex: 1,
-    gap: 12,
-    justifyContent: "center",
-    padding: 24,
-  },
-});
+/** One-shot init of the signed-in user's profile + seed data. Idempotent. */
+function BootstrapOnFirstAuth() {
+  const bootstrapMe = useMutation(api.seed.bootstrapMe);
+  useEffect(() => {
+    void bootstrapMe({}).catch(() => {
+      // Seed might fail if schema isn't pushed yet — non-fatal.
+    });
+  }, [bootstrapMe]);
+  return null;
+}
+
+function RedirectIfNotInTabs({
+  segments,
+  router,
+}: {
+  segments: string[];
+  router: ReturnType<typeof useRouter>;
+}) {
+  useEffect(() => {
+    const inAuth = segments[0] === '(auth)';
+    if (inAuth) {
+      router.replace('/');
+    }
+  }, [segments, router]);
+  return null;
+}
+
+function RedirectIfNotInAuth({
+  segments,
+  router,
+}: {
+  segments: string[];
+  router: ReturnType<typeof useRouter>;
+}) {
+  useEffect(() => {
+    const inAuth = segments[0] === '(auth)';
+    if (!inAuth) {
+      router.replace('/sign-in');
+    }
+  }, [segments, router]);
+  return null;
+}

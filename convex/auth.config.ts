@@ -1,9 +1,11 @@
+// auth.config.ts — Convex Auth needs a provider entry so it can verify
+// identity tokens issued by itself.
+
 export default {
-    providers: [
-        {
-            // Replace with your Clerk issuer domain before production deploys.
-            domain: process.env.CLERK_JWT_ISSUER_DOMAIN,
-            applicationID: "convex",
-        },
-    ],
+  providers: [
+    {
+      domain: process.env.CONVEX_SITE_URL,
+      applicationID: 'convex',
+    },
+  ],
 };

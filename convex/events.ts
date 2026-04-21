@@ -1,712 +1,88 @@
-import { paginationOptsValidator } from "convex/server";
-import { ConvexError, v } from "convex/values";
+// events.ts — list / detail / create.
 
-import { internal } from "./_generated/api";
-import type { Doc, Id } from "./_generated/dataModel";
-import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
-import { requireAuthenticatedIdentity, requireAuthProfile } from "./lib/auth";
+import { v } from 'convex/values';
+import type { Doc, Id } from './_generated/dataModel';
+import { mutation, query } from './_generated/server';
+import { currentUser, requireUser } from './lib/authz';
 
-const rsvpStatusValidator = v.union(
-  v.literal("going"),
-  v.literal("interested"),
-  v.literal("not_going"),
+const CATEGORY = v.union(
+  v.literal('cleanup'),
+  v.literal('food'),
+  v.literal('garden'),
+  v.literal('elders'),
+  v.literal('tutor'),
+  v.literal('animals'),
+  v.literal('blood'),
+  v.literal('outreach'),
+  v.literal('repairs'),
 );
-const messageKindValidator = v.union(v.literal("announcement"), v.literal("update"));
 
-const profilePreviewValidator = v.object({
-  id: v.id("profiles"),
-  displayName: v.string(),
-  avatarUrl: v.optional(v.string()),
-  city: v.optional(v.string()),
-});
-
-const eventListItemValidator = v.object({
-  id: v.id("events"),
-  slug: v.string(),
-  title: v.string(),
-  category: v.string(),
-  startAt: v.number(),
-  endAt: v.number(),
-  city: v.string(),
-  country: v.string(),
-  latitude: v.number(),
-  longitude: v.number(),
-  coverImageUrl: v.optional(v.string()),
-  impactSummary: v.optional(v.string()),
-  attendeeCount: v.number(),
-  organizer: profilePreviewValidator,
-  viewerRsvp: v.optional(rsvpStatusValidator),
-});
-
-const eventMediaValidator = v.object({
-  id: v.id("eventMedia"),
-  url: v.optional(v.string()),
-  storageId: v.optional(v.id("_storage")),
-  caption: v.optional(v.string()),
-  sortOrder: v.number(),
-});
-
-const eventAttendeeValidator = v.object({
-  profile: profilePreviewValidator,
-  status: rsvpStatusValidator,
-  respondedAt: v.number(),
-});
-
-const eventMessageValidator = v.object({
-  id: v.id("eventMessages"),
-  body: v.string(),
-  kind: messageKindValidator,
-  createdAt: v.number(),
-  author: profilePreviewValidator,
-  likeCount: v.number(),
-  commentCount: v.number(),
-  viewerHasLiked: v.boolean(),
-});
-
-const eventQuestionValidator = v.object({
-  id: v.id("eventQuestions"),
-  eventId: v.id("events"),
-  questionBody: v.string(),
-  createdAt: v.number(),
-  asker: profilePreviewValidator,
-  answer: v.optional(
-    v.object({
-      body: v.string(),
-      answeredAt: v.number(),
-      answeredBy: profilePreviewValidator,
-    }),
-  ),
-});
-
-const eventDetailValidator = v.object({
-  event: v.object({
-    id: v.id("events"),
-    slug: v.string(),
-    title: v.string(),
-    description: v.string(),
-    category: v.string(),
-    startAt: v.number(),
-    endAt: v.number(),
-    timezone: v.string(),
-    latitude: v.number(),
-    longitude: v.number(),
-    addressLine1: v.string(),
-    city: v.string(),
-    region: v.optional(v.string()),
-    country: v.string(),
-    postalCode: v.optional(v.string()),
-    coverImageUrl: v.optional(v.string()),
-    coverStorageId: v.optional(v.id("_storage")),
-    impactSummary: v.optional(v.string()),
-    capacity: v.optional(v.number()),
-    status: v.union(v.literal("draft"), v.literal("published")),
-    attendeeCount: v.number(),
-  }),
-  organizer: profilePreviewValidator,
-  viewerRsvp: v.optional(rsvpStatusValidator),
-  attendeeBreakdown: v.object({
-    going: v.number(),
-    interested: v.number(),
-    notGoing: v.number(),
-    total: v.number(),
-  }),
-  attendees: v.array(eventAttendeeValidator),
-  media: v.array(eventMediaValidator),
-  messages: v.array(eventMessageValidator),
-});
-
-const paginatedEventAttendeesValidator = v.object({
-  page: v.array(eventAttendeeValidator),
-  isDone: v.boolean(),
-  continueCursor: v.string(),
-});
-
-const paginatedEventMessagesValidator = v.object({
-  page: v.array(eventMessageValidator),
-  isDone: v.boolean(),
-  continueCursor: v.string(),
-});
-
-const paginatedEventQuestionsValidator = v.object({
-  page: v.array(eventQuestionValidator),
-  isDone: v.boolean(),
-  continueCursor: v.string(),
-});
-
-function toProfilePreview(profile: Doc<"profiles">) {
-  return {
-    id: profile._id,
-    displayName: profile.displayName,
-    ...(profile.avatarUrl ? { avatarUrl: profile.avatarUrl } : {}),
-    ...(profile.city ? { city: profile.city } : {}),
-  };
-}
-
-function createSlug(title: string) {
-  return title
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .slice(0, 48);
-}
-
-async function resolveStorageUrl(
-  ctx: QueryCtx | MutationCtx,
-  storageId?: Id<"_storage">,
-) {
-  if (!storageId) {
-    return undefined;
-  }
-
-  const resolvedUrl = await ctx.storage.getUrl(storageId);
-  return resolvedUrl ?? undefined;
-}
-
-async function getViewerRsvpStatus(
-  ctx: QueryCtx | MutationCtx,
-  eventId: Id<"events">,
-  viewerProfileId: Id<"profiles">,
-) {
-  const viewerRsvp = await ctx.db
-    .query("rsvps")
-    .withIndex("by_eventId_and_attendeeProfileId", (q) =>
-      q.eq("eventId", eventId).eq("attendeeProfileId", viewerProfileId),
-    )
-    .unique();
-
-  return viewerRsvp?.status;
-}
-
-async function ensureViewerCanParticipateInEventQna(
-  ctx: QueryCtx | MutationCtx,
-  eventDoc: Doc<"events">,
-  viewerProfileId: Id<"profiles">,
-) {
-  if (eventDoc.organizerProfileId === viewerProfileId) {
-    return;
-  }
-
-  const viewerRsvpStatus = await getViewerRsvpStatus(ctx, eventDoc._id, viewerProfileId);
-  if (!viewerRsvpStatus || viewerRsvpStatus === "not_going") {
-    throw new ConvexError({
-      code: "NOT_EVENT_ATTENDEE",
-      message: "Only attendees and organizers can ask event questions.",
-    });
-  }
-}
-
-async function assertViewerOwnsEventMessage(
-  ctx: QueryCtx | MutationCtx,
-  messageId: Id<"eventMessages">,
-  viewerProfileId: Id<"profiles">,
-) {
-  const messageDoc = await ctx.db.get(messageId);
-  if (!messageDoc) {
-    throw new ConvexError({
-      code: "MESSAGE_NOT_FOUND",
-      message: "Message not found.",
-    });
-  }
-
-  if (messageDoc.authorProfileId !== viewerProfileId) {
-    throw new ConvexError({
-      code: "NOT_MESSAGE_AUTHOR",
-      message: "Only the message author can edit or delete this post.",
-    });
-  }
-
-  return messageDoc;
-}
-
-async function assertViewerOwnsEventQuestion(
-  ctx: QueryCtx | MutationCtx,
-  questionId: Id<"eventQuestions">,
-  viewerProfileId: Id<"profiles">,
-) {
-  const questionDoc = await ctx.db.get(questionId);
-  if (!questionDoc) {
-    throw new ConvexError({
-      code: "QUESTION_NOT_FOUND",
-      message: "Question not found.",
-    });
-  }
-
-  if (questionDoc.askerProfileId !== viewerProfileId) {
-    throw new ConvexError({
-      code: "NOT_QUESTION_AUTHOR",
-      message: "Only the attendee who asked this question can edit or delete it.",
-    });
-  }
-
-  return questionDoc;
-}
-
-async function toEventListItem(
-  ctx: QueryCtx | MutationCtx,
-  eventDoc: Doc<"events">,
-  viewerProfileId: Id<"profiles">,
-  explicitViewerRsvp?: Doc<"rsvps">["status"],
-) {
-  const organizer = await ctx.db.get(eventDoc.organizerProfileId);
-  if (!organizer) {
-    return null;
-  }
-
-  const viewerRsvp =
-    explicitViewerRsvp ?? (await getViewerRsvpStatus(ctx, eventDoc._id, viewerProfileId));
-  const coverImageUrl = await resolveStorageUrl(ctx, eventDoc.coverStorageId);
-
-  return {
-    id: eventDoc._id,
-    slug: eventDoc.slug,
-    title: eventDoc.title,
-    category: eventDoc.category,
-    startAt: eventDoc.startAt,
-    endAt: eventDoc.endAt,
-    city: eventDoc.city,
-    country: eventDoc.country,
-    latitude: eventDoc.latitude,
-    longitude: eventDoc.longitude,
-    ...(coverImageUrl ? { coverImageUrl } : {}),
-    ...(eventDoc.impactSummary ? { impactSummary: eventDoc.impactSummary } : {}),
-    attendeeCount: eventDoc.attendeeCount,
-    organizer: toProfilePreview(organizer),
-    ...(viewerRsvp ? { viewerRsvp } : {}),
-  };
-}
-
-export const listPublished = query({
+/**
+ * Map / list discovery. `cats` filters by category; omitted = all.
+ * `now` is the client's current time for relative time strings; server just
+ * echoes it back with events for hint purposes (real impl would use it to
+ * hide past events).
+ */
+export const discover = query({
   args: {
-    city: v.optional(v.string()),
-    category: v.optional(v.string()),
+    cats: v.optional(v.array(CATEGORY)),
     limit: v.optional(v.number()),
   },
-  returns: v.array(eventListItemValidator),
   handler: async (ctx, args) => {
-    const viewerProfile = await requireAuthProfile(ctx);
-    const limit = args.limit ?? 50;
+    const cats = args.cats ?? [];
+    const limit = args.limit ?? 100;
 
-    const events = args.city
-      ? await ctx.db
-          .query("events")
-          .withIndex("by_status_and_city_and_startAt", (q) =>
-            q.eq("status", "published").eq("city", args.city!),
-          )
-          .order("asc")
-          .take(limit)
-      : args.category
-        ? await ctx.db
-            .query("events")
-            .withIndex("by_status_and_category_and_startAt", (q) =>
-              q.eq("status", "published").eq("category", args.category!),
-            )
-            .order("asc")
-            .take(limit)
-        : await ctx.db
-            .query("events")
-            .withIndex("by_status_and_startAt", (q) => q.eq("status", "published"))
-            .order("asc")
-            .take(limit);
-
-    const items = await Promise.all(
-      events.map((eventDoc) => toEventListItem(ctx, eventDoc, viewerProfile._id)),
-    );
-
-    return items.filter((item): item is NonNullable<typeof item> => item !== null);
+    // Convex can't do "category in {set}" natively; either filter in memory
+    // or paginate by index. With seed size ~10 events, filter in memory.
+    const all = await ctx.db.query('events').withIndex('by_startsAt').collect();
+    const filtered = cats.length === 0 ? all : all.filter((e) => cats.includes(e.category));
+    return filtered.slice(0, limit);
   },
 });
 
-export const getById = query({
-  args: {
-    eventId: v.id("events"),
-  },
-  returns: v.union(v.null(), eventDetailValidator),
+/** Detail page payload — event + host + rsvp list + current user's rsvp status. */
+export const detail = query({
+  args: { id: v.id('events') },
   handler: async (ctx, args) => {
-    const viewerProfile = await requireAuthProfile(ctx);
-    const eventDoc = await ctx.db.get(args.eventId);
-
-    if (!eventDoc) {
-      return null;
-    }
-
-    const organizer = await ctx.db.get(eventDoc.organizerProfileId);
-    if (!organizer) {
-      return null;
-    }
-
-    const mediaDocs = await ctx.db
-      .query("eventMedia")
-      .withIndex("by_eventId_and_sortOrder", (q) => q.eq("eventId", eventDoc._id))
-      .order("asc")
+    const event = await ctx.db.get(args.id);
+    if (!event) return null;
+    const host = await ctx.db.get(event.hostId);
+    const rsvps = await ctx.db
+      .query('rsvps')
+      .withIndex('by_event', (q) => q.eq('eventId', event._id))
       .collect();
-    const coverImageUrl = await resolveStorageUrl(ctx, eventDoc.coverStorageId);
 
-    const rsvpDocs = await ctx.db
-      .query("rsvps")
-      .withIndex("by_eventId_and_createdAt", (q) => q.eq("eventId", eventDoc._id))
-      .order("desc")
-      .take(20);
+    const userId = await currentUser(ctx);
+    const myRsvp = userId
+      ? await ctx.db
+          .query('rsvps')
+          .withIndex('by_event_user', (q) => q.eq('eventId', event._id).eq('userId', userId))
+          .unique()
+      : null;
 
-    const latestRsvpByProfile = new Map<Id<"profiles">, Doc<"rsvps">>();
-    for (const rsvp of rsvpDocs) {
-      if (!latestRsvpByProfile.has(rsvp.attendeeProfileId)) {
-        latestRsvpByProfile.set(rsvp.attendeeProfileId, rsvp);
-      }
-    }
-
-    const attendees = (
-      await Promise.all(
-        Array.from(latestRsvpByProfile.values()).map(async (rsvpDoc) => {
-          const profile = await ctx.db.get(rsvpDoc.attendeeProfileId);
-          if (!profile) {
-            return null;
-          }
-
-          return {
-            profile: toProfilePreview(profile),
-            status: rsvpDoc.status,
-            respondedAt: rsvpDoc.createdAt,
-          };
-        }),
-      )
-    )
-      .filter((attendee): attendee is NonNullable<typeof attendee> => attendee !== null)
-      .sort((a, b) => b.respondedAt - a.respondedAt);
-
-    const goingCount = attendees.filter((attendee) => attendee.status === "going").length;
-    const interestedCount = attendees.filter((attendee) => attendee.status === "interested").length;
-    const notGoingCount = attendees.filter((attendee) => attendee.status === "not_going").length;
-
-    const messageDocs = await ctx.db
-      .query("eventMessages")
-      .withIndex("by_eventId_and_createdAt", (q) => q.eq("eventId", eventDoc._id))
-      .order("desc")
-      .take(20);
-
-    const messages = await Promise.all(
-      messageDocs.map(async (messageDoc) => {
-        const [author, viewerLike] = await Promise.all([
-          ctx.db.get(messageDoc.authorProfileId),
-          ctx.db
-            .query("eventMessageLikes")
-            .withIndex("by_eventMessageId_and_likerProfileId", (q) =>
-              q
-                .eq("eventMessageId", messageDoc._id)
-                .eq("likerProfileId", viewerProfile._id),
-            )
-            .unique(),
-        ]);
-
-        if (!author) {
-          return null;
-        }
-
-        return {
-          id: messageDoc._id,
-          body: messageDoc.body,
-          kind: messageDoc.kind,
-          createdAt: messageDoc.createdAt,
-          author: toProfilePreview(author),
-          likeCount: messageDoc.likeCount ?? 0,
-          commentCount: messageDoc.commentCount ?? 0,
-          viewerHasLiked: viewerLike !== null,
-        };
-      }),
-    );
-
-    const viewerRsvp = await getViewerRsvpStatus(ctx, eventDoc._id, viewerProfile._id);
-
-    return {
-      event: {
-        id: eventDoc._id,
-        slug: eventDoc.slug,
-        title: eventDoc.title,
-        description: eventDoc.description,
-        category: eventDoc.category,
-        startAt: eventDoc.startAt,
-        endAt: eventDoc.endAt,
-        timezone: eventDoc.timezone,
-        latitude: eventDoc.latitude,
-        longitude: eventDoc.longitude,
-        addressLine1: eventDoc.addressLine1,
-        city: eventDoc.city,
-        ...(eventDoc.region ? { region: eventDoc.region } : {}),
-        country: eventDoc.country,
-        ...(eventDoc.postalCode ? { postalCode: eventDoc.postalCode } : {}),
-        ...(coverImageUrl ? { coverImageUrl } : {}),
-        ...(eventDoc.coverStorageId ? { coverStorageId: eventDoc.coverStorageId } : {}),
-        ...(eventDoc.impactSummary ? { impactSummary: eventDoc.impactSummary } : {}),
-        ...(eventDoc.capacity ? { capacity: eventDoc.capacity } : {}),
-        status: eventDoc.status,
-        attendeeCount: eventDoc.attendeeCount,
-      },
-      organizer: toProfilePreview(organizer),
-      ...(viewerRsvp ? { viewerRsvp } : {}),
-      attendeeBreakdown: {
-        going: goingCount,
-        interested: interestedCount,
-        notGoing: notGoingCount,
-        total: attendees.length,
-      },
-      attendees,
-      media: (
-        await Promise.all(
-          mediaDocs.map(async (mediaDoc) => {
-            const mediaUrl = await resolveStorageUrl(ctx, mediaDoc.storageId);
-            if (!mediaUrl) {
-              return null;
-            }
-
-            return {
-              id: mediaDoc._id,
-              url: mediaUrl,
-              ...(mediaDoc.storageId ? { storageId: mediaDoc.storageId } : {}),
-              ...(mediaDoc.caption ? { caption: mediaDoc.caption } : {}),
-              sortOrder: mediaDoc.sortOrder,
-            };
-          }),
-        )
-      ).filter((media): media is NonNullable<typeof media> => media !== null),
-      messages: messages.filter(
-        (message): message is NonNullable<typeof message> => message !== null,
-      ),
-    };
-  },
-});
-
-export const listAttendeesPaginated = query({
-  args: {
-    eventId: v.id("events"),
-    paginationOpts: paginationOptsValidator,
-  },
-  returns: paginatedEventAttendeesValidator,
-  handler: async (ctx, args) => {
-    await requireAuthenticatedIdentity(ctx);
-
-    const paginatedRsvps = await ctx.db
-      .query("rsvps")
-      .withIndex("by_eventId_and_createdAt", (q) => q.eq("eventId", args.eventId))
-      .order("desc")
-      .paginate(args.paginationOpts);
-
-    const attendees = (
-      await Promise.all(
-        paginatedRsvps.page.map(async (rsvpDoc) => {
-          const profile = await ctx.db.get(rsvpDoc.attendeeProfileId);
-          if (!profile) {
-            return null;
-          }
-
-          return {
-            profile: toProfilePreview(profile),
-            status: rsvpDoc.status,
-            respondedAt: rsvpDoc.createdAt,
-          };
-        }),
-      )
-    ).filter((attendee): attendee is NonNullable<typeof attendee> => attendee !== null);
-
-    return {
-      page: attendees,
-      isDone: paginatedRsvps.isDone,
-      continueCursor: paginatedRsvps.continueCursor,
-    };
-  },
-});
-
-export const listMessagesPaginated = query({
-  args: {
-    eventId: v.id("events"),
-    paginationOpts: paginationOptsValidator,
-  },
-  returns: paginatedEventMessagesValidator,
-  handler: async (ctx, args) => {
-    const viewerProfile = await requireAuthProfile(ctx);
-
-    const paginatedMessages = await ctx.db
-      .query("eventMessages")
-      .withIndex("by_eventId_and_createdAt", (q) => q.eq("eventId", args.eventId))
-      .order("desc")
-      .paginate(args.paginationOpts);
-
-    const messages = (
-      await Promise.all(
-        paginatedMessages.page.map(async (messageDoc) => {
-          const [author, viewerLike] = await Promise.all([
-            ctx.db.get(messageDoc.authorProfileId),
-            ctx.db
-              .query("eventMessageLikes")
-              .withIndex("by_eventMessageId_and_likerProfileId", (q) =>
-                q
-                  .eq("eventMessageId", messageDoc._id)
-                  .eq("likerProfileId", viewerProfile._id),
-              )
-              .unique(),
-          ]);
-
-          if (!author) {
-            return null;
-          }
-
-          return {
-            id: messageDoc._id,
-            body: messageDoc.body,
-            kind: messageDoc.kind,
-            createdAt: messageDoc.createdAt,
-            author: toProfilePreview(author),
-            likeCount: messageDoc.likeCount ?? 0,
-            commentCount: messageDoc.commentCount ?? 0,
-            viewerHasLiked: viewerLike !== null,
-          };
-        }),
-      )
-    ).filter((message): message is NonNullable<typeof message> => message !== null);
-
-    return {
-      page: messages,
-      isDone: paginatedMessages.isDone,
-      continueCursor: paginatedMessages.continueCursor,
-    };
-  },
-});
-
-export const listQuestionsPaginated = query({
-  args: {
-    eventId: v.id("events"),
-    paginationOpts: paginationOptsValidator,
-  },
-  returns: paginatedEventQuestionsValidator,
-  handler: async (ctx, args) => {
-    await requireAuthenticatedIdentity(ctx);
-
-    const eventDoc = await ctx.db.get(args.eventId);
-    if (!eventDoc) {
-      throw new ConvexError({
-        code: "EVENT_NOT_FOUND",
-        message: "Event not found.",
-      });
-    }
-
-    const paginatedQuestions = await ctx.db
-      .query("eventQuestions")
-      .withIndex("by_eventId_and_createdAt", (q) => q.eq("eventId", args.eventId))
-      .order("desc")
-      .paginate(args.paginationOpts);
-
-    const questions = (
-      await Promise.all(
-        paginatedQuestions.page.map(async (questionDoc) => {
-          const askerProfile = await ctx.db.get(questionDoc.askerProfileId);
-          if (!askerProfile) {
-            return null;
-          }
-
-          let answer:
-            | {
-                body: string;
-                answeredAt: number;
-                answeredBy: ReturnType<typeof toProfilePreview>;
+    const going = await Promise.all(
+      rsvps
+        .filter((r) => r.status === 'going')
+        .map(async (r) => {
+          const u = await ctx.db.get(r.userId);
+          return u
+            ? {
+                _id: u._id,
+                name: u.name ?? 'Anon',
+                initials: u.initials ?? '?',
+                tone: u.tone ?? 200,
               }
-            | undefined;
-
-          if (
-            questionDoc.answerBody &&
-            questionDoc.answeredAt &&
-            questionDoc.answeredByProfileId
-          ) {
-            const answeredByProfile = await ctx.db.get(questionDoc.answeredByProfileId);
-            if (answeredByProfile) {
-              answer = {
-                body: questionDoc.answerBody,
-                answeredAt: questionDoc.answeredAt,
-                answeredBy: toProfilePreview(answeredByProfile),
-              };
-            }
-          }
-
-          return {
-            id: questionDoc._id,
-            eventId: questionDoc.eventId,
-            questionBody: questionDoc.questionBody,
-            createdAt: questionDoc.createdAt,
-            asker: toProfilePreview(askerProfile),
-            ...(answer ? { answer } : {}),
-          };
+            : null;
         }),
-      )
-    ).filter((question): question is NonNullable<typeof question> => question !== null);
-
-    return {
-      page: questions,
-      isDone: paginatedQuestions.isDone,
-      continueCursor: paginatedQuestions.continueCursor,
-    };
-  },
-});
-
-export const listForViewer = query({
-  args: {},
-  returns: v.object({
-    attending: v.array(eventListItemValidator),
-    hosting: v.array(eventListItemValidator),
-  }),
-  handler: async (ctx) => {
-    const viewerProfile = await requireAuthProfile(ctx);
-
-    const hostingDocs = await ctx.db
-      .query("events")
-      .withIndex("by_organizerProfileId_and_startAt", (q) =>
-        q.eq("organizerProfileId", viewerProfile._id),
-      )
-      .order("asc")
-      .take(200);
-
-    const attendingRsvps = await ctx.db
-      .query("rsvps")
-      .withIndex("by_attendeeProfileId_and_createdAt", (q) =>
-        q.eq("attendeeProfileId", viewerProfile._id),
-      )
-      .order("desc")
-      .take(400);
-
-    const attendingEventById = new Map<
-      Id<"events">,
-      { event: Doc<"events">; status: Doc<"rsvps">["status"] }
-    >();
-
-    for (const rsvp of attendingRsvps) {
-      if (rsvp.status === "not_going") {
-        continue;
-      }
-
-      if (attendingEventById.has(rsvp.eventId)) {
-        continue;
-      }
-      const eventDoc = await ctx.db.get(rsvp.eventId);
-      if (eventDoc) {
-        attendingEventById.set(eventDoc._id, { event: eventDoc, status: rsvp.status });
-      }
-    }
-
-    const hostingItems = await Promise.all(
-      hostingDocs.map((eventDoc) => toEventListItem(ctx, eventDoc, viewerProfile._id)),
-    );
-
-    const attendingItems = await Promise.all(
-      Array.from(attendingEventById.values()).map(({ event, status }) =>
-        toEventListItem(ctx, event, viewerProfile._id, status),
-      ),
     );
 
     return {
-      attending: attendingItems
-        .filter((item): item is NonNullable<typeof item> => item !== null)
-        .sort((a, b) => a.startAt - b.startAt),
-      hosting: hostingItems
-        .filter((item): item is NonNullable<typeof item> => item !== null)
-        .sort((a, b) => a.startAt - b.startAt),
+      event,
+      host: host
+        ? { _id: host._id, name: host.name ?? '', initials: host.initials ?? '?', tone: host.tone ?? 200 }
+        : null,
+      going: going.filter((x): x is NonNullable<typeof x> => x != null),
+      myRsvp: myRsvp ? { status: myRsvp.status } : null,
     };
   },
 });
@@ -714,472 +90,120 @@ export const listForViewer = query({
 export const create = mutation({
   args: {
     title: v.string(),
+    category: CATEGORY,
     description: v.string(),
-    category: v.string(),
-    startAt: v.number(),
-    endAt: v.number(),
-    timezone: v.string(),
-    latitude: v.number(),
-    longitude: v.number(),
-    addressLine1: v.string(),
-    city: v.string(),
-    region: v.optional(v.string()),
-    country: v.string(),
-    postalCode: v.optional(v.string()),
-    coverStorageId: v.optional(v.id("_storage")),
-    impactSummary: v.optional(v.string()),
-    capacity: v.optional(v.number()),
-    galleryStorageIds: v.optional(v.array(v.id("_storage"))),
+    startsAt: v.number(),
+    endsAt: v.number(),
+    location: v.string(),
+    address: v.string(),
+    lat: v.number(),
+    lng: v.number(),
+    capacity: v.number(),
+    hours: v.number(),
+    hostOrg: v.optional(v.string()),
+    meetingPoint: v.optional(v.string()),
+    bring: v.optional(v.array(v.string())),
   },
-  returns: v.id("events"),
-  handler: async (ctx, args) => {
-    const organizer = await requireAuthProfile(ctx);
-
-    if (args.endAt <= args.startAt) {
-      throw new ConvexError({
-        code: "INVALID_EVENT_WINDOW",
-        message: "End time must be after start time.",
-      });
-    }
-
-    const baseSlug = createSlug(args.title) || `event-${Date.now()}`;
-    const existingWithSlug = await ctx.db
-      .query("events")
-      .withIndex("by_slug", (q) => q.eq("slug", baseSlug))
-      .unique();
-
-    const slug = existingWithSlug ? `${baseSlug}-${Date.now()}` : baseSlug;
-
-    const eventId = await ctx.db.insert("events", {
-      slug,
+  handler: async (ctx, args): Promise<Id<'events'>> => {
+    const hostId = await requireUser(ctx);
+    const id = await ctx.db.insert('events', {
       title: args.title,
-      description: args.description,
       category: args.category,
-      startAt: args.startAt,
-      endAt: args.endAt,
-      timezone: args.timezone,
-      latitude: args.latitude,
-      longitude: args.longitude,
-      addressLine1: args.addressLine1,
-      city: args.city,
-      region: args.region,
-      country: args.country,
-      postalCode: args.postalCode,
-      coverStorageId: args.coverStorageId,
-      impactSummary: args.impactSummary,
+      hostId,
+      hostOrg: args.hostOrg,
+      description: args.description,
+      meetingPoint: args.meetingPoint,
+      bring: args.bring ?? [],
+      startsAt: args.startsAt,
+      endsAt: args.endsAt,
+      location: args.location,
+      address: args.address,
+      lat: args.lat,
+      lng: args.lng,
       capacity: args.capacity,
-      status: "published",
-      organizerProfileId: organizer._id,
-      attendeeCount: 0,
-      createdAt: Date.now(),
+      attendees: 0,
+      hours: args.hours,
     });
-
-    let nextSortOrder = 0;
-
-    for (const storageId of args.galleryStorageIds ?? []) {
-      await ctx.db.insert("eventMedia", {
-        eventId,
-        storageId,
-        sortOrder: nextSortOrder,
-        createdAt: Date.now(),
-      });
-      nextSortOrder += 1;
-    }
-
-    return eventId;
+    return id;
   },
 });
 
-export const rsvpToEvent = mutation({
-  args: {
-    eventId: v.id("events"),
-    status: rsvpStatusValidator,
-    note: v.optional(v.string()),
-  },
-  returns: v.null(),
+export const remove = mutation({
+  args: { id: v.id('events') },
   handler: async (ctx, args) => {
-    const attendeeProfile = await requireAuthProfile(ctx);
-    const event = await ctx.db.get(args.eventId);
-    if (!event) {
-      throw new ConvexError({
-        code: "EVENT_NOT_FOUND",
-        message: "Event not found.",
-      });
+    const userId = await requireUser(ctx);
+    const event = await ctx.db.get(args.id);
+    if (!event) return;
+    if (event.hostId !== userId) {
+      throw new Error('Only the host can delete this event.');
     }
-
-    const existing = await ctx.db
-      .query("rsvps")
-      .withIndex("by_eventId_and_attendeeProfileId", (q) =>
-        q.eq("eventId", args.eventId).eq("attendeeProfileId", attendeeProfile._id),
-      )
-      .unique();
-
-    const nextStatus = args.status;
-    const previousStatus = existing?.status;
-    const movingToGoing = nextStatus === "going" && previousStatus !== "going";
-    const leavingGoing = previousStatus === "going" && nextStatus !== "going";
-    let nextAttendeeCount = event.attendeeCount;
-
-    if (movingToGoing) {
-      if (event.capacity !== undefined && nextAttendeeCount >= event.capacity) {
-        throw new ConvexError({
-          code: "EVENT_FULL",
-          message: "This event is at capacity.",
-        });
-      }
-      nextAttendeeCount += 1;
-    }
-
-    if (leavingGoing) {
-      nextAttendeeCount = Math.max(0, nextAttendeeCount - 1);
-    }
-
-    if (existing) {
-      if (existing.status === args.status && existing.note === args.note) {
-        return null;
-      }
-
-      await ctx.db.patch(existing._id, {
-        status: args.status,
-        note: args.note,
-        createdAt: Date.now(),
-      });
-    } else {
-      await ctx.db.insert("rsvps", {
-        eventId: args.eventId,
-        attendeeProfileId: attendeeProfile._id,
-        status: args.status,
-        note: args.note,
-        createdAt: Date.now(),
-      });
-    }
-
-    if (nextAttendeeCount !== event.attendeeCount) {
-      await ctx.db.patch(args.eventId, {
-        attendeeCount: nextAttendeeCount,
-      });
-    }
-
-    return null;
+    await ctx.db.delete(args.id);
   },
 });
 
-export const sendEventMessage = mutation({
-  args: {
-    eventId: v.id("events"),
-    body: v.string(),
-    kind: v.optional(messageKindValidator),
-  },
-  returns: v.id("eventMessages"),
-  handler: async (ctx, args) => {
-    const authorProfile = await requireAuthProfile(ctx);
-    const event = await ctx.db.get(args.eventId);
-    if (!event) {
-      throw new ConvexError({
-        code: "EVENT_NOT_FOUND",
-        message: "Event not found.",
-      });
-    }
-
-    if (event.organizerProfileId !== authorProfile._id) {
-      throw new ConvexError({
-        code: "NOT_EVENT_ORGANIZER",
-        message: "Only the event organizer can send event-wide messages.",
-      });
-    }
-
-    const trimmedBody = args.body.trim();
-    if (!trimmedBody) {
-      throw new ConvexError({
-        code: "EMPTY_MESSAGE",
-        message: "Message body is required.",
-      });
-    }
-
-    const messageId = await ctx.db.insert("eventMessages", {
-      eventId: args.eventId,
-      authorProfileId: authorProfile._id,
-      body: trimmedBody,
-      kind: args.kind ?? "announcement",
-      likeCount: 0,
-      commentCount: 0,
-      createdAt: Date.now(),
-    });
-
-    await ctx.runMutation(internal.notifications.enqueueForMessage, {
-      eventId: args.eventId,
-      eventMessageId: messageId,
-    });
-
-    await ctx.scheduler.runAfter(0, internal.notificationsActions.dispatchPending, {
-      limit: 100,
-    });
-
-    return messageId;
+/** Utility for seed.ts: look up an event by host + title, avoiding duplicates on re-seed. */
+export const _findByTitle = query({
+  args: { title: v.string() },
+  handler: async (ctx, args): Promise<Doc<'events'> | null> => {
+    const all = await ctx.db.query('events').collect();
+    return all.find((e) => e.title === args.title) ?? null;
   },
 });
 
-export const editEventMessage = mutation({
-  args: {
-    messageId: v.id("eventMessages"),
-    body: v.string(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const viewerProfile = await requireAuthProfile(ctx);
-    const messageDoc = await assertViewerOwnsEventMessage(
-      ctx,
-      args.messageId,
-      viewerProfile._id,
-    );
-
-    const trimmedBody = args.body.trim();
-    if (!trimmedBody) {
-      throw new ConvexError({
-        code: "EMPTY_MESSAGE",
-        message: "Message body is required.",
-      });
-    }
-
-    if (trimmedBody === messageDoc.body) {
-      return null;
-    }
-
-    await ctx.db.patch(messageDoc._id, {
-      body: trimmedBody,
-    });
-
-    return null;
+/**
+ * Events the current user has RSVPed "going" to, starting in the future.
+ * Used by Hub → Upcoming.
+ */
+export const myUpcoming = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await currentUser(ctx);
+    if (!userId) return [];
+    const now = Date.now();
+    const rsvps = await ctx.db
+      .query('rsvps')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect();
+    const eventIds = rsvps
+      .filter((r) => r.status === 'going')
+      .map((r) => r.eventId);
+    const events = await Promise.all(eventIds.map((id) => ctx.db.get(id)));
+    return events
+      .filter((e): e is Doc<'events'> => e != null && e.startsAt >= now)
+      .sort((a, b) => a.startsAt - b.startsAt);
   },
 });
 
-export const deleteEventMessage = mutation({
-  args: {
-    messageId: v.id("eventMessages"),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const viewerProfile = await requireAuthProfile(ctx);
-    const messageDoc = await assertViewerOwnsEventMessage(
-      ctx,
-      args.messageId,
-      viewerProfile._id,
-    );
-
-    const batchSize = 128;
-
-    while (true) {
-      const likes = await ctx.db
-        .query("eventMessageLikes")
-        .withIndex("by_eventMessageId_and_createdAt", (q) =>
-          q.eq("eventMessageId", messageDoc._id),
-        )
-        .order("asc")
-        .take(batchSize);
-
-      if (likes.length === 0) {
-        break;
-      }
-
-      for (const likeDoc of likes) {
-        await ctx.db.delete(likeDoc._id);
-      }
-    }
-
-    while (true) {
-      const comments = await ctx.db
-        .query("eventMessageComments")
-        .withIndex("by_eventMessageId_and_createdAt", (q) =>
-          q.eq("eventMessageId", messageDoc._id),
-        )
-        .order("asc")
-        .take(batchSize);
-
-      if (comments.length === 0) {
-        break;
-      }
-
-      for (const commentDoc of comments) {
-        await ctx.db.delete(commentDoc._id);
-      }
-    }
-
-    while (true) {
-      const deliveries = await ctx.db
-        .query("notificationDeliveries")
-        .withIndex("by_eventMessageId", (q) => q.eq("eventMessageId", messageDoc._id))
-        .take(batchSize);
-
-      if (deliveries.length === 0) {
-        break;
-      }
-
-      for (const deliveryDoc of deliveries) {
-        await ctx.db.delete(deliveryDoc._id);
-      }
-    }
-
-    await ctx.db.delete(messageDoc._id);
-
-    return null;
+/** Events the current user has saved. */
+export const mySaved = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await currentUser(ctx);
+    if (!userId) return [];
+    const saved = await ctx.db
+      .query('savedEvents')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect();
+    const events = await Promise.all(saved.map((s) => ctx.db.get(s.eventId)));
+    return events.filter((e): e is Doc<'events'> => e != null);
   },
 });
 
-export const askQuestionForEvent = mutation({
-  args: {
-    eventId: v.id("events"),
-    questionBody: v.string(),
-  },
-  returns: v.id("eventQuestions"),
-  handler: async (ctx, args) => {
-    const askerProfile = await requireAuthProfile(ctx);
-
-    const eventDoc = await ctx.db.get(args.eventId);
-    if (!eventDoc) {
-      throw new ConvexError({
-        code: "EVENT_NOT_FOUND",
-        message: "Event not found.",
-      });
-    }
-
-    await ensureViewerCanParticipateInEventQna(ctx, eventDoc, askerProfile._id);
-
-    const trimmedQuestion = args.questionBody.trim();
-    if (!trimmedQuestion) {
-      throw new ConvexError({
-        code: "EMPTY_QUESTION",
-        message: "Question is required.",
-      });
-    }
-
-    if (trimmedQuestion.length > 600) {
-      throw new ConvexError({
-        code: "QUESTION_TOO_LONG",
-        message: "Question is too long. Keep it to 600 characters or less.",
-      });
-    }
-
-    return await ctx.db.insert("eventQuestions", {
-      eventId: args.eventId,
-      askerProfileId: askerProfile._id,
-      questionBody: trimmedQuestion,
-      createdAt: Date.now(),
-    });
-  },
-});
-
-export const editEventQuestion = mutation({
-  args: {
-    questionId: v.id("eventQuestions"),
-    questionBody: v.string(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const viewerProfile = await requireAuthProfile(ctx);
-    const questionDoc = await assertViewerOwnsEventQuestion(
-      ctx,
-      args.questionId,
-      viewerProfile._id,
-    );
-
-    const trimmedQuestion = args.questionBody.trim();
-    if (!trimmedQuestion) {
-      throw new ConvexError({
-        code: "EMPTY_QUESTION",
-        message: "Question is required.",
-      });
-    }
-
-    if (trimmedQuestion.length > 600) {
-      throw new ConvexError({
-        code: "QUESTION_TOO_LONG",
-        message: "Question is too long. Keep it to 600 characters or less.",
-      });
-    }
-
-    if (trimmedQuestion === questionDoc.questionBody) {
-      return null;
-    }
-
-    await ctx.db.patch(questionDoc._id, {
-      questionBody: trimmedQuestion,
-    });
-
-    return null;
-  },
-});
-
-export const deleteEventQuestion = mutation({
-  args: {
-    questionId: v.id("eventQuestions"),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const viewerProfile = await requireAuthProfile(ctx);
-    const questionDoc = await assertViewerOwnsEventQuestion(
-      ctx,
-      args.questionId,
-      viewerProfile._id,
-    );
-
-    await ctx.db.delete(questionDoc._id);
-
-    return null;
-  },
-});
-
-export const answerEventQuestion = mutation({
-  args: {
-    questionId: v.id("eventQuestions"),
-    answerBody: v.string(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const responderProfile = await requireAuthProfile(ctx);
-    const questionDoc = await ctx.db.get(args.questionId);
-    if (!questionDoc) {
-      throw new ConvexError({
-        code: "QUESTION_NOT_FOUND",
-        message: "Question not found.",
-      });
-    }
-
-    const eventDoc = await ctx.db.get(questionDoc.eventId);
-    if (!eventDoc) {
-      throw new ConvexError({
-        code: "EVENT_NOT_FOUND",
-        message: "Event not found.",
-      });
-    }
-
-    if (eventDoc.organizerProfileId !== responderProfile._id) {
-      throw new ConvexError({
-        code: "NOT_EVENT_ORGANIZER",
-        message: "Only the event host can answer event questions.",
-      });
-    }
-
-    const trimmedAnswer = args.answerBody.trim();
-    if (!trimmedAnswer) {
-      throw new ConvexError({
-        code: "EMPTY_ANSWER",
-        message: "Answer is required.",
-      });
-    }
-
-    if (trimmedAnswer.length > 800) {
-      throw new ConvexError({
-        code: "ANSWER_TOO_LONG",
-        message: "Answer is too long. Keep it to 800 characters or less.",
-      });
-    }
-
-    await ctx.db.patch(questionDoc._id, {
-      answerBody: trimmedAnswer,
-      answeredAt: Date.now(),
-      answeredByProfileId: responderProfile._id,
-    });
-
-    return null;
+/** Past events the current user attended (RSVP + past startsAt). */
+export const myPast = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await currentUser(ctx);
+    if (!userId) return [];
+    const now = Date.now();
+    const rsvps = await ctx.db
+      .query('rsvps')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect();
+    const eventIds = rsvps.map((r) => r.eventId);
+    const events = await Promise.all(eventIds.map((id) => ctx.db.get(id)));
+    return events
+      .filter((e): e is Doc<'events'> => e != null && e.startsAt < now)
+      .sort((a, b) => b.startsAt - a.startsAt);
   },
 });
