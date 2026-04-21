@@ -1,136 +1,145 @@
-import { defineSchema, defineTable } from "convex/server";
-import { v } from "convex/values";
+// schema.ts — Make Waves data model.
+//
+// Mirrors the shape of waves/project/components/data.jsx. We layer the
+// Convex Auth standard tables underneath via authTables and extend `users`
+// with the Make Waves profile fields (tone, hours, streak…).
+//
+// Indexes are chosen for the queries in events.ts / comments.ts / notifications.ts
+// (typical access pattern is by_event + by_user, ordered by createdAt).
+
+import { authTables } from '@convex-dev/auth/server';
+import { defineSchema, defineTable } from 'convex/server';
+import { v } from 'convex/values';
+
+const CATEGORY = v.union(
+  v.literal('cleanup'),
+  v.literal('food'),
+  v.literal('garden'),
+  v.literal('elders'),
+  v.literal('tutor'),
+  v.literal('animals'),
+  v.literal('blood'),
+  v.literal('outreach'),
+  v.literal('repairs'),
+);
+
+const NOTIFICATION_KIND = v.union(
+  v.literal('update'),
+  v.literal('reply'),
+  v.literal('reminder'),
+  v.literal('badge'),
+  v.literal('new'),
+  v.literal('thanks'),
+);
 
 export default defineSchema({
-  profiles: defineTable({
-    slug: v.string(),
-    externalId: v.optional(v.string()),
-    displayName: v.string(),
+  // ─── Convex Auth tables (users, accounts, sessions, verificationCodes) ──
+  // We override `users` below to add Make Waves profile fields.
+  ...authTables,
+
+  users: defineTable({
+    // Convex Auth standard fields (all optional — populated by the auth flow).
+    name: v.optional(v.string()),
     email: v.optional(v.string()),
+    image: v.optional(v.string()),
+    emailVerificationTime: v.optional(v.number()),
+    phone: v.optional(v.string()),
+    phoneVerificationTime: v.optional(v.number()),
+    isAnonymous: v.optional(v.boolean()),
+
+    // Make Waves profile.
+    initials: v.optional(v.string()),
+    handle: v.optional(v.string()),
     bio: v.optional(v.string()),
-    avatarUrl: v.optional(v.string()),
-    city: v.optional(v.string()),
-    expoPushToken: v.optional(v.string()),
-    updatedAt: v.optional(v.number()),
-    createdAt: v.number(),
+    tone: v.optional(v.number()), // OKLCH hue used by Avatar
+    hours: v.optional(v.number()),
+    streak: v.optional(v.number()),
+    badgeCount: v.optional(v.number()),
   })
-    .index("by_slug", ["slug"])
-    .index("by_externalId", ["externalId"])
-    .index("by_email", ["email"])
-    .index("by_displayName", ["displayName"]),
+    .index('email', ['email'])
+    .index('phone', ['phone']),
 
+  // ─── Events ────────────────────────────────────────────────────────
   events: defineTable({
-    slug: v.string(),
     title: v.string(),
+    category: CATEGORY,
+    hostId: v.id('users'),
+    hostOrg: v.optional(v.string()),
     description: v.string(),
-    category: v.string(),
-    startAt: v.number(),
-    endAt: v.number(),
-    timezone: v.string(),
-    latitude: v.number(),
-    longitude: v.number(),
-    addressLine1: v.string(),
-    city: v.string(),
-    region: v.optional(v.string()),
-    country: v.string(),
-    postalCode: v.optional(v.string()),
-    coverImageUrl: v.optional(v.string()),
-    coverStorageId: v.optional(v.id("_storage")),
-    impactSummary: v.optional(v.string()),
-    capacity: v.optional(v.number()),
-    status: v.union(v.literal("draft"), v.literal("published")),
-    organizerProfileId: v.id("profiles"),
-    attendeeCount: v.number(),
-    createdAt: v.number(),
+    meetingPoint: v.optional(v.string()),
+    bring: v.array(v.string()),
+    // Instants
+    startsAt: v.number(),
+    endsAt: v.number(),
+    // Place
+    location: v.string(),
+    address: v.string(),
+    lat: v.number(),
+    lng: v.number(),
+    // Capacity
+    capacity: v.number(),
+    attendees: v.number(), // denormalized going count
+    hours: v.number(),
   })
-    .index("by_slug", ["slug"])
-    .index("by_status_and_startAt", ["status", "startAt"])
-    .index("by_status_and_city_and_startAt", ["status", "city", "startAt"])
-    .index("by_status_and_category_and_startAt", ["status", "category", "startAt"])
-    .index("by_organizerProfileId_and_startAt", ["organizerProfileId", "startAt"]),
-
-  eventMedia: defineTable({
-    eventId: v.id("events"),
-    url: v.optional(v.string()),
-    storageId: v.optional(v.id("_storage")),
-    caption: v.optional(v.string()),
-    sortOrder: v.number(),
-    createdAt: v.number(),
-  }).index("by_eventId_and_sortOrder", ["eventId", "sortOrder"]),
+    .index('by_startsAt', ['startsAt'])
+    .index('by_category', ['category'])
+    .index('by_host', ['hostId']),
 
   rsvps: defineTable({
-    eventId: v.id("events"),
-    attendeeProfileId: v.id("profiles"),
-    status: v.union(v.literal("going"), v.literal("interested"), v.literal("not_going")),
-    createdAt: v.number(),
-    note: v.optional(v.string()),
+    eventId: v.id('events'),
+    userId: v.id('users'),
+    status: v.union(v.literal('going'), v.literal('interested')),
   })
-    .index("by_eventId_and_attendeeProfileId", ["eventId", "attendeeProfileId"])
-    .index("by_attendeeProfileId_and_createdAt", ["attendeeProfileId", "createdAt"])
-    .index("by_eventId_and_createdAt", ["eventId", "createdAt"]),
+    .index('by_event', ['eventId'])
+    .index('by_user', ['userId'])
+    .index('by_event_user', ['eventId', 'userId']),
 
-  eventMessages: defineTable({
-    eventId: v.id("events"),
-    authorProfileId: v.id("profiles"),
+  comments: defineTable({
+    eventId: v.id('events'),
+    userId: v.id('users'),
     body: v.string(),
-    kind: v.union(v.literal("announcement"), v.literal("update")),
-    likeCount: v.optional(v.number()),
-    commentCount: v.optional(v.number()),
-    createdAt: v.number(),
   })
-    .index("by_eventId_and_createdAt", ["eventId", "createdAt"])
-    .index("by_createdAt", ["createdAt"]),
+    .index('by_event_createdAt', ['eventId'])
+    .index('by_user', ['userId']),
 
-  eventMessageLikes: defineTable({
-    eventId: v.id("events"),
-    eventMessageId: v.id("eventMessages"),
-    likerProfileId: v.id("profiles"),
-    createdAt: v.number(),
-  })
-    .index("by_eventMessageId_and_likerProfileId", ["eventMessageId", "likerProfileId"])
-    .index("by_eventMessageId_and_createdAt", ["eventMessageId", "createdAt"]),
-
-  eventMessageComments: defineTable({
-    eventId: v.id("events"),
-    eventMessageId: v.id("eventMessages"),
-    authorProfileId: v.id("profiles"),
+  eventUpdates: defineTable({
+    eventId: v.id('events'),
+    userId: v.id('users'),
     body: v.string(),
-    createdAt: v.number(),
   })
-    .index("by_eventMessageId_and_createdAt", ["eventMessageId", "createdAt"])
-    .index("by_eventId_and_createdAt", ["eventId", "createdAt"]),
+    .index('by_event', ['eventId']),
 
-  eventQuestions: defineTable({
-    eventId: v.id("events"),
-    askerProfileId: v.id("profiles"),
-    questionBody: v.string(),
-    answerBody: v.optional(v.string()),
-    answeredByProfileId: v.optional(v.id("profiles")),
-    answeredAt: v.optional(v.number()),
-    createdAt: v.number(),
+  notifications: defineTable({
+    userId: v.id('users'),
+    kind: NOTIFICATION_KIND,
+    eventId: v.optional(v.id('events')),
+    fromUserId: v.optional(v.id('users')),
+    body: v.string(),
+    unread: v.boolean(),
   })
-    .index("by_eventId_and_createdAt", ["eventId", "createdAt"])
-    .index("by_eventId_and_answeredAt", ["eventId", "answeredAt"]),
+    .index('by_user', ['userId'])
+    .index('by_unread', ['userId', 'unread']),
 
-  notificationDeliveries: defineTable({
-    eventId: v.id("events"),
-    eventMessageId: v.id("eventMessages"),
-    recipientProfileId: v.id("profiles"),
-    channel: v.union(v.literal("email"), v.literal("push")),
-    status: v.union(
-      v.literal("pending"),
-      v.literal("sent"),
-      v.literal("failed"),
-      v.literal("skipped"),
-    ),
-    providerMessageId: v.optional(v.string()),
-    error: v.optional(v.string()),
-    attemptCount: v.number(),
-    nextAttemptAt: v.number(),
-    lastAttemptAt: v.optional(v.number()),
-    createdAt: v.number(),
+  checkIns: defineTable({
+    eventId: v.id('events'),
+    userId: v.id('users'),
   })
-    .index("by_status_and_nextAttemptAt", ["status", "nextAttemptAt"])
-    .index("by_recipientProfileId_and_createdAt", ["recipientProfileId", "createdAt"])
-    .index("by_eventMessageId", ["eventMessageId"]),
+    .index('by_event', ['eventId'])
+    .index('by_user', ['userId']),
+
+  savedEvents: defineTable({
+    eventId: v.id('events'),
+    userId: v.id('users'),
+  })
+    .index('by_user', ['userId'])
+    .index('by_event_user', ['eventId', 'userId']),
+
+  badgeProgress: defineTable({
+    userId: v.id('users'),
+    badgeId: v.string(),
+    earned: v.boolean(),
+    earnedAt: v.optional(v.number()),
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_badge', ['userId', 'badgeId']),
 });

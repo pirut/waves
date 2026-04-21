@@ -1,36 +1,41 @@
-import { Link } from "expo-router";
-import { StyleSheet } from "react-native";
+// app/+not-found.tsx — fallback for unknown routes.
 
-import { theme } from "@/src/core/theme/tokens";
-import { AppText } from "@/src/core/ui/AppText";
-import { Button } from "@/src/core/ui/Button";
-import { Card } from "@/src/core/ui/Card";
-import { Screen } from "@/src/core/ui/Screen";
+import { Link, Stack } from 'expo-router';
+import { StyleSheet, Text, View } from 'react-native';
+import { FONTS, useTheme } from '@/src/theme/ThemeProvider';
 
 export default function NotFoundScreen() {
+  const { palette } = useTheme();
   return (
-    <Screen scroll={false}>
-      <Card style={styles.shell}>
-        <AppText variant="h1" color={theme.colors.heading}>
-          Page not found
-        </AppText>
-        <AppText color={theme.colors.body}>This route doesn't exist in Make Waves.</AppText>
-        <Link href="/(tabs)" asChild>
-          <Button label="Back to app" onPress={() => undefined} />
+    <>
+      <Stack.Screen options={{ title: 'Not found' }} />
+      <View style={[styles.container, { backgroundColor: palette.bg }]}>
+        <Text style={[styles.title, { color: palette.ink, fontFamily: FONTS.display }]}>
+          Can't find that page.
+        </Text>
+        <Link href="/" style={[styles.link, { color: palette.primary, fontFamily: FONTS.bodySemibold }]}>
+          Back to the map
         </Link>
-      </Card>
-    </Screen>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  shell: {
-    alignItems: "center",
-    alignSelf: "center",
-    gap: theme.spacing.md,
-    justifyContent: "center",
-    maxWidth: 520,
-    paddingHorizontal: theme.spacing.md,
-    width: "100%",
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  title: {
+    fontSize: 28,
+    letterSpacing: -0.3,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  link: {
+    fontSize: 14,
+    marginTop: 8,
   },
 });

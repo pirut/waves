@@ -1,0 +1,145 @@
+// TabBar.tsx — custom bottom tab bar matching the prototype's 5-tab layout
+// with a floating center Create pill. Designed for use as the `tabBar` prop
+// of Expo Router's <Tabs> layout.
+//
+// Ported from waves/project/components/screens-map.jsx `TabBar`.
+
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FONTS, useTheme } from '@/theme/ThemeProvider';
+import { Icon, type IconName } from './Icon';
+
+// Route-name → (label, icon, isCreate) mapping. Route names match the
+// files under app/(tabs)/.
+const TAB_META: Record<string, { label: string; icon: IconName; isCreate?: boolean }> = {
+  index: { label: 'Map', icon: 'map' },
+  hub: { label: 'My Hub', icon: 'calendar' },
+  create: { label: 'Create', icon: 'plus', isCreate: true },
+  activity: { label: 'Activity', icon: 'bell' },
+  profile: { label: 'Profile', icon: 'user' },
+};
+
+export function TabBar({ state, navigation }: BottomTabBarProps) {
+  const { palette } = useTheme();
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View
+      style={[
+        styles.root,
+        {
+          backgroundColor: palette.surface,
+          borderTopColor: palette.line,
+          paddingBottom: 10 + insets.bottom,
+        },
+      ]}
+    >
+      <View style={styles.row}>
+        {state.routes.map((route, index) => {
+          const meta = TAB_META[route.name];
+          if (!meta) return null;
+          const focused = state.index === index;
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!focused && !event.defaultPrevented) {
+              navigation.navigate(route.name as never);
+            }
+          };
+
+          if (meta.isCreate) {
+            return (
+              <Pressable
+                key={route.key}
+                accessibilityRole="button"
+                accessibilityLabel={meta.label}
+                onPress={onPress}
+                style={[
+                  styles.createBtn,
+                  {
+                    backgroundColor: palette.primary,
+                    shadowColor: palette.primary,
+                  },
+                ]}
+              >
+                <Icon
+                  name="plus"
+                  size={22}
+                  strokeWidth={2.2}
+                  color={palette.dark ? '#1a1a1a' : '#fff'}
+                />
+              </Pressable>
+            );
+          }
+
+          return (
+            <Pressable
+              key={route.key}
+              accessibilityRole="button"
+              accessibilityLabel={meta.label}
+              accessibilityState={focused ? { selected: true } : undefined}
+              onPress={onPress}
+              style={styles.tab}
+            >
+              <Icon
+                name={meta.icon}
+                size={22}
+                color={focused ? palette.primary : palette.ink3}
+                strokeWidth={focused ? 2 : 1.6}
+              />
+              <Text
+                style={{
+                  fontFamily: FONTS.bodyMedium,
+                  fontSize: 10,
+                  color: focused ? palette.primary : palette.ink3,
+                  marginTop: 4,
+                  letterSpacing: 0.1,
+                }}
+              >
+                {meta.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingTop: 10,
+    paddingHorizontal: 12,
+    borderTopWidth: 0.5,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  tab: {
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  createBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: [{ translateY: -4 }],
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+});

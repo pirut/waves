@@ -8,8 +8,6 @@ node_modules/
 dist/
 web-build/
 expo-env.d.ts
-web/.next/
-web/.vercel/
 
 # Native
 .kotlin/
@@ -33,7 +31,9 @@ yarn-error.*
 *.pem
 
 # local env files
-.env*.local
+.env
+.env.local
+.env.*.local
 
 # typescript
 *.tsbuildinfo
@@ -41,4 +41,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
-.vercel
+
+# convex
+.convex/

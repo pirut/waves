@@ -1,250 +1,90 @@
-import { ConvexError, v } from "convex/values";
+// notifications.ts — list for me (paginated) + mark-read.
 
-import { Doc } from "./_generated/dataModel";
-import {
-  internalMutation,
-  internalQuery,
-  mutation,
-} from "./_generated/server";
-import { requireAuthProfile } from "./lib/auth";
+import { paginationOptsValidator } from 'convex/server';
+import { v } from 'convex/values';
+import { internalMutation, mutation, query } from './_generated/server';
+import { requireUser } from './lib/authz';
 
-const notificationChannelValidator = v.union(v.literal("email"), v.literal("push"));
+const NOTIFICATION_KIND = v.union(
+  v.literal('update'),
+  v.literal('reply'),
+  v.literal('reminder'),
+  v.literal('badge'),
+  v.literal('new'),
+  v.literal('thanks'),
+);
 
-const pendingDeliveryValidator = v.object({
-  deliveryId: v.id("notificationDeliveries"),
-  channel: notificationChannelValidator,
-  attemptCount: v.number(),
-  recipientEmail: v.optional(v.string()),
-  expoPushToken: v.optional(v.string()),
-  recipientName: v.string(),
-  eventTitle: v.string(),
-  messageBody: v.string(),
-});
-
-function toPendingDeliveryView(
-  delivery: Doc<"notificationDeliveries">,
-  recipient: Doc<"profiles"> | null,
-  eventDoc: Doc<"events"> | null,
-  messageDoc: Doc<"eventMessages"> | null,
-) {
-  return {
-    deliveryId: delivery._id,
-    channel: delivery.channel,
-    attemptCount: delivery.attemptCount,
-    ...(recipient?.email ? { recipientEmail: recipient.email } : {}),
-    ...(recipient?.expoPushToken ? { expoPushToken: recipient.expoPushToken } : {}),
-    recipientName: recipient?.displayName ?? "Community member",
-    eventTitle: eventDoc?.title ?? "Make Waves event",
-    messageBody: messageDoc?.body ?? "You have a new event update.",
-  };
-}
-
-export const registerPushToken = mutation({
-  args: {
-    expoPushToken: v.string(),
-  },
-  returns: v.null(),
+/** Lists notifications for the current user, newest first. */
+export const listForMe = query({
+  args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
-    const profile = await requireAuthProfile(ctx);
+    const userId = await requireUser(ctx);
+    const page = await ctx.db
+      .query('notifications')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .order('desc')
+      .paginate(args.paginationOpts);
 
-    await ctx.db.patch(profile._id, {
-      expoPushToken: args.expoPushToken.trim(),
-      updatedAt: Date.now(),
-    });
-
-    return null;
-  },
-});
-
-export const clearPushToken = mutation({
-  args: {},
-  returns: v.null(),
-  handler: async (ctx) => {
-    const profile = await requireAuthProfile(ctx);
-
-    await ctx.db.patch(profile._id, {
-      expoPushToken: undefined,
-      updatedAt: Date.now(),
-    });
-
-    return null;
-  },
-});
-
-export const enqueueForMessage = internalMutation({
-  args: {
-    eventId: v.id("events"),
-    eventMessageId: v.id("eventMessages"),
-  },
-  returns: v.object({
-    queued: v.number(),
-  }),
-  handler: async (ctx, args) => {
-    const eventDoc = await ctx.db.get(args.eventId);
-    if (!eventDoc) {
-      throw new ConvexError({
-        code: "EVENT_NOT_FOUND",
-        message: "Cannot queue notifications because the event was not found.",
-      });
-    }
-
-    const messageDoc = await ctx.db.get(args.eventMessageId);
-    if (!messageDoc || messageDoc.eventId !== args.eventId) {
-      throw new ConvexError({
-        code: "MESSAGE_NOT_FOUND",
-        message: "Cannot queue notifications because the event message was not found.",
-      });
-    }
-
-    const rsvps = await ctx.db
-      .query("rsvps")
-      .withIndex("by_eventId_and_createdAt", (q) => q.eq("eventId", args.eventId))
-      .order("desc")
-      .take(3000);
-
-    let queued = 0;
-
-    for (const rsvp of rsvps) {
-      if (rsvp.status === "not_going") {
-        continue;
-      }
-
-      if (rsvp.attendeeProfileId === messageDoc.authorProfileId) {
-        continue;
-      }
-
-      const recipient = await ctx.db.get(rsvp.attendeeProfileId);
-      if (!recipient) {
-        continue;
-      }
-
-      if (recipient.email) {
-        await ctx.db.insert("notificationDeliveries", {
-          eventId: args.eventId,
-          eventMessageId: args.eventMessageId,
-          recipientProfileId: recipient._id,
-          channel: "email",
-          status: "pending",
-          attemptCount: 0,
-          nextAttemptAt: Date.now(),
-          createdAt: Date.now(),
-        });
-        queued += 1;
-      }
-
-      if (recipient.expoPushToken) {
-        await ctx.db.insert("notificationDeliveries", {
-          eventId: args.eventId,
-          eventMessageId: args.eventMessageId,
-          recipientProfileId: recipient._id,
-          channel: "push",
-          status: "pending",
-          attemptCount: 0,
-          nextAttemptAt: Date.now(),
-          createdAt: Date.now(),
-        });
-        queued += 1;
-      }
-    }
-
-    return { queued };
-  },
-});
-
-export const listPendingDeliveries = internalQuery({
-  args: {
-    limit: v.optional(v.number()),
-  },
-  returns: v.array(pendingDeliveryValidator),
-  handler: async (ctx, args) => {
-    const limit = Math.max(1, Math.min(args.limit ?? 50, 250));
-    const now = Date.now();
-
-    const readyDeliveries: Array<Doc<"notificationDeliveries">> = [];
-
-    const query = ctx.db
-      .query("notificationDeliveries")
-      .withIndex("by_status_and_nextAttemptAt", (q) => q.eq("status", "pending"))
-      .order("asc");
-
-    for await (const delivery of query) {
-      if (delivery.nextAttemptAt > now) {
-        break;
-      }
-
-      readyDeliveries.push(delivery);
-      if (readyDeliveries.length >= limit) {
-        break;
-      }
-    }
-
-    const views = await Promise.all(
-      readyDeliveries.map(async (delivery) => {
-        const [recipient, eventDoc, messageDoc] = await Promise.all([
-          ctx.db.get(delivery.recipientProfileId),
-          ctx.db.get(delivery.eventId),
-          ctx.db.get(delivery.eventMessageId),
-        ]);
-
-        return toPendingDeliveryView(delivery, recipient, eventDoc, messageDoc);
+    const withEnrichment = await Promise.all(
+      page.page.map(async (n) => {
+        const from = n.fromUserId ? await ctx.db.get(n.fromUserId) : null;
+        const event = n.eventId ? await ctx.db.get(n.eventId) : null;
+        return {
+          ...n,
+          from: from
+            ? { _id: from._id, name: from.name ?? 'Anon', initials: from.initials ?? '?', tone: from.tone ?? 200 }
+            : null,
+          event: event ? { _id: event._id, title: event.title } : null,
+        };
       }),
     );
-
-    return views;
+    return { ...page, page: withEnrichment };
   },
 });
 
-export const markDeliveryAttempt = internalMutation({
-  args: {
-    deliveryId: v.id("notificationDeliveries"),
-    outcome: v.union(
-      v.literal("sent"),
-      v.literal("failed"),
-      v.literal("skipped"),
-      v.literal("retry"),
-    ),
-    providerMessageId: v.optional(v.string()),
-    error: v.optional(v.string()),
+export const unreadCount = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await requireUser(ctx);
+    const unread = await ctx.db
+      .query('notifications')
+      .withIndex('by_unread', (q) => q.eq('userId', userId).eq('unread', true))
+      .collect();
+    return unread.length;
   },
-  returns: v.null(),
+});
+
+export const markAllRead = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await requireUser(ctx);
+    const unread = await ctx.db
+      .query('notifications')
+      .withIndex('by_unread', (q) => q.eq('userId', userId).eq('unread', true))
+      .collect();
+    for (const n of unread) {
+      await ctx.db.patch(n._id, { unread: false });
+    }
+  },
+});
+
+/** Internal: called by other mutations (rsvp, comment, etc.) to create a notification. */
+export const createNotification = internalMutation({
+  args: {
+    userId: v.id('users'),
+    kind: NOTIFICATION_KIND,
+    body: v.string(),
+    eventId: v.optional(v.id('events')),
+    fromUserId: v.optional(v.id('users')),
+  },
   handler: async (ctx, args) => {
-    const delivery = await ctx.db.get(args.deliveryId);
-
-    if (!delivery) {
-      return null;
-    }
-
-    const attemptedAt = Date.now();
-    const nextAttemptCount = delivery.attemptCount + 1;
-
-    if (args.outcome === "retry") {
-      const backoffMs = Math.min(30 * 60 * 1000, 2 ** nextAttemptCount * 30 * 1000);
-      await ctx.db.patch(delivery._id, {
-        status: "pending",
-        ...(args.error ? { error: args.error } : {}),
-        attemptCount: nextAttemptCount,
-        lastAttemptAt: attemptedAt,
-        nextAttemptAt: attemptedAt + backoffMs,
-      });
-      return null;
-    }
-
-    const status: Doc<"notificationDeliveries">["status"] =
-      args.outcome === "sent"
-        ? "sent"
-        : args.outcome === "failed"
-          ? "failed"
-          : "skipped";
-
-    await ctx.db.patch(delivery._id, {
-      status,
-      ...(args.providerMessageId ? { providerMessageId: args.providerMessageId } : {}),
-      ...(args.error ? { error: args.error } : {}),
-      attemptCount: nextAttemptCount,
-      lastAttemptAt: attemptedAt,
-      nextAttemptAt: attemptedAt,
+    return await ctx.db.insert('notifications', {
+      userId: args.userId,
+      kind: args.kind,
+      eventId: args.eventId,
+      fromUserId: args.fromUserId,
+      body: args.body,
+      unread: true,
     });
-
-    return null;
   },
 });
