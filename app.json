@@ -6,15 +6,16 @@
     "orientation": "portrait",
     "scheme": "waves",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
     "newArchEnabled": true,
     "splash": {
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#F6F3EC"
+      "backgroundColor": "#F7F2E8"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.make-waves",
-      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "Make Waves uses your location to show events near you on the map."
@@ -22,6 +23,10 @@
     },
     "android": {
       "package": "com.anonymous.makewaves",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#F7F2E8"
+      },
       "edgeToEdgeEnabled": true,
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -30,13 +35,14 @@
     },
     "web": {
       "bundler": "metro",
-      "output": "single"
+      "output": "single",
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router",
       "expo-font",
       "expo-secure-store",
-      "expo-apple-authentication",
+      "@clerk/expo",
       [
         "expo-location",
         {
@@ -46,7 +52,7 @@
       [
         "@rnmapbox/maps",
         {
-          "RNMapboxMapsDownloadToken": "MAPBOX_DOWNLOAD_TOKEN_PLACEHOLDER"
+          "RNMapboxMapsVersion": "11.18.2"
         }
       ]
     ],

@@ -4,6 +4,7 @@
 import { Pressable, Text, View } from 'react-native';
 import { CATEGORIES, type Category, type CategoryId } from '@/theme/tokens';
 import { FONTS, badgeColor, chipColor, useTheme } from '@/theme/ThemeProvider';
+import { UI } from '@/theme/layout';
 import { Icon } from './Icon';
 
 type CategoryChipProps = {
@@ -23,9 +24,10 @@ export function CategoryChip({ cat, active = false, compact = false, onPress }: 
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        paddingVertical: compact ? 6 : 8,
-        paddingHorizontal: compact ? 10 : 12,
-        borderRadius: 999,
+        minHeight: compact ? 34 : 40,
+        paddingVertical: compact ? 6 : 9,
+        paddingHorizontal: compact ? 10 : 13,
+        borderRadius: UI.radius.pill,
         borderWidth: 1,
         borderColor: border,
         backgroundColor: bg,
@@ -37,6 +39,7 @@ export function CategoryChip({ cat, active = false, compact = false, onPress }: 
         style={{
           fontFamily: FONTS.bodyMedium,
           fontSize: compact ? 12 : 13,
+          lineHeight: compact ? 15 : 17,
           color: fg,
         }}
       >

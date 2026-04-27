@@ -59,6 +59,12 @@ export const detail = query({
           .withIndex('by_event_user', (q) => q.eq('eventId', event._id).eq('userId', userId))
           .unique()
       : null;
+    const mySaved = userId
+      ? await ctx.db
+          .query('savedEvents')
+          .withIndex('by_event_user', (q) => q.eq('eventId', event._id).eq('userId', userId))
+          .unique()
+      : null;
 
     const going = await Promise.all(
       rsvps
@@ -83,6 +89,7 @@ export const detail = query({
         : null,
       going: going.filter((x): x is NonNullable<typeof x> => x != null),
       myRsvp: myRsvp ? { status: myRsvp.status } : null,
+      mySaved: Boolean(mySaved),
     };
   },
 });

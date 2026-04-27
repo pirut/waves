@@ -24,6 +24,9 @@ export type PaletteTokens = {
   accent2: string;
   wash: string;
   success: string;
+  // Foreground colors that pair with brand surfaces.
+  onPrimary: string;
+  onAccent: string;
   // Map
   mapBg: string;
   mapLand: string;
@@ -39,19 +42,21 @@ export const PALETTES: Record<PaletteId, PaletteTokens> = {
   tidepool: {
     id: 'tidepool',
     label: 'Tidepool',
-    bg: 'oklch(0.97 0.01 85)',
+    bg: '#F7F2E8',
     surface: 'oklch(1 0 0)',
     surface2: 'oklch(0.955 0.012 85)',
-    ink: 'oklch(0.22 0.04 210)',
-    ink2: 'oklch(0.45 0.03 210)',
+    ink: '#0F172A',
+    ink2: '#425466',
     ink3: 'oklch(0.62 0.02 210)',
     line: 'oklch(0.89 0.012 210)',
-    primary: 'oklch(0.42 0.09 195)',
-    primary2: 'oklch(0.52 0.11 195)',
-    accent: 'oklch(0.72 0.16 45)',
-    accent2: 'oklch(0.62 0.18 35)',
+    primary: '#0F6663',
+    primary2: '#2FA39A',
+    accent: '#F2C94C',
+    accent2: '#F27A59',
     wash: 'oklch(0.93 0.03 200)',
     success: 'oklch(0.62 0.12 155)',
+    onPrimary: '#ffffff',
+    onAccent: '#1a1a1a',
     mapBg: 'oklch(0.95 0.015 180)',
     mapLand: 'oklch(0.965 0.012 180)',
     mapWater: 'oklch(0.88 0.04 215)',
@@ -77,6 +82,8 @@ export const PALETTES: Record<PaletteId, PaletteTokens> = {
     accent2: 'oklch(0.65 0.18 65)',
     wash: 'oklch(0.93 0.035 140)',
     success: 'oklch(0.62 0.12 145)',
+    onPrimary: '#ffffff',
+    onAccent: '#1a1a1a',
     mapBg: 'oklch(0.95 0.018 90)',
     mapLand: 'oklch(0.965 0.014 90)',
     mapWater: 'oklch(0.85 0.03 210)',
@@ -103,6 +110,8 @@ export const PALETTES: Record<PaletteId, PaletteTokens> = {
     accent2: 'oklch(0.72 0.15 195)',
     wash: 'oklch(0.27 0.04 265)',
     success: 'oklch(0.78 0.14 155)',
+    onPrimary: '#1a1a1a',
+    onAccent: '#1a1a1a',
     mapBg: 'oklch(0.16 0.025 265)',
     mapLand: 'oklch(0.22 0.03 265)',
     mapWater: 'oklch(0.14 0.04 245)',

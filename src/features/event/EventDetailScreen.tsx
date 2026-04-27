@@ -6,16 +6,19 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
+import { Button, IconButton } from '@/src/components/Button';
 import { CapacityBar } from '@/src/components/CapacityBar';
 import { CategoryBadge } from '@/src/components/CategoryChip';
 import { Icon } from '@/src/components/Icon';
@@ -24,7 +27,9 @@ import { SectionTitle } from '@/src/components/SectionTitle';
 import { oklch } from '@/src/theme/oklch';
 import { CAT_TONE, CATEGORIES, type CategoryId } from '@/src/theme/tokens';
 import { FONTS, useTheme } from '@/src/theme/ThemeProvider';
+import { cardShadow, UI, useResponsiveLayout } from '@/src/theme/layout';
 import { formatDateLabel, formatTimeRange } from '@/src/lib/date';
+import { mapsUrl } from '@/src/lib/places';
 import { AboutTab } from './AboutTab';
 import { UpdatesTab } from './UpdatesTab';
 import { CommentsTab } from './CommentsTab';
@@ -45,11 +50,14 @@ export function EventDetailScreen({
   onOpenCheckIn,
 }: EventDetailScreenProps) {
   const { palette } = useTheme();
+  const layout = useResponsiveLayout(UI.detailMax);
   const detail = useQuery(api.events.detail, { id: eventId });
   const updates = useQuery(api.updates.listByEvent, { eventId });
   const toggleRsvp = useMutation(api.rsvps.toggleRsvp);
+  const toggleSave = useMutation(api.savedEvents.toggleSave);
   const [tab, setTab] = useState<TabId>('about');
   const [submitting, setSubmitting] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   if (detail === undefined) {
     return (
@@ -84,6 +92,7 @@ export function EventDetailScreen({
 
   const { event, host, going, myRsvp } = detail;
   const signedUp = myRsvp?.status === 'going';
+  const saved = Boolean(detail.mySaved);
   // `event.category` comes through the api stub typed as any; narrow at the
   // boundary.
   const categoryId = event.category as CategoryId;
@@ -109,21 +118,52 @@ export function EventDetailScreen({
     }
   };
 
+  const onToggleSave = async () => {
+    setSaving(true);
+    try {
+      await toggleSave({ eventId });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to update saved event';
+      Alert.alert('Error', message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onShare = async () => {
+    try {
+      const url = mapsUrl({ lat: event.lat, lng: event.lng, label: event.title });
+      await Share.share({
+        title: event.title,
+        message: `${event.title} at ${event.location}\n${formatDateLabel(event.startsAt)} ${formatTimeRange(event.startsAt, event.endsAt)}\n${url}`,
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Could not share this event';
+      Alert.alert('Share failed', message);
+    }
+  };
+
+  const onOpenMap = async () => {
+    const url = mapsUrl({ lat: event.lat, lng: event.lng, label: event.title });
+    const canOpen = await Linking.canOpenURL(url);
+    if (canOpen) {
+      await Linking.openURL(url);
+    }
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: palette.bg }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 150 }}>
         {/* HERO */}
-        <View style={{ height: 240, overflow: 'hidden', backgroundColor: heroFromColor }}>
-          {/* Approximate gradient with a second half-height overlay color. RN
-              StyleSheet doesn't support gradients natively; this keeps fidelity
-              acceptable without adding expo-linear-gradient. */}
-          <View
-            style={{
-              ...StyleSheet.absoluteFillObject,
-              backgroundColor: heroToColor,
-              opacity: 0.55,
-            }}
-          />
+        <View
+          style={{
+            height: layout.isTablet ? 300 : 240,
+            overflow: 'hidden',
+            marginHorizontal: layout.isTablet ? layout.sideInset : 0,
+            marginTop: layout.isTablet ? 18 : 0,
+            borderRadius: layout.isTablet ? UI.radius.xl : 0,
+          }}
+        >
           <Svg
             width="100%"
             height="100%"
@@ -131,6 +171,13 @@ export function EventDetailScreen({
             preserveAspectRatio="none"
             style={StyleSheet.absoluteFillObject}
           >
+            <Defs>
+              <LinearGradient id="heroGrad" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0" stopColor={heroFromColor} stopOpacity="1" />
+                <Stop offset="1" stopColor={heroToColor} stopOpacity="1" />
+              </LinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width="400" height="240" fill="url(#heroGrad)" />
             <Path
               d="M0 160 Q 100 120 200 160 T 400 160 L 400 240 L 0 240 Z"
               fill={palette.dark ? '#000' : '#fff'}
@@ -143,9 +190,11 @@ export function EventDetailScreen({
             />
           </Svg>
 
-          <SafeAreaView edges={['top']} style={{ paddingHorizontal: 12 }}>
+          <SafeAreaView edges={['top']} style={{ paddingHorizontal: layout.isTablet ? 18 : 12 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Back"
                 onPress={onBack}
                 style={[styles.heroBtn, { backgroundColor: 'rgba(255,255,255,0.92)' }]}
               >
@@ -176,7 +225,12 @@ export function EventDetailScreen({
                   </Text>
                 </View>
               )}
-              <Pressable style={[styles.heroBtn, { backgroundColor: 'rgba(255,255,255,0.92)' }]}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Share event"
+                onPress={onShare}
+                style={[styles.heroBtn, { backgroundColor: 'rgba(255,255,255,0.92)' }]}
+              >
                 <Icon name="share" size={16} color="#000" />
               </Pressable>
             </View>
@@ -186,20 +240,26 @@ export function EventDetailScreen({
         {/* Title block */}
         <View
           style={{
-            paddingHorizontal: 20,
-            paddingTop: 20,
+            marginHorizontal: layout.isTablet ? layout.sideInset : 0,
+            paddingHorizontal: layout.isTablet ? 28 : 20,
+            paddingTop: 22,
             paddingBottom: 12,
             backgroundColor: palette.surface,
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
+            borderTopLeftRadius: UI.radius.xl,
+            borderTopRightRadius: UI.radius.xl,
+            borderBottomLeftRadius: layout.isTablet ? UI.radius.xl : 0,
+            borderBottomRightRadius: layout.isTablet ? UI.radius.xl : 0,
             marginTop: -24,
+            borderWidth: layout.isTablet ? 1 : 0,
+            borderColor: palette.line,
+            ...cardShadow(palette.dark),
           }}
         >
           <Text
             style={{
               fontFamily: FONTS.display,
-              fontSize: 28,
-              lineHeight: 32,
+              fontSize: layout.isTablet ? 34 : 28,
+              lineHeight: layout.isTablet ? 38 : 32,
               color: palette.ink,
               letterSpacing: -0.4,
               marginBottom: 10,
@@ -225,7 +285,7 @@ export function EventDetailScreen({
             style={{
               padding: 14,
               backgroundColor: palette.surface2,
-              borderRadius: 14,
+              borderRadius: UI.radius.md,
               gap: 12,
             }}
           >
@@ -234,7 +294,17 @@ export function EventDetailScreen({
               primary={formatDateLabel(event.startsAt)}
               secondary={formatTimeRange(event.startsAt, event.endsAt)}
             />
-            <MetaRow icon="pin" primary={event.location} secondary={event.address} />
+            <MetaRow
+              icon="pin"
+              primary={event.location}
+              secondary={(
+                <Pressable onPress={onOpenMap} style={{ alignSelf: 'flex-start' }}>
+                  <Text style={{ fontFamily: FONTS.bodySemibold, fontSize: 12, color: palette.primary }}>
+                    {event.address} - View on map
+                  </Text>
+                </Pressable>
+              )}
+            />
             <MetaRow
               icon="users"
               primary={`${event.attendees} going · ${Math.max(0, event.capacity - event.attendees)} spots left`}
@@ -248,7 +318,8 @@ export function EventDetailScreen({
           style={{
             flexDirection: 'row',
             gap: 4,
-            paddingHorizontal: 20,
+            marginHorizontal: layout.isTablet ? layout.sideInset : 0,
+            paddingHorizontal: layout.isTablet ? 28 : 20,
             paddingTop: 16,
             backgroundColor: palette.surface,
             borderBottomWidth: 0.5,
@@ -290,7 +361,19 @@ export function EventDetailScreen({
         </View>
 
         {/* Tab content */}
-        <View style={{ backgroundColor: palette.surface, paddingHorizontal: 20, paddingVertical: 16 }}>
+        <View
+          style={{
+            marginHorizontal: layout.isTablet ? layout.sideInset : 0,
+            backgroundColor: palette.surface,
+            paddingHorizontal: layout.isTablet ? 28 : 20,
+            paddingVertical: 18,
+            borderBottomLeftRadius: layout.isTablet ? UI.radius.xl : 0,
+            borderBottomRightRadius: layout.isTablet ? UI.radius.xl : 0,
+            borderWidth: layout.isTablet ? 1 : 0,
+            borderTopWidth: 0,
+            borderColor: palette.line,
+          }}
+        >
           {tab === 'about' && (
             <AboutTab
               description={event.description}
@@ -312,82 +395,50 @@ export function EventDetailScreen({
           left: 0,
           right: 0,
           paddingHorizontal: 16,
+          paddingLeft: layout.isTablet ? layout.sideInset : 16,
+          paddingRight: layout.isTablet ? layout.sideInset : 16,
           paddingTop: 12,
           paddingBottom: 32,
           backgroundColor: palette.surface,
-          borderTopWidth: 0.5,
+          borderTopWidth: 1,
           borderTopColor: palette.line,
         }}
       >
-        {signedUp ? (
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Pressable
-              onPress={onOpenCheckIn}
-              style={{
-                flex: 1,
-                height: 52,
-                borderRadius: 26,
-                backgroundColor: palette.primary,
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'row',
-                gap: 8,
-              }}
-            >
-              <Icon name="check" size={18} color={palette.dark ? '#1a1a1a' : '#fff'} />
-              <Text
-                style={{
-                  color: palette.dark ? '#1a1a1a' : '#fff',
-                  fontFamily: FONTS.bodySemibold,
-                  fontSize: 15,
-                }}
-              >
-                You're going · Check in
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={onToggleRsvp}
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 26,
-                borderWidth: 1,
-                borderColor: palette.line,
-                backgroundColor: palette.surface,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Icon name="calendar" size={18} color={palette.ink} />
-            </Pressable>
-          </View>
-        ) : (
-          <Pressable
-            onPress={onToggleRsvp}
-            disabled={submitting}
-            style={{
-              height: 52,
-              borderRadius: 26,
-              backgroundColor: palette.primary,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {submitting ? (
-              <ActivityIndicator color={palette.dark ? '#1a1a1a' : '#fff'} />
-            ) : (
-              <Text
-                style={{
-                  color: palette.dark ? '#1a1a1a' : '#fff',
-                  fontFamily: FONTS.bodySemibold,
-                  fontSize: 15,
-                }}
-              >
-                Sign up · {Math.max(0, event.capacity - event.attendees)} spots left
-              </Text>
-            )}
-          </Pressable>
-        )}
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {signedUp ? (
+            <View style={{ flex: 1 }}>
+              <Button
+                label="You're going · Check in"
+                icon="check"
+                onPress={onOpenCheckIn}
+              />
+            </View>
+          ) : event.attendees >= event.capacity ? (
+            <View style={{ flex: 1 }}>
+              <Button
+                label="Event full · Join waitlist"
+                variant="secondary"
+                loading={submitting}
+                onPress={onToggleRsvp}
+              />
+            </View>
+          ) : (
+            <View style={{ flex: 1 }}>
+              <Button
+                label={`Sign up · ${Math.max(0, event.capacity - event.attendees)} spots left`}
+                loading={submitting}
+                onPress={onToggleRsvp}
+              />
+            </View>
+          )}
+          <IconButton
+            icon="heart"
+            active={saved}
+            disabled={saving}
+            onPress={onToggleSave}
+            accessibilityLabel={saved ? 'Remove from saved' : 'Save event'}
+          />
+        </View>
       </View>
     </View>
   );

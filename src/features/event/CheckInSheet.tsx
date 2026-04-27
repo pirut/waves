@@ -2,11 +2,13 @@
 // Ported from screens-hub.jsx `CheckInSheet`.
 
 import { useMutation } from 'convex/react';
+import { useMemo } from 'react';
 import { Alert, Modal, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Rect } from 'react-native-svg';
 import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
+import { Button } from '@/src/components/Button';
 import { FONTS, useTheme } from '@/src/theme/ThemeProvider';
 
 type CheckInSheetProps = {
@@ -15,11 +17,45 @@ type CheckInSheetProps = {
   onClose: () => void;
 };
 
-const ON_SQUARES = [0, 1, 3, 5, 6, 11, 13, 17, 18, 20, 24, 28, 30, 32, 35];
+const GRID = 8;
+const FINDER_CELLS = new Set<number>();
+for (let r = 0; r < 3; r++) {
+  for (let c = 0; c < 3; c++) {
+    FINDER_CELLS.add(r * GRID + c);
+    FINDER_CELLS.add(r * GRID + (GRID - 1 - c));
+    FINDER_CELLS.add((GRID - 1 - r) * GRID + c);
+  }
+}
+
+// Deterministic 32-bit hash → cell on/off pattern keyed by eventId.
+function hashSeed(input: string): number {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function patternFor(eventId: string): boolean[] {
+  const seed = hashSeed(eventId || 'event');
+  const cells = GRID * GRID;
+  const out = new Array<boolean>(cells);
+  let state = seed || 1;
+  for (let i = 0; i < cells; i++) {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    state >>>= 0;
+    out[i] = (state & 1) === 1;
+  }
+  return out;
+}
 
 export function CheckInSheet({ visible, eventId, onClose }: CheckInSheetProps) {
   const { palette } = useTheme();
   const checkIn = useMutation(api.checkIns.checkInToEvent);
+  const pattern = useMemo(() => patternFor(eventId ?? 'event'), [eventId]);
 
   const onManualCheckIn = async () => {
     if (!eventId) return onClose();
@@ -91,25 +127,30 @@ export function CheckInSheet({ visible, eventId, onClose }: CheckInSheetProps) {
             }}
           >
             <Svg width={150} height={150} viewBox="0 0 150 150">
-              {Array.from({ length: 36 }).map((_, i) => {
-                const x = (i % 6) * 24 + 8;
-                const y = Math.floor(i / 6) * 24 + 8;
-                const on = ON_SQUARES.includes(i);
+              {pattern.map((on, i) => {
+                if (FINDER_CELLS.has(i)) return null;
+                const col = i % GRID;
+                const row = Math.floor(i / GRID);
+                const cellSize = 150 / GRID;
                 return (
                   <Rect
                     key={i}
-                    x={x}
-                    y={y}
-                    width={16}
-                    height={16}
-                    rx={2}
-                    fill={on ? palette.ink : palette.line}
+                    x={col * cellSize + 2}
+                    y={row * cellSize + 2}
+                    width={cellSize - 4}
+                    height={cellSize - 4}
+                    rx={1.5}
+                    fill={on ? palette.ink : 'transparent'}
                   />
                 );
               })}
-              <Rect x={4} y={4} width={40} height={40} rx={6} fill="none" stroke={palette.ink} strokeWidth={4} />
-              <Rect x={106} y={4} width={40} height={40} rx={6} fill="none" stroke={palette.ink} strokeWidth={4} />
-              <Rect x={4} y={106} width={40} height={40} rx={6} fill="none" stroke={palette.ink} strokeWidth={4} />
+              {/* Finder anchors at three corners (top-left, top-right, bottom-left). */}
+              <Rect x={4} y={4} width={42} height={42} rx={6} fill="none" stroke={palette.ink} strokeWidth={4} />
+              <Rect x={14} y={14} width={22} height={22} rx={3} fill={palette.ink} />
+              <Rect x={104} y={4} width={42} height={42} rx={6} fill="none" stroke={palette.ink} strokeWidth={4} />
+              <Rect x={114} y={14} width={22} height={22} rx={3} fill={palette.ink} />
+              <Rect x={4} y={104} width={42} height={42} rx={6} fill="none" stroke={palette.ink} strokeWidth={4} />
+              <Rect x={14} y={114} width={22} height={22} rx={3} fill={palette.ink} />
             </Svg>
           </View>
 
@@ -126,34 +167,15 @@ export function CheckInSheet({ visible, eventId, onClose }: CheckInSheetProps) {
             Show this to the host at the volunteer tent, or tap below to check in manually.
           </Text>
 
+          <Button label="I'm here, check me in" onPress={onManualCheckIn} size="md" />
           <Pressable
-            onPress={onManualCheckIn}
-            style={{
-              width: '100%',
-              height: 48,
-              borderRadius: 24,
-              backgroundColor: palette.primary,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text
-              style={{
-                color: palette.dark ? '#1a1a1a' : '#fff',
-                fontFamily: FONTS.bodySemibold,
-                fontSize: 14,
-              }}
-            >
-              I'm signed in manually
-            </Text>
-          </Pressable>
-          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close"
             onPress={onClose}
             style={{
               marginTop: 10,
               width: '100%',
-              height: 40,
-              borderRadius: 20,
+              minHeight: 44,
               alignItems: 'center',
               justifyContent: 'center',
             }}

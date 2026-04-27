@@ -3,13 +3,15 @@
 
 import { useMutation, useQuery } from 'convex/react';
 import { useEffect } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { api } from '@/convex/_generated/api';
 import { Avatar } from '@/src/components/Avatar';
 import { Icon, type IconName } from '@/src/components/Icon';
+import { SkeletonList } from '@/src/components/Skeleton';
 import { FONTS, useTheme } from '@/src/theme/ThemeProvider';
+import { UI, useResponsiveLayout } from '@/src/theme/layout';
 
 // Return shape of notifications.listForMe. Declared here instead of
 // importing from convex because the codegen `api` type is a generic stub
@@ -38,24 +40,32 @@ const KIND_ICON: Record<string, IconName> = {
   thanks: 'heart',
 };
 
-export function ActivityScreen() {
+type ActivityScreenProps = {
+  onOpenEvent?: (eventId: string) => void;
+};
+
+export function ActivityScreen({ onOpenEvent }: ActivityScreenProps) {
   const { palette } = useTheme();
+  const layout = useResponsiveLayout(760);
   const unreadCount = useQuery(api.notifications.unreadCount, {});
   const page = useQuery(api.notifications.listForMe, {
     paginationOpts: { numItems: 50, cursor: null },
   });
   const markAllRead = useMutation(api.notifications.markAllRead);
 
-  // Mark all as read on mount — matches the prototype's "3 new" header clearing
-  // when the user lands on the tab.
+  // Mark as read after a brief dwell so the user can see the unread badge fade,
+  // rather than clearing instantly on mount.
   useEffect(() => {
-    void markAllRead({}).catch(() => {});
+    const timer = setTimeout(() => {
+      void markAllRead({}).catch(() => {});
+    }, 1500);
+    return () => clearTimeout(timer);
   }, [markAllRead]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: palette.bg }} edges={['top']}>
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
-        <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
+        <View style={{ paddingHorizontal: layout.sideInset, paddingTop: layout.isTablet ? 30 : 16, paddingBottom: 14 }}>
           <Text
             style={{
               fontFamily: FONTS.bodySemibold,
@@ -70,7 +80,7 @@ export function ActivityScreen() {
           <Text
             style={{
               fontFamily: FONTS.display,
-              fontSize: 32,
+              fontSize: layout.isTablet ? 40 : 32,
               color: palette.ink,
               letterSpacing: -0.4,
               marginTop: 4,
@@ -80,8 +90,10 @@ export function ActivityScreen() {
           </Text>
         </View>
 
-        <View style={{ paddingHorizontal: 12 }}>
-          {(page?.page ?? []).map((n: ActivityNotification) => {
+        <View style={{ paddingHorizontal: layout.sideInset }}>
+          {page === undefined && <SkeletonList count={4} />}
+          {page !== undefined &&
+            (page?.page ?? []).map((n: ActivityNotification) => {
             const iconName = KIND_ICON[n.kind] ?? 'bell';
             const relative = formatDistanceToNowStrict(new Date(n._creationTime), { addSuffix: false });
             return (
@@ -90,10 +102,10 @@ export function ActivityScreen() {
                 style={{
                   flexDirection: 'row',
                   gap: 12,
-                  padding: 12,
-                  borderRadius: 14,
+                  padding: 14,
+                  borderRadius: UI.radius.lg,
                   backgroundColor: n.unread ? palette.surface : 'transparent',
-                  borderWidth: n.unread ? 0.5 : 0,
+                  borderWidth: n.unread ? 1 : 0,
                   borderColor: palette.line,
                   marginBottom: 4,
                 }}
@@ -134,13 +146,17 @@ export function ActivityScreen() {
                     <Text style={{ color: palette.ink2 }}>{n.body}</Text>
                   </Text>
                   {n.event && (
-                    <View
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open event ${n.event.title}`}
+                      onPress={() => onOpenEvent?.(n.event?._id ?? '')}
+                      disabled={!n.event || !onOpenEvent}
                       style={{
                         alignSelf: 'flex-start',
                         backgroundColor: palette.surface2,
                         paddingHorizontal: 10,
                         paddingVertical: 6,
-                        borderRadius: 10,
+                        borderRadius: UI.radius.sm,
                         marginTop: 4,
                       }}
                     >
@@ -150,7 +166,7 @@ export function ActivityScreen() {
                       >
                         {n.event.title}
                       </Text>
-                    </View>
+                    </Pressable>
                   )}
                   <Text
                     style={{
@@ -177,7 +193,7 @@ export function ActivityScreen() {
               </View>
             );
           })}
-          {(page?.page?.length ?? 0) === 0 && (
+          {page !== undefined && (page?.page?.length ?? 0) === 0 && (
             <Text
               style={{
                 fontFamily: FONTS.body,

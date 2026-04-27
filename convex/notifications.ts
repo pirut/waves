@@ -3,7 +3,7 @@
 import { paginationOptsValidator } from 'convex/server';
 import { v } from 'convex/values';
 import { internalMutation, mutation, query } from './_generated/server';
-import { requireUser } from './lib/authz';
+import { currentUser, requireUser } from './lib/authz';
 
 const NOTIFICATION_KIND = v.union(
   v.literal('update'),
@@ -18,7 +18,10 @@ const NOTIFICATION_KIND = v.union(
 export const listForMe = query({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
-    const userId = await requireUser(ctx);
+    const userId = await currentUser(ctx);
+    if (!userId) {
+      return { page: [], isDone: true, continueCursor: '' };
+    }
     const page = await ctx.db
       .query('notifications')
       .withIndex('by_user', (q) => q.eq('userId', userId))
@@ -45,7 +48,10 @@ export const listForMe = query({
 export const unreadCount = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await requireUser(ctx);
+    const userId = await currentUser(ctx);
+    if (!userId) {
+      return 0;
+    }
     const unread = await ctx.db
       .query('notifications')
       .withIndex('by_unread', (q) => q.eq('userId', userId).eq('unread', true))

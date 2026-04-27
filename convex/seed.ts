@@ -1,18 +1,16 @@
 // seed.ts — dev fixture data for Make Waves.
 //
-// Ports waves/project/components/data.jsx verbatim:
-//   - 6 fixture users (maya, leo, aditi, sam, jun, rita) — the "me" user
-//     from the prototype maps to whoever signs in at runtime; see
-//     `users.bootstrap` (below) for the signed-in user's profile + rsvps.
-//   - 9 events in SF, xy (0–1000) linearly mapped to lat/lng.
-//   - Rsvps from `going[]` (filtered to fixture users).
-//   - Comments + updates per the fixture data.
+// West Palm Beach fixture world:
+//   - 6 local fixture users; the "me" user maps to whoever signs in at
+//     runtime; see `seed.bootstrapMe` below for profile + rsvps.
+//   - 9 events around West Palm Beach / Palm Beach County.
+//   - RSVPs, saved events, comments, updates, notifications, and badges.
 //
 // Run with:
 //   npx convex run seed:wipe   # clear stale Make Waves data (keeps auth users)
 //   npx convex run seed:run    # populate world fixtures
 //
-// Idempotent — re-running `seed:run` is a no-op (lookups by fixture email /
+// Idempotent - re-running `seed:run` is a no-op (lookups by fixture email /
 // event title).
 
 import { v } from 'convex/values';
@@ -23,7 +21,7 @@ import {
 } from './_generated/server';
 import { requireUser } from './lib/authz';
 
-// ─── World fixtures ────────────────────────────────────────────────────
+// --- World fixtures ----------------------------------------------------
 
 type UserKey = 'maya' | 'leo' | 'aditi' | 'sam' | 'jun' | 'rita';
 
@@ -39,12 +37,12 @@ type FixtureUser = {
 };
 
 const FIXTURE_USERS: readonly FixtureUser[] = [
-  { key: 'maya',  email: 'maya@waves.local',  name: 'Maya Okonkwo', initials: 'MO', hours: 132, badgeCount: 14, streak: 22, tone: 40 },
-  { key: 'leo',   email: 'leo@waves.local',   name: 'Leo Park',     initials: 'LP', hours: 67,  badgeCount: 9,  streak: 3,  tone: 140 },
-  { key: 'aditi', email: 'aditi@waves.local', name: 'Aditi Rao',    initials: 'AR', hours: 210, badgeCount: 19, streak: 44, tone: 80 },
-  { key: 'sam',   email: 'sam@waves.local',   name: 'Sam Ellis',    initials: 'SE', hours: 18,  badgeCount: 3,  streak: 2,  tone: 320 },
-  { key: 'jun',   email: 'jun@waves.local',   name: 'Jun Abara',    initials: 'JA', hours: 91,  badgeCount: 11, streak: 8,  tone: 260 },
-  { key: 'rita',  email: 'rita@waves.local',  name: 'Rita Valdez',  initials: 'RV', hours: 56,  badgeCount: 6,  streak: 4,  tone: 10  },
+  { key: 'maya',  email: 'maya@waves.local',  name: 'Maya Bennett',  initials: 'MB', hours: 142, badgeCount: 14, streak: 18, tone: 35 },
+  { key: 'leo',   email: 'leo@waves.local',   name: 'Leo Santiago',  initials: 'LS', hours: 76,  badgeCount: 8,  streak: 4,  tone: 145 },
+  { key: 'aditi', email: 'aditi@waves.local', name: 'Aditi Rao',     initials: 'AR', hours: 188, badgeCount: 17, streak: 31, tone: 82 },
+  { key: 'sam',   email: 'sam@waves.local',   name: 'Sam Ellis',     initials: 'SE', hours: 34,  badgeCount: 4,  streak: 2,  tone: 305 },
+  { key: 'jun',   email: 'jun@waves.local',   name: 'Jun Alvarez',   initials: 'JA', hours: 96,  badgeCount: 10, streak: 9,  tone: 230 },
+  { key: 'rita',  email: 'rita@waves.local',  name: 'Rita Campbell', initials: 'RC', hours: 61,  badgeCount: 6,  streak: 5,  tone: 12  },
 ] as const;
 
 type Category =
@@ -52,7 +50,7 @@ type Category =
   | 'animals' | 'blood' | 'outreach' | 'repairs';
 
 type FixtureEvent = {
-  key: string; // 'e1' … 'e9'
+  key: string; // 'e1' ... 'e9'
   title: string;
   category: Category;
   host: UserKey;
@@ -63,12 +61,13 @@ type FixtureEvent = {
   durationHours: number;
   location: string;
   address: string;
-  x: number;
-  y: number;
+  lat: number;
+  lng: number;
   attendees: number;
   capacity: number;
   going: UserKey[];
   signedUpForMe: boolean;
+  savedForMe?: boolean;
   hours: number;
   description: string;
   meetingPoint: string;
@@ -80,232 +79,225 @@ type FixtureEvent = {
 const FIXTURE_EVENTS: readonly FixtureEvent[] = [
   {
     key: 'e1',
-    title: 'Ocean Beach Sunrise Cleanup',
+    title: 'Lake Trail Sunrise Cleanup',
     category: 'cleanup',
     host: 'maya',
-    hostOrg: 'Pacific Coast Collective',
+    hostOrg: 'Palm Beach Waterkeeper',
     startsInDays: 3,
     durationHours: 2.5,
-    location: 'Ocean Beach, SF',
-    address: 'Great Hwy & Judah St',
-    x: 150, y: 520,
+    location: 'Palm Beach Lake Trail',
+    address: 'Royal Poinciana Way & Lake Trail, Palm Beach, FL',
+    lat: 26.7177, lng: -80.0427,
     attendees: 47, capacity: 80,
     going: ['maya', 'leo', 'aditi', 'sam', 'jun'],
     signedUpForMe: true,
+    savedForMe: true,
     hours: 2.5,
     description:
-      'Monthly sunrise sweep from Judah to Sloat. We sort debris for the microplastic study and finish with hot coffee from Andytown. Gloves & bags provided — bring a reusable bottle.',
-    meetingPoint: 'Blue flag near the Judah St parking lot.',
-    bring: ['Closed-toe shoes', 'Reusable water bottle', 'Warm layers'],
+      'A sunrise sweep along the Lake Trail before the morning bike traffic picks up. We will log plastics for the lagoon report, separate recyclables, and finish with cafecito near Royal Poinciana.',
+    meetingPoint: 'Meet by the benches just south of Royal Poinciana Way.',
+    bring: ['Closed-toe shoes', 'Reusable water bottle', 'Sun protection'],
     updates: [
-      { author: 'maya', atHoursAgo: 2, body: "Forecast looks clear — 54°F, light wind. We'll need extra volunteers on the south end near Sloat; a storm pushed a lot of kelp there." },
-      { author: 'maya', atHoursAgo: 28, body: 'Andytown is sponsoring us again — free coffee for everyone who signs in before 7am.' },
+      { author: 'maya', atHoursAgo: 2, body: 'Forecast looks clear with a light breeze off the lagoon. We need two extra people on the north end by the marina slips.' },
+      { author: 'maya', atHoursAgo: 28, body: 'Subculture Coffee is sending cold brew for volunteers who check in before 7:15.' },
     ],
     comments: [
-      { author: 'leo',   atMinutesAgo: 60, body: 'Bringing my niece (12) — is that ok?' },
-      { author: 'maya',  atMinutesAgo: 55, body: 'Absolutely, anyone 10+ is welcome with a guardian.' },
-      { author: 'sam',   atMinutesAgo: 22, body: 'Can I bike there? Is there parking for bikes?' },
-      { author: 'aditi', atMinutesAgo: 15, body: "Yes — racks by the restrooms. I'll wait there at 6:20 if anyone wants to ride in together from the Panhandle." },
+      { author: 'leo', atMinutesAgo: 60, body: 'Bringing my niece - is 12 old enough for this one?' },
+      { author: 'maya', atMinutesAgo: 55, body: 'Yes, anyone 10+ is welcome with a guardian. We keep younger volunteers near the benches.' },
+      { author: 'sam', atMinutesAgo: 22, body: 'Can I bike over from Downtown WPB?' },
+      { author: 'aditi', atMinutesAgo: 15, body: 'Yes. I am riding from the Brightline station at 6:35 if anyone wants to meet there.' },
     ],
   },
   {
     key: 'e2',
-    title: 'Tenderloin Community Dinner',
+    title: 'Clematis Community Supper',
     category: 'food',
     host: 'leo',
-    hostOrg: "St. Anthony's",
+    hostOrg: 'The Lord\'s Place',
     startsInDays: 1,
     durationHours: 3,
-    location: 'Tenderloin, SF',
-    address: '150 Golden Gate Ave',
-    x: 480, y: 340,
-    attendees: 12, capacity: 15,
+    location: 'Downtown West Palm Beach',
+    address: '2808 N Australian Ave, West Palm Beach, FL',
+    lat: 26.7361, lng: -80.0658,
+    attendees: 18, capacity: 24,
     going: ['leo', 'jun', 'rita'],
     signedUpForMe: true,
     hours: 3,
     description:
-      'Help prepare and serve ~400 meals. Roles: prep, line server, dish, greeter. No experience needed — the kitchen leads run a quick orientation at 4:45.',
-    meetingPoint: 'Volunteer entrance on Jones St.',
-    bring: ['Closed-toe shoes', 'Hair tie if long hair'],
+      'Prep, plate, and serve dinner for neighbors coming through the evening meal program. The kitchen team runs a quick role briefing, then pairs first-timers with returning volunteers.',
+    meetingPoint: 'Volunteer check-in at the side entrance on Australian Ave.',
+    bring: ['Closed-toe shoes', 'Hair tie if needed', 'Photo ID'],
     updates: [
-      { author: 'leo', atHoursAgo: 3, body: "We have 3 greeter spots open and 1 prep — everything else is full. First-timers, grab greeter, it's the best intro role." },
+      { author: 'leo', atHoursAgo: 3, body: 'We have 4 greeter spots open and 2 prep spots. First-timers, greeter is the best intro role.' },
     ],
     comments: [
-      { author: 'jun', atMinutesAgo: 120, body: 'Will there be a second orientation for people arriving at 5?' },
-      { author: 'leo', atMinutesAgo: 60,  body: "Yes, I'll run a short one at 5:10." },
+      { author: 'jun', atMinutesAgo: 120, body: 'Will there be a second orientation for people arriving after work?' },
+      { author: 'leo', atMinutesAgo: 60, body: 'Yes, I will run a short one at 5:20.' },
     ],
   },
   {
     key: 'e3',
-    title: 'Glen Canyon Native Planting',
+    title: 'Okeeheelee Native Planting',
     category: 'garden',
     host: 'aditi',
-    hostOrg: 'SF Rec & Parks',
+    hostOrg: 'Palm Beach County Parks',
     startsInDays: 4,
     durationHours: 3,
-    location: 'Glen Canyon Park',
-    address: 'Elk & Chenery St',
-    x: 460, y: 600,
-    attendees: 23, capacity: 40,
+    location: 'Okeeheelee Park',
+    address: '7715 Forest Hill Blvd, West Palm Beach, FL',
+    lat: 26.6505, lng: -80.1667,
+    attendees: 26, capacity: 44,
     going: ['aditi', 'maya', 'rita'],
     signedUpForMe: false,
+    savedForMe: true,
     hours: 3,
     description:
-      'Planting 200 coastal sage, yarrow, and California poppy seedlings along the restored creek bed. Light digging and mulching — family-friendly.',
-    meetingPoint: 'Recreation Center lawn.',
-    bring: ['Sun hat', 'Work gloves (we have extras)', 'Water'],
+      'Plant native muhly grass, firebush, and dune sunflower around a restored wetland edge. Light digging, mulching, and watering - family-friendly and beginner-friendly.',
+    meetingPoint: 'Nature Center parking lot, near the covered pavilion.',
+    bring: ['Sun hat', 'Work gloves if you have them', 'Water'],
     updates: [],
     comments: [],
   },
   {
     key: 'e4',
-    title: 'Laguna Honda Game Afternoon',
+    title: 'MorseLife Game Afternoon',
     category: 'elders',
     host: 'rita',
-    hostOrg: 'Laguna Honda Hospital',
+    hostOrg: 'MorseLife Health System',
     startsInDays: 9,
     durationHours: 2.5,
-    location: 'Forest Hill, SF',
-    address: '375 Laguna Honda Blvd',
-    x: 360, y: 520,
-    attendees: 6, capacity: 10,
+    location: 'Haverhill Area',
+    address: '4847 Fred Gladstone Dr, West Palm Beach, FL',
+    lat: 26.7092, lng: -80.1169,
+    attendees: 8, capacity: 12,
     going: ['rita', 'sam'],
     signedUpForMe: false,
     hours: 2.5,
     description:
-      'Play cards, chess, and checkers with residents on the 4th floor. A wonderful, low-key way to spend an afternoon.',
-    meetingPoint: 'Main lobby — ask for Rita.',
-    bring: ['Photo ID', 'A smile'],
+      'Play cards, dominoes, chess, and checkers with residents. A relaxed afternoon for anyone who likes conversation, patience, and a good rematch.',
+    meetingPoint: 'Main lobby - ask for Rita at the volunteer desk.',
+    bring: ['Photo ID', 'A favorite simple game if you have one'],
     updates: [],
     comments: [],
   },
   {
     key: 'e5',
-    title: "Saturday Kids' Reading Hour",
+    title: 'Northwood Kids Reading Hour',
     category: 'tutor',
     host: 'jun',
-    hostOrg: 'Mission Branch Library',
+    hostOrg: 'Mandel Public Library',
     startsInDays: 3,
     durationHours: 1.5,
-    location: 'Mission District',
-    address: '300 Bartlett St',
-    x: 580, y: 510,
-    attendees: 8, capacity: 12,
+    location: 'Northwood Village',
+    address: '411 Clematis St, West Palm Beach, FL',
+    lat: 26.7137, lng: -80.0534,
+    attendees: 11, capacity: 16,
     going: ['jun', 'aditi'],
     signedUpForMe: false,
     hours: 1.5,
     description:
-      'Read 1:1 with kids ages 5–9. Books are provided at all levels. Bilingual (Spanish) readers especially welcome.',
-    meetingPoint: "Children's section, back left.",
-    bring: ['Nothing — books provided'],
+      'Read one-on-one with kids ages 5-9 and help them pick a book to take home. Bilingual English/Spanish readers are especially helpful.',
+    meetingPoint: 'Children\'s section, near the mural wall.',
+    bring: ['Nothing - books are provided'],
     updates: [],
     comments: [],
   },
   {
     key: 'e6',
-    title: 'SPCA Dog Walkers',
+    title: 'Peggy Adams Dog Walkers',
     category: 'animals',
     host: 'sam',
-    hostOrg: 'SF SPCA',
+    hostOrg: 'Peggy Adams Animal Rescue League',
     startsInDays: 4,
     durationHours: 2,
-    location: 'Mission District',
-    address: '250 Florida St',
-    x: 640, y: 450,
+    location: 'Northwood',
+    address: '3100 N Military Trl, West Palm Beach, FL',
+    lat: 26.7421, lng: -80.1115,
     attendees: 14, capacity: 20,
     going: ['sam', 'leo', 'maya'],
     signedUpForMe: false,
     hours: 2,
     description:
-      'Walk adoptable dogs around Potrero Hill. One-time volunteers welcome; returning walkers can take the reactive dogs after the 8am briefing.',
-    meetingPoint: 'SPCA side entrance on Alabama.',
+      'Walk adoptable dogs before the shelter opens and help staff refresh the play yards. One-time volunteers welcome; returning walkers can request longer routes.',
+    meetingPoint: 'Volunteer gate by the main parking lot.',
     bring: ['Comfortable shoes'],
     updates: [],
     comments: [],
   },
   {
     key: 'e7',
-    title: 'Mobile Blood Drive — Hayes Valley',
+    title: 'Mobile Blood Drive at CityPlace',
     category: 'blood',
     host: 'maya',
-    hostOrg: 'Vitalant',
+    hostOrg: 'OneBlood',
     startsInDays: 15,
     durationHours: 6,
-    location: 'Hayes Valley',
-    address: '500 Laguna St',
-    x: 430, y: 410,
-    attendees: 28, capacity: 60,
+    location: 'CityPlace',
+    address: '700 S Rosemary Ave, West Palm Beach, FL',
+    lat: 26.7073, lng: -80.0570,
+    attendees: 31, capacity: 64,
     going: ['maya', 'jun', 'rita'],
     signedUpForMe: false,
     hours: 1,
     description:
-      'Book a 30-min slot. Bring ID, eat a full meal beforehand, and hydrate. First-time donors get a full walkthrough.',
-    meetingPoint: 'Vitalant van out front.',
+      'Help check in donors, hand out snacks, and fill open donation slots. First-time donors get a full walkthrough from the OneBlood team.',
+    meetingPoint: 'Big Red Bus near the Rosemary Ave entrance.',
     bring: ['Government ID', 'List of medications'],
     updates: [],
     comments: [],
   },
   {
     key: 'e8',
-    title: 'Civic Center Outreach Walk',
+    title: 'Riviera Beach Outreach Walk',
     category: 'outreach',
     host: 'aditi',
-    hostOrg: 'GLIDE',
+    hostOrg: 'St. George Center',
     startsInDays: 2,
     durationHours: 2.5,
-    location: 'Civic Center',
-    address: 'GLIDE, 330 Ellis St',
-    x: 470, y: 360,
-    attendees: 9, capacity: 12,
+    location: 'Riviera Beach',
+    address: '21 W 22nd St, Riviera Beach, FL',
+    lat: 26.7831, lng: -80.0569,
+    attendees: 10, capacity: 14,
     going: ['aditi', 'leo'],
     signedUpForMe: false,
     hours: 2.5,
     description:
-      "Hand out hygiene kits, socks, and hot meals in pairs. Training from GLIDE staff at 7 sharp — please don't be late.",
-    meetingPoint: 'GLIDE front desk.',
-    bring: ['Walking shoes', 'Warm jacket'],
+      'Hand out hygiene kits, socks, and meal cards in pairs. The outreach lead gives a safety briefing and route map before groups leave.',
+    meetingPoint: 'Front office on 22nd Street.',
+    bring: ['Walking shoes', 'Small backpack'],
     updates: [],
     comments: [],
   },
   {
     key: 'e9',
-    title: 'Bayview Community Bike Repair',
+    title: 'South Olive Bike Repair Pop-Up',
     category: 'repairs',
     host: 'jun',
-    hostOrg: 'Bayview Bike Co-op',
+    hostOrg: 'Palm Beach Bicycle Trail Shop',
     startsInDays: 10,
     durationHours: 3,
-    location: 'Bayview, SF',
-    address: '1550 Evans Ave',
-    x: 720, y: 620,
-    attendees: 5, capacity: 8,
+    location: 'South Olive Park',
+    address: '345 Summa St, West Palm Beach, FL',
+    lat: 26.6599, lng: -80.0535,
+    attendees: 7, capacity: 12,
     going: ['jun'],
     signedUpForMe: false,
+    savedForMe: true,
     hours: 3,
     description:
-      "Fix up donated bikes for neighborhood kids. Mechanics & apprentices both welcome — we'll pair you up.",
-    meetingPoint: 'Roll-up door on Evans.',
+      'Fix flats, adjust brakes, and tune donated bikes for neighborhood kids. Mechanics and apprentices are both welcome - we pair everyone up.',
+    meetingPoint: 'Picnic tables beside the tennis courts.',
     bring: ['Grubby clothes'],
     updates: [],
     comments: [],
   },
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────
+// --- Helpers -----------------------------------------------------------
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
-
-/**
- * Linear mapping of prototype canvas (0–1000) to a rough SF bounding box.
- * x → lng (west to east), y → lat (north to south, since y=0 is top).
- */
-function xyToLatLng(x: number, y: number): { lat: number; lng: number } {
-  const lng = -122.515 + (x / 1000) * 0.16;
-  const lat = 37.81 - (y / 1000) * 0.105;
-  return { lat, lng };
-}
 
 async function upsertFixtureUser(
   ctx: MutationCtx,
@@ -347,7 +339,7 @@ async function findEventByTitle(
   return all.find((e) => e.title === title) ?? null;
 }
 
-// ─── seed:run — world fixtures ────────────────────────────────────────
+// --- seed:run - world fixtures ----------------------------------------
 
 export const run = mutation({
   args: {},
@@ -381,7 +373,6 @@ export const run = mutation({
 
     for (const e of FIXTURE_EVENTS) {
       const existing = await findEventByTitle(ctx, e.title);
-      const { lat, lng } = xyToLatLng(e.x, e.y);
       const startsAt = now + e.startsInDays * DAY_MS;
       const endsAt = startsAt + Math.round(e.durationHours * HOUR_MS);
 
@@ -399,8 +390,8 @@ export const run = mutation({
           endsAt,
           location: e.location,
           address: e.address,
-          lat,
-          lng,
+          lat: e.lat,
+          lng: e.lng,
           capacity: e.capacity,
           attendees: e.attendees,
           hours: e.hours,
@@ -419,8 +410,8 @@ export const run = mutation({
           endsAt,
           location: e.location,
           address: e.address,
-          lat,
-          lng,
+          lat: e.lat,
+          lng: e.lng,
           capacity: e.capacity,
           attendees: e.attendees,
           hours: e.hours,
@@ -491,7 +482,7 @@ export const run = mutation({
   },
 });
 
-// ─── seed:bootstrapMe — signed-in user's profile + personal data ─────
+// --- seed:bootstrapMe - signed-in user's profile + personal data -------
 
 type NotifSeed = {
   eventKey: string | null;
@@ -502,12 +493,12 @@ type NotifSeed = {
 };
 
 const ME_NOTIFICATIONS: readonly NotifSeed[] = [
-  { eventKey: 'e1', from: 'maya',  kind: 'update',   body: 'posted an update: "Forecast looks clear…"',                    unread: true  },
-  { eventKey: 'e1', from: 'aditi', kind: 'reply',    body: 'replied to your comment about bike parking.',                  unread: true  },
-  { eventKey: 'e2', from: null,    kind: 'reminder', body: 'Tomorrow at 5pm — Tenderloin Community Dinner.',               unread: true  },
-  { eventKey: null, from: null,    kind: 'badge',    body: 'You earned the Second Wave badge — 5 cleanups!',               unread: false },
-  { eventKey: 'e9', from: 'jun',   kind: 'new',      body: 'posted a new event near you: Bayview Bike Repair.',            unread: false },
-  { eventKey: 'e2', from: 'leo',   kind: 'thanks',   body: "thanked you for coming to last month's dinner",                unread: false },
+  { eventKey: 'e1', from: 'maya', kind: 'update', body: 'posted an update for Lake Trail: clear skies and cold brew.', unread: true },
+  { eventKey: 'e1', from: 'aditi', kind: 'reply', body: 'replied to your Brightline bike meetup comment.', unread: true },
+  { eventKey: 'e2', from: null, kind: 'reminder', body: 'Tomorrow evening - Clematis Community Supper.', unread: true },
+  { eventKey: null, from: null, kind: 'badge', body: 'You earned the Lagoon Steward badge.', unread: false },
+  { eventKey: 'e9', from: 'jun', kind: 'new', body: 'posted a bike repair pop-up in South Olive.', unread: false },
+  { eventKey: 'e2', from: 'leo', kind: 'thanks', body: 'thanked you for helping downtown last month.', unread: false },
 ];
 
 type BadgeSeed = { id: string; earned: boolean };
@@ -524,34 +515,44 @@ const ME_BADGES: readonly BadgeSeed[] = [
 ];
 
 /**
- * One-time init for the signed-in user. Idempotent — safe to call on every
- * app launch. Populates profile fields matching data.jsx's `me` fixture,
- * creates rsvps on the two `signedUpForMe` events, and seeds notifications +
- * badge progress.
+ * One-time init for the signed-in user. Idempotent - safe to call on every
+ * app launch. Populates profile fields, creates rsvps/saves for local events,
+ * and seeds notifications + badge progress.
  */
 export const bootstrapMe = mutation({
   args: {},
   returns: v.object({
     profileUpdated: v.boolean(),
     rsvpsCreated: v.number(),
+    savedEventsCreated: v.number(),
     notificationsCreated: v.number(),
     badgesCreated: v.number(),
   }),
   handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error('Authentication required');
+    }
+
     const userId = await requireUser(ctx);
     const user = await ctx.db.get(userId);
     if (!user) throw new Error('User not found');
 
-    // 1. Profile — only patch missing fields (so real input like custom name
+    // 1. Profile - only patch missing fields (so real input like custom name
     //    doesn't get clobbered).
     let profileUpdated = false;
     const patches: Partial<Doc<'users'>> = {};
     if (user.tone == null) patches.tone = 200;
-    if (user.initials == null) patches.initials = 'YO';
-    if (user.hours == null) patches.hours = 48;
-    if (user.streak == null) patches.streak = 5;
-    if (user.badgeCount == null) patches.badgeCount = 7;
-    if (user.name == null) patches.name = 'You';
+    if (user.initials == null) patches.initials = 'WP';
+    if (user.hours == null) patches.hours = 52;
+    if (user.streak == null) patches.streak = 6;
+    if (user.badgeCount == null) patches.badgeCount = 8;
+    if (user.handle == null) patches.handle = 'wpb-wave-maker';
+    if (user.bio == null) patches.bio = 'Finding small ways to make West Palm Beach kinder, cleaner, and more connected.';
+    if (user.tokenIdentifier == null) patches.tokenIdentifier = identity.tokenIdentifier;
+    if (user.name == null) patches.name = identity.name ?? 'You';
+    if (user.email == null && identity.email) patches.email = identity.email;
+    if (user.image == null && identity.pictureUrl) patches.image = identity.pictureUrl;
     if (Object.keys(patches).length > 0) {
       await ctx.db.patch(userId, patches);
       profileUpdated = true;
@@ -575,7 +576,23 @@ export const bootstrapMe = mutation({
       }
     }
 
-    // 3. Notifications — only if the user has zero existing notifications
+    // 3. Saved events from the fixture plan.
+    let savedEventsCreated = 0;
+    const savedEvents = FIXTURE_EVENTS.filter((e) => e.savedForMe);
+    for (const fix of savedEvents) {
+      const ev = byTitle.get(fix.title);
+      if (!ev) continue;
+      const has = await ctx.db
+        .query('savedEvents')
+        .withIndex('by_event_user', (q) => q.eq('eventId', ev._id).eq('userId', userId))
+        .unique();
+      if (!has) {
+        await ctx.db.insert('savedEvents', { eventId: ev._id, userId });
+        savedEventsCreated += 1;
+      }
+    }
+
+    // 4. Notifications - only if the user has zero existing notifications
     //    (avoids dupes on re-run, but keeps real post-seed notifications
     //    untouched if the user already has any).
     let notificationsCreated = 0;
@@ -612,7 +629,7 @@ export const bootstrapMe = mutation({
       }
     }
 
-    // 4. Badge progress — upsert catalog entries per ME_BADGES.
+    // 5. Badge progress - upsert catalog entries per ME_BADGES.
     let badgesCreated = 0;
     for (const b of ME_BADGES) {
       const existing = await ctx.db
@@ -632,6 +649,7 @@ export const bootstrapMe = mutation({
     return {
       profileUpdated,
       rsvpsCreated,
+      savedEventsCreated,
       notificationsCreated,
       badgesCreated,
     };
@@ -644,10 +662,9 @@ export const bootstrapMe = mutation({
 // (or instead of) `seed:run` when the deployment has stale data from a
 // previous schema or project.
 //
-// By default, **does not** touch Convex Auth tables (users,
-// authAccounts, authSessions, etc.) — preserving sign-in credentials.
-// Pass `{ includeUsers: true }` to also delete every row in `users`,
-// which effectively resets every account (they'll have to sign up again).
+// By default, **does not** touch `users`, preserving linked Clerk-backed
+// profiles. Pass `{ includeUsers: true }` to also delete every row in
+// `users`, which effectively resets the app profile layer.
 
 async function wipeTable(ctx: MutationCtx, name: string) {
   const table = name as Parameters<typeof ctx.db.query>[0];
@@ -690,17 +707,13 @@ export const wipe = mutation({
       users: 0,
     };
     if (args.includeUsers) {
-      // Wiping `users` also leaves authAccounts/authSessions orphaned — the
-      // next `convex dev` push will flag those as invalid foreign keys. If
-      // you want a full auth wipe, use the Convex dashboard "clear tables"
-      // or run `seed:wipeAll` below.
       results.users = await wipeTable(ctx, 'users');
     }
     return results;
   },
 });
 
-// ─── seed:wipeAll — nuke everything, including auth tables ───────────
+// ─── seed:wipeAll — nuke all Make Waves tables ───────────────────────
 
 export const wipeAll = mutation({
   args: {},
@@ -719,24 +732,12 @@ export const wipeAll = mutation({
       'savedEvents',
       'badgeProgress',
       'users',
-      // Convex Auth tables:
-      'authAccounts',
-      'authSessions',
-      'authRefreshTokens',
-      'authVerificationCodes',
-      'authVerifiers',
-      'authRateLimits',
     ];
     let rows = 0;
     let wiped = 0;
     for (const t of tables) {
-      try {
-        rows += await wipeTable(ctx, t);
-        wiped += 1;
-      } catch {
-        // Some auth tables may not exist depending on providers configured;
-        // swallow and continue.
-      }
+      rows += await wipeTable(ctx, t);
+      wiped += 1;
     }
     return { tables: wiped, rows };
   },

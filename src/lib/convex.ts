@@ -1,5 +1,5 @@
 // convex.ts — client singleton + helpers.
-// Separated out so it can be imported both by ConvexAuthProvider wiring
+// Separated out so it can be imported both by the Clerk/Convex provider wiring
 // and any bare-metal useQuery/useMutation calls that bypass auth.
 
 import { ConvexReactClient } from 'convex/react';

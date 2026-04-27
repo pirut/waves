@@ -1,7 +1,7 @@
 // app/_layout.tsx — root layout.
 //
 // Wraps:
-//   - ConvexAuthProvider (token storage: expo-secure-store on native, localStorage on web)
+//   - ClerkProvider + ConvexProviderWithClerk for authenticated Convex requests
 //   - ThemeProvider (palette + font loading)
 //   - SafeAreaProvider
 //   - GestureHandlerRootView + BottomSheetModalProvider (for sheets)
@@ -9,39 +9,53 @@
 // Routes to (auth) or (tabs) based on auth state, with a splash screen while
 // fonts + auth-state are resolving.
 
-import { ConvexAuthProvider } from '@convex-dev/auth/react';
+import { ClerkProvider, useAuth } from '@clerk/expo';
+import { tokenCache } from '@clerk/expo/token-cache';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, LogBox, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Authenticated, AuthLoading, Unauthenticated } from 'convex/react';
+import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { convex } from '@/src/lib/convex';
-import { getAuthStorage } from '@/src/lib/authStorage';
 import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
 
 void SplashScreen.preventAutoHideAsync();
 
+LogBox.ignoreLogs([
+  'Clerk: Clerk has been loaded with development keys.',
+  'Mapbox [error] MapLoad error HTTP status code 401.',
+]);
+
+const clerkPublishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
+
+if (!clerkPublishableKey) {
+  throw new Error('Missing EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY');
+}
+
 export default function RootLayout() {
   return (
-    <ConvexAuthProvider client={convex} storage={getAuthStorage()}>
-      <SafeAreaProvider>
-        <ThemeProvider>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <BottomSheetModalProvider>
-              <StatusBar style="auto" />
-              <AuthGate />
-            </BottomSheetModalProvider>
-          </GestureHandlerRootView>
-        </ThemeProvider>
-      </SafeAreaProvider>
-    </ConvexAuthProvider>
+    <ClerkProvider publishableKey={clerkPublishableKey} tokenCache={tokenCache}>
+      <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+        <SafeAreaProvider>
+          <ThemeProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <BottomSheetModalProvider>
+                <StatusBar style="auto" />
+                <AuthGate />
+              </BottomSheetModalProvider>
+            </GestureHandlerRootView>
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </ConvexProviderWithClerk>
+    </ClerkProvider>
   );
 }
 

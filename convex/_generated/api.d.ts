@@ -8,7 +8,6 @@
  * @module
  */
 
-import type * as auth from "../auth.js";
 import type * as badges from "../badges.js";
 import type * as checkIns from "../checkIns.js";
 import type * as comments from "../comments.js";
@@ -29,7 +28,6 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  auth: typeof auth;
   badges: typeof badges;
   checkIns: typeof checkIns;
   comments: typeof comments;

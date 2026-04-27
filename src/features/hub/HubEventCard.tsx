@@ -7,6 +7,7 @@ import { CategoryBadge } from '@/src/components/CategoryChip';
 import { Icon } from '@/src/components/Icon';
 import { formatDateBlock, formatTimeRange } from '@/src/lib/date';
 import { FONTS, useTheme } from '@/src/theme/ThemeProvider';
+import { cardShadow, UI } from '@/src/theme/layout';
 
 type HubEventCardProps = {
   event: Doc<'events'>;
@@ -25,18 +26,20 @@ export function HubEventCard({ event, saved = false, onPress }: HubEventCardProp
       style={{
         flexDirection: 'row',
         gap: 14,
+        minHeight: 112,
         padding: 14,
-        borderRadius: 16,
+        borderRadius: UI.radius.lg,
         backgroundColor: palette.surface,
-        borderWidth: 0.5,
+        borderWidth: 1,
         borderColor: palette.line,
+        ...cardShadow(palette.dark),
       }}
     >
       {/* Date block */}
       <View
         style={{
           width: 56,
-          borderRadius: 12,
+          borderRadius: UI.radius.sm,
           overflow: 'hidden',
           borderWidth: 1,
           borderColor: palette.line,

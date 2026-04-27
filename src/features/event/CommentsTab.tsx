@@ -13,7 +13,9 @@ import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
 import { Avatar } from '@/src/components/Avatar';
 import { Icon } from '@/src/components/Icon';
+import { Skeleton } from '@/src/components/Skeleton';
 import { FONTS, useTheme } from '@/src/theme/ThemeProvider';
+import { UI } from '@/src/theme/layout';
 
 type CommentsTabProps = {
   eventId: Id<'events'>;
@@ -54,9 +56,59 @@ export function CommentsTab({ eventId }: CommentsTabProps) {
     }
   };
 
+  const loading = page === undefined;
+  const comments = page?.page ?? [];
+  const hasMore = page !== undefined && page.isDone === false;
+
   return (
     <View style={{ gap: 14, paddingTop: 4 }}>
-      {(page?.page ?? []).map((c: CommentRow) =>
+      {loading && (
+        <View style={{ gap: 14 }}>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={{ flexDirection: 'row', gap: 10 }}>
+              <Skeleton width={32} height={32} radius={16} />
+              <View style={{ flex: 1, gap: 6 }}>
+                <Skeleton width="40%" height={10} />
+                <Skeleton width="90%" height={12} />
+                <Skeleton width="70%" height={12} />
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {!loading && comments.length === 0 && (
+        <View
+          style={{
+            paddingVertical: 28,
+            alignItems: 'center',
+            gap: 8,
+            borderRadius: UI.radius.md,
+            borderWidth: 1,
+            borderColor: palette.line,
+            borderStyle: 'dashed',
+            backgroundColor: 'transparent',
+          }}
+        >
+          <Icon name="chat" size={20} color={palette.ink3} />
+          <Text style={{ fontFamily: FONTS.bodySemibold, fontSize: 14, color: palette.ink2 }}>
+            No comments yet
+          </Text>
+          <Text
+            style={{
+              fontFamily: FONTS.body,
+              fontSize: 12,
+              color: palette.ink3,
+              textAlign: 'center',
+              maxWidth: 240,
+            }}
+          >
+            Be the first to ask a question or say hi.
+          </Text>
+        </View>
+      )}
+
+      {comments.map((c: CommentRow) =>
         c.author ? (
           <View key={c._id} style={{ flexDirection: 'row', gap: 10 }}>
             <Avatar user={{ initials: c.author.initials, tone: c.author.tone }} size={32} />
@@ -82,6 +134,20 @@ export function CommentsTab({ eventId }: CommentsTabProps) {
             </View>
           </View>
         ) : null,
+      )}
+
+      {hasMore && (
+        <Text
+          style={{
+            fontFamily: FONTS.body,
+            fontSize: 12,
+            color: palette.ink3,
+            textAlign: 'center',
+            paddingVertical: 8,
+          }}
+        >
+          Showing the most recent {comments.length} · older comments archived
+        </Text>
       )}
 
       {/* Composer */}
@@ -116,12 +182,16 @@ export function CommentsTab({ eventId }: CommentsTabProps) {
           onSubmitEditing={onPost}
         />
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Post comment"
+          accessibilityState={{ disabled: !canPost }}
           onPress={onPost}
           disabled={!canPost}
+          hitSlop={6}
           style={{
-            width: 32,
-            height: 32,
-            borderRadius: 16,
+            width: 36,
+            height: 36,
+            borderRadius: 18,
             backgroundColor: canPost ? palette.primary : palette.line,
             alignItems: 'center',
             justifyContent: 'center',
@@ -130,7 +200,7 @@ export function CommentsTab({ eventId }: CommentsTabProps) {
           <Icon
             name="arrowR"
             size={16}
-            color={canPost ? (palette.dark ? '#1a1a1a' : '#fff') : palette.ink3}
+            color={canPost ? palette.onPrimary : palette.ink3}
           />
         </Pressable>
       </View>

@@ -14,7 +14,7 @@ export type EventMapProps = {
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   /**
-   * Initial camera. Defaults to San Francisco. After first render the user
+   * Initial camera. Defaults to West Palm Beach. After first render the user
    * can pan freely; we don't auto-recenter on marker changes.
    */
   initialCenter?: { lat: number; lng: number };

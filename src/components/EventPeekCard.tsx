@@ -4,6 +4,7 @@
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { FONTS, useTheme } from '@/theme/ThemeProvider';
+import { cardShadow, UI, useResponsiveLayout } from '@/theme/layout';
 import { Avatar } from './Avatar';
 import { CapacityBarHero } from './CapacityBar';
 import { CategoryBadge } from './CategoryChip';
@@ -27,6 +28,7 @@ type EventPeekCardProps = {
 
 export function EventPeekCard({ event, onOpen }: EventPeekCardProps) {
   const { palette } = useTheme();
+  const layout = useResponsiveLayout(520);
   const pct = Math.round((event.attendees / event.capacity) * 100);
   return (
     <Pressable
@@ -34,8 +36,14 @@ export function EventPeekCard({ event, onOpen }: EventPeekCardProps) {
       style={[
         styles.card,
         {
+          left: layout.sideInset,
+          right: layout.sideInset,
+          bottom: layout.isTablet ? 104 : 98,
           backgroundColor: palette.surface,
-          shadowColor: '#000',
+          borderColor: palette.line,
+          maxWidth: 520,
+          alignSelf: 'center',
+          ...cardShadow(palette.dark),
         },
       ]}
     >
@@ -57,8 +65,8 @@ export function EventPeekCard({ event, onOpen }: EventPeekCardProps) {
           <Text
             style={{
               fontFamily: FONTS.display,
-              fontSize: 22,
-              lineHeight: 25,
+              fontSize: layout.isTablet ? 24 : 22,
+              lineHeight: layout.isTablet ? 27 : 25,
               color: palette.ink,
               marginBottom: 6,
               letterSpacing: -0.2,
@@ -89,14 +97,9 @@ export function EventPeekCard({ event, onOpen }: EventPeekCardProps) {
 const styles = StyleSheet.create({
   card: {
     position: 'absolute',
-    bottom: 96,
-    left: 12,
-    right: 12,
-    borderRadius: 22,
+    borderRadius: UI.radius.lg,
     padding: 16,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.14,
-    shadowRadius: 32,
+    borderWidth: 1,
     elevation: 10,
     zIndex: 20,
   },

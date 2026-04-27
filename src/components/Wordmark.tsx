@@ -1,37 +1,83 @@
-// Wordmark.tsx — the italic serif "Make Waves" mark + wave glyph.
-// Ported from waves/project/components/screens-map.jsx `Wordmark`.
+// Wordmark.tsx — Make Waves logo assets, sourced from the 2026 logo kit.
 
-import { Text, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
-import { FONTS, useTheme } from '@/theme/ThemeProvider';
+import { Image, Text, View } from 'react-native';
+import { FONTS } from '@/theme/ThemeProvider';
 
 type WordmarkProps = {
   size?: number;
+  stacked?: boolean;
+  tagline?: boolean;
 };
 
-export function Wordmark({ size = 22 }: WordmarkProps) {
-  const { palette } = useTheme();
+const BRAND = {
+  teal: '#0F6663',
+  teal2: '#2FA39A',
+};
+
+const logoMark = require('../../assets/brand/logo-mark.png');
+const logoLockup = require('../../assets/brand/logo-lockup.png');
+
+export function LogoMark({ size = 44 }: { size?: number }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-      <Svg width={size * 0.9} height={size * 0.55} viewBox="0 0 24 14" fill="none">
-        <Path
-          d="M1 7 Q 5 1 9 7 T 17 7 T 23 7"
-          stroke={palette.primary}
-          strokeWidth={1.8}
-          strokeLinecap="round"
-          fill="none"
-        />
-      </Svg>
-      <Text
-        style={{
-          fontFamily: FONTS.displayItalic,
-          fontSize: size,
-          color: palette.ink,
-          letterSpacing: -0.5,
-        }}
-      >
-        Make Waves
-      </Text>
+    <Image
+      source={logoMark}
+      resizeMode="contain"
+      style={{ width: size, height: size }}
+      accessibilityIgnoresInvertColors
+    />
+  );
+}
+
+export function Wordmark({ size = 22, stacked = false, tagline = false }: WordmarkProps) {
+  if (stacked && tagline) {
+    const width = size * 7.8;
+    return (
+      <Image
+        source={logoLockup}
+        resizeMode="contain"
+        style={{ width, height: width * 0.66 }}
+        accessibilityIgnoresInvertColors
+      />
+    );
+  }
+
+  const markSize = stacked ? size * 1.75 : size * 1.1;
+  return (
+    <View
+      style={{
+        flexDirection: stacked ? 'column' : 'row',
+        alignItems: 'center',
+        gap: stacked ? 8 : 7,
+      }}
+    >
+      <LogoMark size={markSize} />
+      <View style={{ alignItems: stacked ? 'center' : 'flex-start' }}>
+        <Text
+          style={{
+            fontFamily: FONTS.display,
+            fontSize: size,
+            lineHeight: size * 1.03,
+            color: BRAND.teal,
+            letterSpacing: -0.4,
+          }}
+        >
+          Make Waves
+        </Text>
+        {tagline && (
+          <Text
+            style={{
+              marginTop: stacked ? 6 : 2,
+              fontFamily: FONTS.bodyBold,
+              fontSize: Math.max(9, size * 0.25),
+              letterSpacing: 3,
+              color: BRAND.teal2,
+              textTransform: 'uppercase',
+            }}
+          >
+            Community - Events - Impact
+          </Text>
+        )}
+      </View>
     </View>
   );
 }

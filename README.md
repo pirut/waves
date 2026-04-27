@@ -106,6 +106,23 @@ Note: Convex Node actions require Node 18/20/22.
 
 - `EXPO_PUBLIC_CONVEX_URL`
 - `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `CLERK_JWT_ISSUER_DOMAIN`
+
+## Clerk setup checklist
+
+The repo already contains the Expo, native iOS, and Convex wiring for Clerk. To make the integration actually work, you still need to finish the external Clerk + Convex dashboard setup:
+
+1. In Clerk, create an application and copy the publishable key into `.env.local` as `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`.
+2. In Clerk, open `Native applications` and enable the Native API.
+3. In Clerk, register the native app identifiers from [app.json](/Users/jrbussard/repos/waves/app.json:12):
+   iOS bundle ID: `com.anonymous.make-waves`
+   Android package: `com.anonymous.makewaves`
+4. In Clerk, activate the Convex integration and copy the Frontend API URL / issuer domain.
+5. Put that issuer URL into `.env.local` as `CLERK_JWT_ISSUER_DOMAIN`.
+6. Run `npx convex dev` so `convex/auth.config.ts` is pushed to the deployment with the Clerk issuer domain.
+7. Start the app with `npm run ios` or `npm run dev`.
+
+Reference: [docs/clerk-setup.md](/Users/jrbussard/repos/waves/docs/clerk-setup.md)
 
 ## Required environment variables for dedicated web app (`web/.env.local`)
 

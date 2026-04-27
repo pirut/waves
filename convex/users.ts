@@ -4,9 +4,8 @@ import { query } from './_generated/server';
 import { currentUser } from './lib/authz';
 
 /**
- * Returns the current user's profile (joined with Convex Auth base fields),
- * or `null` if the caller is anonymous. UI code uses this to gate the
- * (auth) vs (tabs) stacks and populate the Profile screen.
+ * Returns the current user's profile, or `null` if the caller is anonymous
+ * or their app-level profile has not been bootstrapped yet.
  */
 export const me = query({
   args: {},

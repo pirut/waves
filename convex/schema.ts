@@ -1,13 +1,12 @@
 // schema.ts — Make Waves data model.
 //
-// Mirrors the shape of waves/project/components/data.jsx. We layer the
-// Convex Auth standard tables underneath via authTables and extend `users`
-// with the Make Waves profile fields (tone, hours, streak…).
+// Mirrors the shape of waves/project/components/data.jsx. We keep an app-level
+// `users` table and link Clerk-authenticated identities to it via
+// `tokenIdentifier`.
 //
 // Indexes are chosen for the queries in events.ts / comments.ts / notifications.ts
 // (typical access pattern is by_event + by_user, ordered by createdAt).
 
-import { authTables } from '@convex-dev/auth/server';
 import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
 
@@ -33,19 +32,11 @@ const NOTIFICATION_KIND = v.union(
 );
 
 export default defineSchema({
-  // ─── Convex Auth tables (users, accounts, sessions, verificationCodes) ──
-  // We override `users` below to add Make Waves profile fields.
-  ...authTables,
-
   users: defineTable({
-    // Convex Auth standard fields (all optional — populated by the auth flow).
+    tokenIdentifier: v.optional(v.string()),
     name: v.optional(v.string()),
     email: v.optional(v.string()),
     image: v.optional(v.string()),
-    emailVerificationTime: v.optional(v.number()),
-    phone: v.optional(v.string()),
-    phoneVerificationTime: v.optional(v.number()),
-    isAnonymous: v.optional(v.boolean()),
 
     // Make Waves profile.
     initials: v.optional(v.string()),
@@ -56,8 +47,8 @@ export default defineSchema({
     streak: v.optional(v.number()),
     badgeCount: v.optional(v.number()),
   })
-    .index('email', ['email'])
-    .index('phone', ['phone']),
+    .index('by_tokenIdentifier', ['tokenIdentifier'])
+    .index('email', ['email']),
 
   // ─── Events ────────────────────────────────────────────────────────
   events: defineTable({

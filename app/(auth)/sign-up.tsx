@@ -1,142 +1,216 @@
-// app/(auth)/sign-up.tsx — email + password sign-up.
+// app/(auth)/sign-up.tsx — Clerk email + password sign-up.
 
-import { useAuthActions } from '@convex-dev/auth/react';
+import { isClerkAPIResponseError, useSignUp } from '@clerk/expo';
 import { Link } from 'expo-router';
 import { useState } from 'react';
+import { Text, View } from 'react-native';
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+  AuthButton,
+  AuthFooter,
+  AuthMessage,
+  AuthScreen,
+  AuthTextButton,
+} from '@/src/components/AuthForm';
 import { FieldInput, FormField } from '@/src/components/FormField';
-import { Wordmark } from '@/src/components/Wordmark';
 import { FONTS, useTheme } from '@/src/theme/ThemeProvider';
+
+function authError(err: unknown, fallback: string) {
+  return isClerkAPIResponseError(err)
+    ? err.errors[0]?.longMessage ?? err.errors[0]?.message ?? fallback
+    : err instanceof Error
+      ? err.message
+      : fallback;
+}
 
 export default function SignUpScreen() {
   const { palette } = useTheme();
-  const { signIn } = useAuthActions();
+  const { fetchStatus, signUp } = useSignUp();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  const [pendingVerification, setPendingVerification] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const canSubmit = email.length > 2 && password.length >= 6 && !submitting;
+  const busy = submitting || fetchStatus === 'fetching';
+  const cleanEmail = email.trim();
+  const canCreate = cleanEmail.length > 2 && password.length >= 8 && !busy;
+  const canVerify = code.trim().length > 0 && !busy;
 
-  const onSubmit = async () => {
-    if (!canSubmit) return;
+  const clearFeedback = () => {
+    setError(null);
+    setNotice(null);
+  };
+
+  const createAccount = async () => {
+    if (!canCreate) return;
+    clearFeedback();
     setSubmitting(true);
     try {
-      // Convex Auth Password provider uses `flow: 'signUp'` to create the user.
-      await signIn('password', { email, password, flow: 'signUp' });
+      const created = await signUp.password({
+        emailAddress: cleanEmail,
+        password,
+      });
+      if (created.error) throw created.error;
+
+      const verification = await signUp.verifications.sendEmailCode();
+      if (verification.error) throw verification.error;
+
+      setCode('');
+      setPendingVerification(true);
+      setNotice(`We sent a verification code to ${cleanEmail}.`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Sign-up failed';
-      Alert.alert('Sign-up failed', message);
+      setError(authError(err, 'Could not create account'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const verifyEmail = async () => {
+    if (!canVerify) return;
+    clearFeedback();
+    setSubmitting(true);
+    try {
+      const result = await signUp.verifications.verifyEmailCode({ code: code.trim() });
+      if (result.error) throw result.error;
+
+      if (signUp.status !== 'complete') {
+        throw new Error(`Verification needs another step: ${signUp.status}`);
+      }
+
+      await signUp.finalize();
+    } catch (err: unknown) {
+      setError(authError(err, 'Could not verify email'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const resendCode = async () => {
+    clearFeedback();
+    setSubmitting(true);
+    try {
+      const verification = await signUp.verifications.sendEmailCode();
+      if (verification.error) throw verification.error;
+      setNotice(`We sent a new code to ${cleanEmail}.`);
+    } catch (err: unknown) {
+      setError(authError(err, 'Could not resend the code'));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: palette.bg }}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            paddingHorizontal: 24,
-            paddingTop: 40,
-            paddingBottom: 24,
-            justifyContent: 'center',
-          }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={{ alignItems: 'center', marginBottom: 28 }}>
-            <Wordmark size={32} />
-            <Text
-              style={{
-                fontFamily: FONTS.body,
-                fontSize: 14,
-                color: palette.ink2,
-                marginTop: 8,
-                textAlign: 'center',
-              }}
-            >
-              Start volunteering in your neighborhood.
-            </Text>
-          </View>
+    <AuthScreen
+      title={pendingVerification ? 'Check your email' : 'Create your account'}
+      subtitle={
+        pendingVerification
+          ? 'Enter the code we sent so we can finish setting up your account.'
+          : 'Join volunteer events around West Palm Beach and keep your impact in one place.'
+      }
+    >
+      {error && <AuthMessage tone="error">{error}</AuthMessage>}
+      {notice && <AuthMessage tone="success">{notice}</AuthMessage>}
 
-          <View
+      {pendingVerification ? (
+        <>
+          <FormField label="Verification code">
+            <FieldInput
+              autoCapitalize="none"
+              autoComplete="one-time-code"
+              keyboardType="number-pad"
+              placeholder="123456"
+              value={code}
+              onChangeText={(value) => {
+                setCode(value);
+                clearFeedback();
+              }}
+            />
+          </FormField>
+
+          <AuthButton
+            label="Verify and continue"
+            loading={submitting}
+            disabled={!canVerify}
+            onPress={verifyEmail}
+          />
+
+          <View style={{ alignItems: 'center', gap: 14, marginTop: 16 }}>
+            <AuthTextButton label="Resend code" onPress={resendCode} disabled={busy} />
+            <AuthTextButton
+              label="Use a different email"
+              disabled={busy}
+              onPress={() => {
+                setPendingVerification(false);
+                setCode('');
+                clearFeedback();
+              }}
+            />
+          </View>
+        </>
+      ) : (
+        <>
+          <FormField label="Email">
+            <FieldInput
+              autoCapitalize="none"
+              autoComplete="email"
+              keyboardType="email-address"
+              placeholder="you@example.com"
+              value={email}
+              onChangeText={(value) => {
+                setEmail(value);
+                clearFeedback();
+              }}
+            />
+          </FormField>
+          <FormField label="Password">
+            <FieldInput
+              autoCapitalize="none"
+              secureTextEntry
+              placeholder="At least 8 characters"
+              value={password}
+              onChangeText={(value) => {
+                setPassword(value);
+                clearFeedback();
+              }}
+            />
+          </FormField>
+
+          <Text
             style={{
-              backgroundColor: palette.surface,
-              borderRadius: 20,
-              padding: 20,
-              borderWidth: 0.5,
-              borderColor: palette.line,
+              color: palette.ink3,
+              fontFamily: FONTS.body,
+              fontSize: 12,
+              lineHeight: 18,
+              marginTop: -8,
+              marginBottom: 16,
             }}
           >
-            <FormField label="Email">
-              <FieldInput
-                autoCapitalize="none"
-                autoComplete="email"
-                keyboardType="email-address"
-                placeholder="you@example.com"
-                value={email}
-                onChangeText={setEmail}
-              />
-            </FormField>
-            <FormField label="Password">
-              <FieldInput
-                autoCapitalize="none"
-                secureTextEntry
-                placeholder="At least 6 characters"
-                value={password}
-                onChangeText={setPassword}
-              />
-            </FormField>
+            Use 8 or more characters.
+          </Text>
 
-            <Pressable
-              disabled={!canSubmit}
-              onPress={onSubmit}
-              style={{
-                marginTop: 4,
-                backgroundColor: canSubmit ? palette.primary : palette.wash,
-                paddingVertical: 14,
-                borderRadius: 14,
-                alignItems: 'center',
-              }}
-            >
-              {submitting ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={{ color: '#fff', fontFamily: FONTS.bodySemibold, fontSize: 15 }}>
-                  Create account
-                </Text>
-              )}
-            </Pressable>
+          <AuthButton
+            label="Create account"
+            loading={submitting}
+            disabled={!canCreate}
+            onPress={createAccount}
+          />
 
-            <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 16, gap: 4 }}>
-              <Text style={{ color: palette.ink2, fontFamily: FONTS.body, fontSize: 13 }}>
-                Already have an account?
-              </Text>
+          <AuthFooter
+            prompt="Already have an account?"
+            action={(
               <Link href="/sign-in" asChild>
-                <Pressable>
-                  <Text style={{ color: palette.primary, fontFamily: FONTS.bodySemibold, fontSize: 13 }}>
-                    Sign in
-                  </Text>
-                </Pressable>
+                <AuthTextButton label="Sign in" />
               </Link>
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+            )}
+          />
+        </>
+      )}
+
+      {/* Required for sign-up flows. Clerk renders bot protection here when needed. */}
+      <View nativeID="clerk-captcha" />
+    </AuthScreen>
   );
 }

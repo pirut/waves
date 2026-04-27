@@ -2,7 +2,7 @@
 
 import { v } from 'convex/values';
 import { mutation, query } from './_generated/server';
-import { requireUser } from './lib/authz';
+import { currentUser, requireUser } from './lib/authz';
 
 export const toggleSave = mutation({
   args: { eventId: v.id('events') },
@@ -24,7 +24,10 @@ export const toggleSave = mutation({
 export const listMine = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await requireUser(ctx);
+    const userId = await currentUser(ctx);
+    if (!userId) {
+      return [];
+    }
     const saved = await ctx.db
       .query('savedEvents')
       .withIndex('by_user', (q) => q.eq('userId', userId))

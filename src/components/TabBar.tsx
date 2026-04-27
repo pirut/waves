@@ -8,6 +8,7 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONTS, useTheme } from '@/theme/ThemeProvider';
+import { cardShadow, UI, useResponsiveLayout } from '@/theme/layout';
 import { Icon, type IconName } from './Icon';
 
 // Route-name → (label, icon, isCreate) mapping. Route names match the
@@ -23,15 +24,26 @@ const TAB_META: Record<string, { label: string; icon: IconName; isCreate?: boole
 export function TabBar({ state, navigation }: BottomTabBarProps) {
   const { palette } = useTheme();
   const insets = useSafeAreaInsets();
+  const layout = useResponsiveLayout(560);
 
   return (
     <View
       style={[
         styles.root,
         {
+          left: layout.isTablet ? layout.sideInset : 0,
+          right: layout.isTablet ? layout.sideInset : 0,
+          bottom: layout.isTablet ? 12 : 0,
+          maxWidth: layout.isTablet ? 560 : undefined,
+          alignSelf: 'center',
           backgroundColor: palette.surface,
-          borderTopColor: palette.line,
+          borderColor: palette.line,
+          borderTopWidth: layout.isTablet ? 1 : 0.5,
+          borderWidth: layout.isTablet ? 1 : 0,
+          borderRadius: layout.isTablet ? UI.radius.xl : 0,
+          paddingTop: layout.isTablet ? 8 : 10,
           paddingBottom: 10 + insets.bottom,
+          ...cardShadow(palette.dark),
         },
       ]}
     >
@@ -118,7 +130,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingTop: 10,
     paddingHorizontal: 12,
-    borderTopWidth: 0.5,
   },
   row: {
     flexDirection: 'row',
@@ -131,8 +142,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   createBtn: {
-    width: 46,
-    height: 46,
+    width: 48,
+    height: 48,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',

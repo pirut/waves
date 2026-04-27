@@ -5,6 +5,7 @@ import { Text, View } from 'react-native';
 import { Avatar } from '@/src/components/Avatar';
 import { EmptyState } from '@/src/components/EmptyState';
 import { FONTS, useTheme } from '@/src/theme/ThemeProvider';
+import { UI } from '@/src/theme/layout';
 
 type Update = {
   _id: string;
@@ -41,7 +42,7 @@ export function UpdatesTab({ updates }: UpdatesTabProps) {
           key={u._id}
           style={{
             padding: 14,
-            borderRadius: 14,
+            borderRadius: UI.radius.md,
             backgroundColor: palette.surface2,
             borderLeftWidth: 3,
             borderLeftColor: palette.primary,

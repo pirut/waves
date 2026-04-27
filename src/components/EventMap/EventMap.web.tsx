@@ -8,9 +8,10 @@ import { Pin } from './Pin';
 import type { EventMapProps } from './EventMap.types';
 import { tidepoolStyle } from './mapStyle.tidepool';
 import { useTheme } from '@/theme/ThemeProvider';
+import { WEST_PALM_BEACH } from '@/lib/places';
 
-const DEFAULT_CENTER = { lat: 37.76, lng: -122.43 };
-const DEFAULT_ZOOM = 11.5;
+const DEFAULT_CENTER = { lat: WEST_PALM_BEACH.lat, lng: WEST_PALM_BEACH.lng };
+const DEFAULT_ZOOM = WEST_PALM_BEACH.zoom;
 
 export function EventMap({
   markers,

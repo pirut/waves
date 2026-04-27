@@ -1,9 +1,9 @@
 // ProfileScreen.tsx — big avatar with streak badge, impact card, badges grid,
 // settings rows. Ported from screens-hub.jsx `ProfileScreen`.
 
-import { useAuthActions } from '@convex-dev/auth/react';
+import { useClerk } from '@clerk/expo';
 import { useQuery } from 'convex/react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '@/convex/_generated/api';
@@ -11,6 +11,7 @@ import { Avatar } from '@/src/components/Avatar';
 import { Icon, type IconName } from '@/src/components/Icon';
 import { FONTS, useTheme } from '@/src/theme/ThemeProvider';
 import type { PaletteHex } from '@/src/theme/oklch';
+import { cardShadow, UI, useResponsiveLayout } from '@/src/theme/layout';
 
 type BadgeEntry = {
   id: string;
@@ -22,9 +23,36 @@ type BadgeEntry = {
 
 export function ProfileScreen() {
   const { palette } = useTheme();
-  const { signOut } = useAuthActions();
+  const layout = useResponsiveLayout(760);
+  const { signOut } = useClerk();
   const me = useQuery(api.users.me, {});
   const badges = useQuery(api.badges.listForMe, {});
+
+  const showPreferences = () => {
+    Alert.alert('Preferences', 'Tidepool theme, West Palm Beach discovery, and weekly digest are active for this local profile.');
+  };
+
+  const showNotifications = () => {
+    Alert.alert('Notifications', 'Event reminders, host updates, replies, and badge milestones are enabled.');
+  };
+
+  const inviteFriends = async () => {
+    await Share.share({
+      title: 'Make Waves',
+      message: 'Join me on Make Waves to find volunteer events around West Palm Beach.',
+    });
+  };
+
+  const confirmSignOut = () => {
+    Alert.alert(
+      'Sign out?',
+      'You can sign back in any time.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Sign out', style: 'destructive', onPress: () => void signOut() },
+      ],
+    );
+  };
 
   if (!me) {
     return <SafeAreaView style={{ flex: 1, backgroundColor: palette.bg }} />;
@@ -34,7 +62,7 @@ export function ProfileScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: palette.bg }} edges={['top']}>
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
         {/* Header */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 24, alignItems: 'center' }}>
+        <View style={{ paddingHorizontal: layout.sideInset, paddingTop: layout.isTablet ? 34 : 24, paddingBottom: 24, alignItems: 'center' }}>
           <View>
             <Avatar user={{ initials: me.initials, tone: me.tone }} size={92} />
             {me.streak > 0 && (
@@ -68,7 +96,7 @@ export function ProfileScreen() {
           <Text
             style={{
               fontFamily: FONTS.display,
-              fontSize: 28,
+              fontSize: layout.isTablet ? 34 : 28,
               color: palette.ink,
               marginTop: 14,
               letterSpacing: -0.3,
@@ -101,13 +129,15 @@ export function ProfileScreen() {
         {/* Impact card */}
         <View
           style={{
-            marginHorizontal: 20,
+            marginLeft: layout.sideInset,
+            marginRight: layout.sideInset,
             marginBottom: 20,
-            borderRadius: 20,
+            borderRadius: UI.radius.lg,
             overflow: 'hidden',
             backgroundColor: palette.surface,
-            borderWidth: 0.5,
+            borderWidth: 1,
             borderColor: palette.line,
+            ...cardShadow(palette.dark),
           }}
         >
           <View style={{ padding: 20 }}>
@@ -159,7 +189,7 @@ export function ProfileScreen() {
         </View>
 
         {/* Badges grid */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
+        <View style={{ paddingHorizontal: layout.sideInset, marginBottom: 12 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
             <Text
               style={{
@@ -176,7 +206,7 @@ export function ProfileScreen() {
         </View>
         <View
           style={{
-            paddingHorizontal: 16,
+            paddingHorizontal: layout.sideInset - 4,
             flexDirection: 'row',
             flexWrap: 'wrap',
           }}
@@ -189,7 +219,7 @@ export function ProfileScreen() {
         </View>
 
         {/* Settings */}
-        <View style={{ padding: 20, paddingTop: 12 }}>
+        <View style={{ paddingHorizontal: layout.sideInset, paddingTop: 12, paddingBottom: 20 }}>
           <Text
             style={{
               fontFamily: FONTS.bodyBold,
@@ -204,17 +234,17 @@ export function ProfileScreen() {
           </Text>
           <View
             style={{
-              borderRadius: 14,
+              borderRadius: UI.radius.md,
               backgroundColor: palette.surface,
-              borderWidth: 0.5,
+              borderWidth: 1,
               borderColor: palette.line,
               overflow: 'hidden',
             }}
           >
-            <SettingRow icon="settings" label="Preferences" />
-            <SettingRow icon="bell" label="Notifications" />
-            <SettingRow icon="gift" label="Invite friends" />
-            <SettingRow icon="arrowR" label="Sign out" onPress={() => void signOut()} last />
+            <SettingRow icon="settings" label="Preferences" onPress={showPreferences} />
+            <SettingRow icon="bell" label="Notifications" onPress={showNotifications} />
+            <SettingRow icon="gift" label="Invite friends" onPress={() => void inviteFriends()} />
+            <SettingRow icon="arrowR" label="Sign out" onPress={confirmSignOut} last />
           </View>
         </View>
       </ScrollView>
@@ -233,9 +263,10 @@ function BadgeCard({
     <View
       style={{
         padding: 12,
-        borderRadius: 14,
+        minHeight: 132,
+        borderRadius: UI.radius.md,
         backgroundColor: badge.earned ? palette.surface : 'transparent',
-        borderWidth: badge.earned ? 0.5 : 1,
+        borderWidth: 1,
         borderColor: palette.line,
         borderStyle: badge.earned ? 'solid' : 'dashed',
         alignItems: 'center',
@@ -289,13 +320,16 @@ function SettingRow({
   const { palette } = useTheme();
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
       onPress={onPress}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
+        minHeight: 52,
         padding: 14,
-        borderBottomWidth: last ? 0 : 0.5,
+        borderBottomWidth: last ? 0 : 1,
         borderBottomColor: palette.line,
       }}
     >
