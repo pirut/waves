@@ -5,26 +5,72 @@
 // Ported from waves/project/components/screens-map.jsx `TabBar`.
 
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONTS, useTheme } from '@/theme/ThemeProvider';
 import { cardShadow, UI, useResponsiveLayout } from '@/theme/layout';
 import { Icon, type IconName } from './Icon';
 
-// Route-name → (label, icon, isCreate) mapping. Route names match the
-// files under app/(tabs)/.
-const TAB_META: Record<string, { label: string; icon: IconName; isCreate?: boolean }> = {
+// Route-name -> (label, icon) mapping. Route names match the files under app/(tabs)/.
+const TAB_META: Record<string, { label: string; icon: IconName }> = {
   index: { label: 'Map', icon: 'map' },
   hub: { label: 'My Hub', icon: 'calendar' },
-  create: { label: 'Create', icon: 'plus', isCreate: true },
   activity: { label: 'Activity', icon: 'bell' },
   profile: { label: 'Profile', icon: 'user' },
 };
 
 export function TabBar({ state, navigation }: BottomTabBarProps) {
+  const router = useRouter();
   const { palette } = useTheme();
   const insets = useSafeAreaInsets();
   const layout = useResponsiveLayout(560);
+  const visibleRoutes = state.routes.filter((route) => TAB_META[route.name]);
+
+  const renderTab = (route: (typeof visibleRoutes)[number]) => {
+    const meta = TAB_META[route.name];
+    const index = state.routes.findIndex((item) => item.key === route.key);
+    const focused = state.index === index;
+    const onPress = () => {
+      const event = navigation.emit({
+        type: 'tabPress',
+        target: route.key,
+        canPreventDefault: true,
+      });
+      if (!focused && !event.defaultPrevented) {
+        navigation.navigate(route.name as never);
+      }
+    };
+
+    return (
+      <Pressable
+        key={route.key}
+        accessibilityRole="button"
+        accessibilityLabel={meta.label}
+        accessibilityState={focused ? { selected: true } : undefined}
+        onPress={onPress}
+        style={styles.tab}
+      >
+        <Icon
+          name={meta.icon}
+          size={22}
+          color={focused ? palette.primary : palette.ink3}
+          strokeWidth={focused ? 2 : 1.6}
+        />
+        <Text
+          style={{
+            fontFamily: FONTS.bodyMedium,
+            fontSize: 10,
+            color: focused ? palette.primary : palette.ink3,
+            marginTop: 4,
+            letterSpacing: 0.1,
+          }}
+        >
+          {meta.label}
+        </Text>
+      </Pressable>
+    );
+  };
 
   return (
     <View
@@ -48,75 +94,27 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
       ]}
     >
       <View style={styles.row}>
-        {state.routes.map((route, index) => {
-          const meta = TAB_META[route.name];
-          if (!meta) return null;
-          const focused = state.index === index;
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
-            if (!focused && !event.defaultPrevented) {
-              navigation.navigate(route.name as never);
-            }
-          };
-
-          if (meta.isCreate) {
-            return (
-              <Pressable
-                key={route.key}
-                accessibilityRole="button"
-                accessibilityLabel={meta.label}
-                onPress={onPress}
-                style={[
-                  styles.createBtn,
-                  {
-                    backgroundColor: palette.primary,
-                    shadowColor: palette.primary,
-                  },
-                ]}
-              >
-                <Icon
-                  name="plus"
-                  size={22}
-                  strokeWidth={2.2}
-                  color={palette.dark ? '#1a1a1a' : '#fff'}
-                />
-              </Pressable>
-            );
-          }
-
-          return (
-            <Pressable
-              key={route.key}
-              accessibilityRole="button"
-              accessibilityLabel={meta.label}
-              accessibilityState={focused ? { selected: true } : undefined}
-              onPress={onPress}
-              style={styles.tab}
-            >
-              <Icon
-                name={meta.icon}
-                size={22}
-                color={focused ? palette.primary : palette.ink3}
-                strokeWidth={focused ? 2 : 1.6}
-              />
-              <Text
-                style={{
-                  fontFamily: FONTS.bodyMedium,
-                  fontSize: 10,
-                  color: focused ? palette.primary : palette.ink3,
-                  marginTop: 4,
-                  letterSpacing: 0.1,
-                }}
-              >
-                {meta.label}
-              </Text>
-            </Pressable>
-          );
-        })}
+        {visibleRoutes.slice(0, 2).map(renderTab)}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Create"
+          onPress={() => router.push('/create')}
+          style={[
+            styles.createBtn,
+            {
+              backgroundColor: palette.primary,
+              shadowColor: palette.primary,
+            },
+          ]}
+        >
+          <Icon
+            name="plus"
+            size={22}
+            strokeWidth={2.2}
+            color={palette.dark ? '#1a1a1a' : '#fff'}
+          />
+        </Pressable>
+        {visibleRoutes.slice(2).map(renderTab)}
       </View>
     </View>
   );

@@ -12,7 +12,6 @@
 import { ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -20,7 +19,6 @@ import { useCallback, useEffect } from 'react';
 import { ActivityIndicator, LogBox, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Authenticated, AuthLoading, Unauthenticated } from 'convex/react';
 import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -65,8 +63,13 @@ export default function RootLayout() {
  */
 function AuthGate() {
   const { fontsLoaded, palette } = useTheme();
+  const { isLoaded, isSignedIn } = useAuth();
   const router = useRouter();
   const segments = useSegments();
+  const rootSegment = segments[0];
+  const inAuthGroup = rootSegment === '(auth)';
+  const shouldRedirectToApp = fontsLoaded && isLoaded && isSignedIn && inAuthGroup;
+  const shouldRedirectToAuth = fontsLoaded && isLoaded && !isSignedIn && !inAuthGroup;
 
   // Hide splash once fonts are loaded.
   const onReady = useCallback(async () => {
@@ -79,7 +82,17 @@ function AuthGate() {
     void onReady();
   }, [onReady]);
 
-  if (!fontsLoaded) {
+  useEffect(() => {
+    if (!fontsLoaded || !isLoaded) return;
+
+    if (shouldRedirectToApp) {
+      router.replace('/');
+    } else if (shouldRedirectToAuth) {
+      router.replace('/sign-in');
+    }
+  }, [fontsLoaded, isLoaded, router, shouldRedirectToApp, shouldRedirectToAuth]);
+
+  if (!fontsLoaded || !isLoaded || shouldRedirectToApp || shouldRedirectToAuth) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.bg }}>
         <ActivityIndicator color={palette.primary} />
@@ -89,26 +102,13 @@ function AuthGate() {
 
   return (
     <>
-      <AuthLoading>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.bg }}>
-          <ActivityIndicator color={palette.primary} />
-        </View>
-      </AuthLoading>
-      <Authenticated>
-        <BootstrapOnFirstAuth />
-        <RedirectIfNotInTabs segments={segments} router={router} />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: palette.bg } }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="event/[id]" options={{ presentation: 'card', animation: 'slide_from_right' }} />
-          <Stack.Screen name="create" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-        </Stack>
-      </Authenticated>
-      <Unauthenticated>
-        <RedirectIfNotInAuth segments={segments} router={router} />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: palette.bg } }}>
-          <Stack.Screen name="(auth)" />
-        </Stack>
-      </Unauthenticated>
+      {isSignedIn ? <BootstrapOnFirstAuth /> : null}
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: palette.bg } }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="event/[id]" options={{ presentation: 'card', animation: 'slide_from_right' }} />
+        <Stack.Screen name="create" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      </Stack>
     </>
   );
 }
@@ -121,37 +121,5 @@ function BootstrapOnFirstAuth() {
       // Seed might fail if schema isn't pushed yet — non-fatal.
     });
   }, [bootstrapMe]);
-  return null;
-}
-
-function RedirectIfNotInTabs({
-  segments,
-  router,
-}: {
-  segments: string[];
-  router: ReturnType<typeof useRouter>;
-}) {
-  useEffect(() => {
-    const inAuth = segments[0] === '(auth)';
-    if (inAuth) {
-      router.replace('/');
-    }
-  }, [segments, router]);
-  return null;
-}
-
-function RedirectIfNotInAuth({
-  segments,
-  router,
-}: {
-  segments: string[];
-  router: ReturnType<typeof useRouter>;
-}) {
-  useEffect(() => {
-    const inAuth = segments[0] === '(auth)';
-    if (!inAuth) {
-      router.replace('/sign-in');
-    }
-  }, [segments, router]);
   return null;
 }
